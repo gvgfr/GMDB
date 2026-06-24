@@ -9,15 +9,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 /* Show the full artwork in the movie-detail modal. */
 .modal-poster-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 460px;
+  overflow: hidden;
   background: #111;
 }
 
 .modal-poster {
-  display: block;
-  width: 100%;
+  width: auto !important;
+  height: auto !important;
+  max-width: 100%;
   max-height: 460px;
-  object-fit: contain;
+  object-fit: contain !important;
   background: #111;
+}
 }<style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
