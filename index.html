@@ -1,0 +1,2225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gautham's Masala Meter — Indian Movie Recommendations</title>
+
+<!-- Open Graph / link-preview tags — controls what shows up when this site
+     gets shared (iMessage, WhatsApp, Slack, etc.) instead of leaving it to
+     chance (e.g. a crawler grabbing whatever movie poster happened to be
+     on screen). Points to a dedicated branded share image. -->
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://gvgfr.github.io/GMDB/"/>
+<meta property="og:title" content="Masala Meter — Gautham's Movie Recommendations"/>
+<meta property="og:description" content="Honest scores from critic consensus, audience reception, and the Gautham Score. Find where to stream, and get similar-film suggestions."/>
+<meta property="og:image" content="https://gvgfr.github.io/GMDB/share-preview.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Masala Meter — Gautham's Movie Recommendations"/>
+<meta name="twitter:description" content="Honest scores from critic consensus, audience reception, and the Gautham Score."/>
+<meta name="twitter:image" content="https://gvgfr.github.io/GMDB/share-preview.png"/>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;
+  --red:#E52020;--red2:#b91c1c;
+  --text:#f0ede6;--text2:#a8a69f;--text3:#8a8780;
+  --border:rgba(229,32,32,0.15);--radius:10px;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 1.5rem;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:'Bricolage Grotesque','Inter',sans-serif;font-size:26px;font-weight:800;letter-spacing:-0.5px;line-height:1;background:linear-gradient(135deg,#16C95E 0%,#6FE34A 50%,#C5F23B 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#16C95E;}
+.logo span{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:#7B8F6E;display:block;letter-spacing:3.5px;text-transform:uppercase;margin-top:6px;-webkit-text-fill-color:#7B8F6E;}
+.header-actions{display:flex;gap:10px;align-items:center;}
+.btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all 0.2s;font-family:'Inter',sans-serif;}
+.btn-primary{background:var(--red);color:white;}
+.btn-primary:hover{background:var(--red2);}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--text);border-color:var(--red);}
+.btn-about{background:rgba(22,201,94,0.08);color:#6FE34A;border:1.5px solid #16C95E;font-weight:700;}
+.btn-about:hover{background:rgba(22,201,94,0.16);color:#C5F23B;}
+
+.hero{padding:2.25rem 1.5rem 1rem;text-align:center;border-bottom:1px solid var(--border);position:relative;}
+.streaming-carousel-section{padding:1.25rem 0 1.5rem;border-bottom:1px solid var(--border);}
+.streaming-carousel-label{font-size:20px;font-weight:800;color:var(--text);margin:0 1.5rem 0.85rem;}
+.streaming-carousel-tv-icon{font-size:26px;vertical-align:middle;margin-right:2px;}
+.streaming-carousel{display:flex;gap:12px;overflow-x:auto;padding:0 1.5rem 6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;}
+.streaming-carousel::-webkit-scrollbar{height:6px;}
+.streaming-carousel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.carousel-card{flex:0 0 auto;width:155px;cursor:pointer;scroll-snap-align:start;transition:transform 0.15s;}
+.carousel-card:hover{transform:translateY(-4px);}
+.carousel-poster-wrap{position:relative;width:155px;height:220px;border-radius:8px;overflow:hidden;background:var(--bg2);}
+.carousel-poster{width:100%;height:100%;object-fit:cover;display:block;}
+.carousel-poster-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--text3);}
+.carousel-title{font-size:12px;font-weight:600;color:var(--text);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.carousel-empty{color:var(--text2);font-size:13px;padding:0 1.5rem;}
+.hero::before{content:'';position:absolute;top:-50%;left:50%;transform:translateX(-50%);width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(229,32,32,0.08) 0%,transparent 70%);pointer-events:none;}
+.hero-eyebrow{font-size:13px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:0.65rem;}
+.hero-title{font-family:'Playfair Display',serif;font-size:clamp(1.4rem,3.2vw,2.2rem);font-weight:900;line-height:1.1;margin-bottom:0.85rem;}
+.hero-title span{color:var(--red);}
+.hero-desc{font-size:17px;color:var(--text);max-width:600px;margin:0 auto 1.5rem;line-height:1.65;}
+.inline-about-link{cursor:pointer;font-weight:700;color:var(--text);}
+.hero-actions{display:flex;gap:12px;justify-content:center;margin-bottom:0.25rem;flex-wrap:wrap;}
+.btn-hero{padding:14px 28px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all 0.2s;}
+.btn-hero-primary{background:var(--red);color:white;}
+.btn-hero-primary:hover{background:var(--red2);transform:translateY(-1px);}
+.btn-hero-secondary{background:var(--bg3);color:#F2C94C;border:1px solid var(--border);}
+.btn-hero-secondary:hover{border-color:var(--red);}
+
+.search-wrap{max-width:520px;margin:0 auto;position:relative;}
+.search-wrap-below-filters{margin-top:1.5rem;}
+.search-wrap-outer{padding:0 1.5rem;}
+.search-input{width:100%;padding:15px 54px 15px 20px;background:#2a2030;border:2px solid var(--red);border-radius:10px;color:var(--text);font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:all 0.2s;box-shadow:0 0 0 0 rgba(229,32,32,0);}
+.search-input:focus{box-shadow:0 0 0 3px rgba(229,32,32,0.2);}
+.search-input::placeholder{color:rgba(255,255,255,0.75);}
+.search-input:focus{border-color:var(--red);}
+.search-hint{font-size:12.5px;color:#FFB020;margin-top:10px;margin-bottom:1.5rem;text-align:center;opacity:0.85;}
+.hint-add-link{cursor:pointer;text-decoration:underline;font-weight:800;opacity:1;color:#F2C94C;font-size:1.05em;}
+.hint-add-link:hover{color:#FFDD66;}
+.search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;border:none;padding:6px;border-radius:8px;transition:background 0.2s;}
+.search-icon:hover{background:rgba(229,32,32,0.15);}
+.suggestions{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;max-height:340px;overflow-y:auto;display:none;box-shadow:0 12px 32px rgba(0,0,0,0.7);z-index:300;}
+.suggestions.show{display:block;}
+.suggestion-item{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;transition:background 0.15s;border-bottom:1px solid var(--border);}
+.suggestion-item:last-child{border-bottom:none;}
+.suggestion-item:hover,.suggestion-item.active{background:rgba(229,32,32,0.15);}
+.suggestion-poster{width:32px;height:48px;border-radius:4px;object-fit:cover;background:var(--bg3);flex-shrink:0;}
+.suggestion-info{flex:1;min-width:0;}
+.suggestion-title{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.suggestion-meta{font-size:12px;color:var(--text2);}
+.suggestion-score{font-size:13px;font-weight:700;padding:2px 8px;border-radius:4px;flex-shrink:0;}
+
+.stats-bar{display:flex;gap:2rem;justify-content:center;padding:1rem 1.5rem;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.stat{text-align:center;}
+.stat-clickable{cursor:pointer;border-radius:8px;padding:4px 10px;transition:background 0.15s;}
+.stat-clickable:hover{background:rgba(255,255,255,0.06);}
+.stat-clickable:hover .stat-num{text-decoration:underline;}
+.stat-num{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--red);}
+.stat-label{font-size:11px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;}
+
+.filters{display:flex;gap:10px;padding:1rem 1.5rem;background:#211934;border-bottom:2px solid #3d2f5c;scrollbar-width:none;flex-wrap:wrap;align-items:center;}
+.filter-btn{padding:10px 18px;border-radius:24px;font-size:14px;font-weight:600;cursor:pointer;border:2px solid var(--border);background:transparent;color:var(--text2);transition:all 0.2s;white-space:nowrap;font-family:'Inter',sans-serif;}
+.filter-btn:hover{transform:translateY(-1px);}
+.filter-btn:hover,.filter-btn.active{background:var(--red);color:white;border-color:var(--red);}
+.fb-vera{border-color:#10D96A;color:#10D96A;}
+.fb-vera:hover,.fb-vera.active{background:#10D96A;color:#06231a;border-color:#10D96A;}
+.fb-semma{border-color:#5BA8FF;color:#5BA8FF;}
+.fb-semma:hover,.fb-semma.active{background:#5BA8FF;color:#06223d;border-color:#5BA8FF;}
+.ctrl-btn{padding:7px 14px;border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;border:1.5px solid rgba(29,211,176,0.55);background:var(--bg2);color:rgba(29,211,176,0.85);font-family:'Inter',sans-serif;white-space:nowrap;transition:all 0.2s;}
+.ctrl-btn:hover{transform:translateY(-1px);border-color:#1DD3B0;color:#1DD3B0;}
+.ctrl-btn.active{background:#1DD3B0;color:#04231d;border-color:#1DD3B0;}
+.fb-parava{border-color:#FFB020;color:#FFB020;}
+.fb-parava:hover,.fb-parava.active{background:#FFB020;color:#3d2a06;border-color:#FFB020;}
+.fb-mokkai{border-color:#FF5C7A;color:#FF5C7A;}
+.fb-mokkai:hover,.fb-mokkai.active{background:#FF5C7A;color:#3d0612;border-color:#FF5C7A;}
+.select-wrap{position:relative;display:inline-flex;align-items:center;}
+.select-icon{position:absolute;left:14px;font-size:15px;pointer-events:none;z-index:1;}
+.sort-by-label{font-size:11px;font-weight:800;letter-spacing:0.5px;color:var(--accent);white-space:nowrap;}
+.select-wrap-sort{--accent:#F2C94C;}
+/* Language and Year now match Sort's pattern — value hidden entirely,
+   just the label + chevron shown, whole pill clickable for a comfortable
+   tap target. Clicking still opens the real dropdown with all options. */
+.select-wrap-lang,
+.select-wrap-year{
+  border:2px solid var(--accent);
+  border-radius:20px;
+  padding:9px 34px 9px 16px;
+  background:var(--bg2);
+}
+.select-wrap-lang .select-icon,
+.select-wrap-year .select-icon{position:static;pointer-events:none;}
+.select-wrap-lang .sort-select,
+.select-wrap-year .sort-select{
+  position:absolute;
+  inset:0;
+  border:none !important;
+  background-color:transparent !important;
+  color:transparent !important;
+  padding:0 !important;
+  font-size:14px;
+  background-position:right 10px center;
+  background-size:18px;
+}
+.select-wrap-lang{--accent:#1DB954;}
+.select-wrap-year{--accent:#E8862E;}
+
+/* Sort is simpler still — the value text itself is hidden (color:
+   transparent), so the closed button never needs to show the current
+   selection at all, just "SORT BY" and a chevron. Clicking still opens
+   the real native dropdown with all sort options — this only affects
+   what's shown when it's closed, nothing about how it actually works.
+   The select covers the WHOLE pill (not just a narrow sliver) so the
+   tap target stays comfortably large on mobile — the label sits on top
+   purely visually, with pointer-events disabled so clicks pass through
+   to the select underneath it. */
+.select-wrap-sort{
+  border:2px solid var(--accent);
+  border-radius:20px;
+  padding:9px 34px 9px 16px;
+  background:var(--bg2);
+}
+.select-wrap-sort .select-icon{position:static;pointer-events:none;}
+.select-wrap-sort .sort-select{
+  position:absolute;
+  inset:0;
+  border:none !important;
+  background-color:transparent !important;
+  color:transparent !important;
+  padding:0 !important;
+  font-size:14px;
+  background-position:right 10px center;
+  background-size:18px;
+}
+
+.sort-select{padding:10px 46px 10px 40px;border-radius:24px;font-size:14px;font-weight:600;cursor:pointer;border:2px solid var(--accent);background:var(--bg2);color:var(--text);font-family:'Inter',sans-serif;appearance:none;-webkit-appearance:none;background-repeat:no-repeat;background-position:right 10px center;background-size:22px;transition:all 0.2s;}
+.sort-select:hover{background-color:rgba(255,255,255,0.05);}
+.sort-select:focus{outline:none;box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);}
+.select-wrap-sort .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23F2C94C' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
+.select-wrap-lang .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%231DB954' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
+.select-wrap-year .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23E8862E' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
+
+.grid-wrap{padding:1.5rem;}
+.grid-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1rem;}
+.grid-header .section-title{margin-bottom:0;}
+.score-legend{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--text);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:8px 14px;}
+.legend-intro{font-weight:700;color:#FFB020;text-transform:uppercase;letter-spacing:0.5px;font-size:11px;}
+.legend-item{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-weight:600;}
+.legend-clickable{cursor:pointer;border-radius:6px;padding:3px 8px;transition:background 0.15s;}
+.legend-active{background:rgba(255,255,255,0.14);outline:1px solid rgba(255,255,255,0.25);}
+.legend-clear{align-items:center;gap:4px;cursor:pointer;border-radius:6px;padding:3px 10px;font-weight:700;font-size:13px;color:var(--red);border:1px solid var(--red);margin-left:4px;}
+.legend-clear:hover{background:rgba(229,32,32,0.12);}
+.legend-clickable:hover{background:rgba(255,255,255,0.08);}
+.section-title{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:1.25rem;}
+.movies-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;}
+.view-toggle{display:flex;gap:4px;background:rgba(0,0,0,0.3);border-radius:10px;padding:4px;margin-left:auto;}
+.view-btn{width:38px;height:38px;border-radius:8px;border:none;background:transparent;color:var(--text2);cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}
+.view-btn.active{background:var(--red);color:white;}
+.view-btn:hover:not(.active){background:rgba(255,255,255,0.1);}
+.movies-grid.list-view{display:flex;flex-direction:column;gap:10px;}
+.movies-grid.list-view .card{display:flex;flex-direction:row;align-items:center;height:auto;}
+.movies-grid.list-view .card-poster,.movies-grid.list-view .card-poster-placeholder{width:60px;height:90px;flex-shrink:0;border-radius:8px;}
+.movies-grid.list-view .card-body{flex:1;padding:0 0 0 16px;display:flex;align-items:center;justify-content:space-between;}
+.movies-grid.list-view .card-title{font-size:17px;margin-bottom:2px;white-space:normal;}
+.movies-grid.list-view .card-meta{margin-bottom:0;}
+.movies-grid.list-view .card-info{flex:1;}
+@media(min-width:640px){.movies-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));}}
+@media(min-width:1024px){.movies-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}}
+
+@keyframes cardFadeIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.card{background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:transform 0.2s,border-color 0.2s,box-shadow 0.2s;position:relative;animation:cardFadeIn 0.4s ease both;}
+.card:hover{transform:translateY(-4px);border-color:rgba(229,32,32,0.4);box-shadow:0 12px 28px rgba(0,0,0,0.45);}
+.card-poster{transition:transform 0.45s cubic-bezier(0.22,1,0.36,1);}
+.card:hover .card-poster{transform:scale(1.05);}
+.card-poster{width:100%;aspect-ratio:2/3;object-fit:cover;object-position:top center;display:block;background:var(--bg3);}
+.card-poster-wrap{position:relative;overflow:hidden;}
+.card-new-ribbon{position:absolute;top:18px;left:-46px;width:180px;text-align:center;background:#1DD3B0;color:#04241d;font-size:11px;font-weight:800;letter-spacing:0.2px;padding:5px 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,0.35);z-index:2;pointer-events:none;white-space:nowrap;}
+.card-theater-badge{position:absolute;bottom:8px;right:8px;background:rgba(229,32,32,0.92);color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,0.35);white-space:nowrap;}
+
+#newStreamBtn{position:relative;}
+#newStreamBtn.attention-pulse{animation:newStreamPulse 1.6s ease-in-out 3;}
+@keyframes newStreamPulse{0%,100%{box-shadow:0 0 0 0 rgba(29,211,176,0.55);}50%{box-shadow:0 0 0 10px rgba(29,211,176,0);}}
+.new-stream-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#1DD3B0;color:#04241d;font-size:11px;font-weight:800;}
+.card-poster-placeholder{width:100%;aspect-ratio:2/3;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--text3);}
+.card-body{padding:12px 14px 14px;}
+.card-title{font-size:16px;font-weight:700;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-meta{font-size:13px;color:var(--text2);margin-bottom:10px;}
+.card-score{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;font-size:16px;font-weight:700;}
+.tier-vera{background:rgba(16,185,90,0.22);color:#10D96A;}
+.tier-semma{background:rgba(56,150,255,0.22);color:#5BA8FF;}
+.tier-parava{background:rgba(255,176,32,0.22);color:#FFB020;}
+.tier-mokkai{background:rgba(255,82,110,0.22);color:#FF5C7A;}
+.tier-unknown{background:rgba(255,255,255,0.1);color:var(--text2);}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--bg2);border-radius:16px;border:1px solid var(--border);width:100%;max-width:680px;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.2s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-poster-wrap{position:relative;}
+.modal-scroll-region{display:contents;}
+.modal-poster{width:100%;max-height:420px;object-fit:contain;background:#000;border-radius:16px 16px 0 0;}
+.modal-poster-placeholder{width:100%;height:200px;background:var(--bg3);border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:center;font-size:4rem;color:var(--text3);}
+.modal-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,0.75);border:1px solid rgba(255,255,255,0.25);cursor:pointer;color:white;font-size:22px;display:flex;align-items:center;justify-content:center;z-index:10;}
+.shared-link-banner{background:linear-gradient(135deg,#16C95E 0%,#6FE34A 100%);color:#04231d;font-weight:700;font-size:14px;padding:12px 18px;text-align:center;cursor:pointer;line-height:1.4;}
+.shared-link-cta{text-decoration:underline;}
+.shared-link-banner:hover{filter:brightness(1.05);}
+.modal-body{padding:1.5rem;}
+.modal-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;margin-bottom:4px;}
+.modal-meta{font-size:13px;color:var(--text2);margin-bottom:1.25rem;}
+.meta-language{color:#1DB954;font-weight:600;}
+.meta-genre{color:#B36AE2;font-weight:600;}
+.modal-score-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center;}
+.modal-score-big{font-family:'Playfair Display',serif;font-size:42px;font-weight:900;color:var(--red);line-height:1;}
+.modal-score-label{font-size:11px;color:var(--text2);letter-spacing:1px;}
+.modal-badge{padding:6px 12px;border-radius:6px;font-size:13px;font-weight:600;}
+.modal-section{margin-bottom:1.25rem;}
+.modal-section-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#C9A24B;font-weight:700;margin-bottom:6px;}
+.modal-section-value{font-size:16px;color:var(--text);line-height:1.7;}
+.story-clamp{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
+.story-clamp.story-open{-webkit-line-clamp:unset;overflow:visible;}
+.story-toggle{background:none;border:none;color:#FFB020;font-size:14px;font-weight:600;cursor:pointer;padding:6px 0 0;font-family:inherit;}
+.story-toggle:hover{text-decoration:underline;}
+.trivia-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;}
+.trivia-item{position:relative;padding-left:26px;font-size:15px;color:var(--text);line-height:1.55;}
+.trivia-item::before{content:"🎬";position:absolute;left:0;top:1px;font-size:14px;}
+.modal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:1.5rem;position:sticky;bottom:0;background:linear-gradient(to top, var(--bg2) 70%, transparent);padding:16px 0 4px;z-index:5;}
+.modal-btn{flex:1;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;}
+.modal-btn-primary{background:var(--red);color:white;}
+.modal-btn-primary:hover{background:var(--red2);}
+.modal-btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
+.modal-btn-share{background:rgba(29,211,176,0.15);color:#1DD3B0;border:1px solid #1DD3B0;flex-shrink:0;}
+.modal-btn-share:hover{background:#1DD3B0;color:#04231d;}
+.modal-btn-secondary:hover{border-color:var(--red);}
+
+/* ADD MODAL */
+.add-modal{background:var(--bg2);border-radius:16px;border:1px solid var(--border);width:100%;max-width:480px;padding:2rem;transform:translateY(20px);transition:transform 0.2s;}
+.modal-overlay.open .add-modal{transform:translateY(0);}
+.add-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:0.5rem;}
+.add-desc{font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;}
+.add-input{width:100%;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.2s;margin-bottom:0.75rem;}
+.add-input:focus{border-color:var(--red);}
+.add-input::placeholder{color:var(--text3);}
+.add-hint{font-size:12px;color:var(--text3);margin-bottom:1.25rem;line-height:1.5;}
+.add-actions{display:flex;gap:10px;}
+.status-msg{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:1rem;display:none;}
+.status-success{background:rgba(29,158,117,0.15);color:#1D9E75;border:1px solid rgba(29,158,117,0.3);}
+.status-error{background:rgba(229,32,32,0.15);color:var(--red);border:1px solid rgba(229,32,32,0.3);}
+.status-loading{background:rgba(255,255,255,0.05);color:var(--text2);border:1px solid var(--border);}
+
+/* ABOUT MODAL */
+.about-modal{background:var(--bg2);border-radius:16px;border:1px solid var(--border);width:100%;max-width:720px;padding:2.5rem;transform:translateY(20px);transition:transform 0.2s;position:relative;}
+/* About modal specifically scrolls like a normal page (whole overlay
+   scrolls), instead of being boxed into its own small internal scrollbar
+   like before — much less cramped for a content-heavy modal like this. */
+#aboutModal{align-items:flex-start;overflow-y:auto;padding:2rem 1rem;}
+#aboutModal .about-modal{margin:1rem auto;}
+.modal-overlay.open .about-modal{transform:translateY(0);}
+.about-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;}
+.about-title{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;}
+.about-title span{color:var(--red);}
+.about-section{margin-bottom:1.5rem;}
+.about-section-label{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);font-weight:700;margin-bottom:0.75rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border);}
+.score-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;}
+.score-card{padding:12px;border-radius:8px;border:1px solid var(--border);}
+.score-range{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:2px;}
+.score-label{font-size:14px;color:var(--text);font-weight:600;}
+.score-bar{height:3px;border-radius:2px;margin-top:8px;}
+.source-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:15px;color:var(--text);}
+.source-row:last-child{border-bottom:none;}
+.source-weight{font-size:12px;color:var(--text2);font-weight:600;}
+.conf-row{display:flex;gap:8px;margin-bottom:0.5rem;}
+.conf-badge{padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;}
+.about-note{background:var(--bg3);border-left:3px solid var(--red);border-radius:0 6px 6px 0;padding:12px 14px;font-size:15px;color:var(--text);line-height:1.7;margin-bottom:8px;}
+
+.empty{text-align:center;padding:4rem 2rem;color:var(--text2);}
+.empty-icon{font-size:3rem;margin-bottom:1rem;}
+.empty-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:0.5rem;}
+.loading{text-align:center;padding:4rem;color:var(--text2);}
+.spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+footer{text-align:center;padding:2rem;border-top:1px solid var(--border);font-size:12px;color:var(--text3);}
+footer span{color:var(--red);}
+
+/* TAKEAWAY QUOTE */
+.takeaway{
+  font-family:'Playfair Display',serif;
+  font-size:18px;font-style:italic;font-weight:600;
+  color:var(--text);line-height:1.55;
+  border-left:3px solid var(--red);
+  padding:6px 0 6px 18px;margin:1rem 0 1.25rem;
+}
+.takeaway::before{content:'\201C';color:var(--red);}
+.takeaway::after{content:'\201D';color:var(--red);}
+
+/* CAST & MUSIC */
+.meta-grid{display:flex;flex-wrap:wrap;gap:1.5rem;margin-bottom:1.25rem;}
+.cast-photo-strip{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px;}
+.cast-photo-item{flex:0 0 auto;width:72px;text-align:center;}
+.cast-photo-img{width:64px;height:64px;border-radius:50%;object-fit:cover;object-position:top center;background:var(--bg3);border:2px solid rgba(255,255,255,0.1);}
+.cast-photo-placeholder{width:64px;height:64px;border-radius:50%;background:var(--bg3);border:2px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:22px;}
+.cast-photo-name{margin-top:6px;font-size:11px;line-height:1.25;color:var(--text2);word-break:break-word;display:block;text-decoration:none;}
+.cast-photo-name:hover{color:#1DD3B0;text-decoration:underline;}
+.meta-block{flex:1;min-width:120px;}
+.meta-block-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#FFB020;margin-bottom:4px;font-weight:600;}
+.meta-block-value{font-size:14px;color:var(--text);line-height:1.5;}
+.songs-value{font-size:13px;color:var(--red);font-weight:500;}
+.songs-wrap{display:flex;flex-wrap:wrap;gap:8px;}
+.song-link{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:#1DB954;font-weight:500;text-decoration:none;background:rgba(29,185,84,0.1);padding:5px 12px;border-radius:20px;border:1px solid rgba(29,185,84,0.3);transition:all 0.2s;}
+.song-link:hover{background:rgba(29,185,84,0.2);border-color:#1DB954;}
+.add-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid var(--red);border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;transition:all 0.4s;display:flex;align-items:center;gap:10px;max-width:90vw;}
+.add-toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast-spinner{width:16px;height:16px;border:2px solid rgba(229,32,32,0.3);border-top-color:var(--red);border-radius:50%;animation:toastspin 0.8s linear infinite;display:inline-block;}
+@keyframes toastspin{to{transform:rotate(360deg);}}
+.toast-btn{background:var(--red);color:white;border:none;padding:5px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;margin-left:6px;}
+.toast-btn:hover{background:var(--red2);}
+.similar-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.similar-card{cursor:pointer;transition:transform 0.2s;}
+.similar-card:hover{transform:translateY(-3px);}
+.similar-card img,.similar-noposter{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;}
+.similar-title{font-size:12px;font-weight:600;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.similar-reason{font-size:10px;color:var(--text3);line-height:1.3;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.similar-score{font-size:11px;font-weight:700;display:inline-block;padding:1px 6px;border-radius:4px;margin-top:3px;}
+.recs-loading{grid-column:1/-1;color:var(--text3);font-size:13px;padding:12px 0;}
+.rec-badge{font-size:11px;font-weight:700;display:inline-block;padding:2px 8px;border-radius:4px;margin-top:3px;}
+.rec-have{background:rgba(16,185,90,0.2);color:#10D96A;}
+.rec-add{background:rgba(229,32,32,0.2);color:var(--red);}
+.ott-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
+.ott-btn{display:inline-flex;align-items:center;font-size:13px;font-weight:600;color:#fff;text-decoration:none;background:var(--ott-color);padding:7px 16px;border-radius:8px;transition:all 0.2s;opacity:0.92;}
+.ott-btn:hover{opacity:1;transform:translateY(-1px);}
+.ott-note{font-size:11px;color:var(--text3);}
+
+/* MASALA SCORE BADGE */
+.gmdb-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:#E52020;border-radius:6px;
+  padding:4px 10px;font-size:13px;font-weight:700;
+  color:white;letter-spacing:0.5px;
+}
+.gmdb-badge-label{font-size:10px;font-weight:600;letter-spacing:1px;opacity:0.85;}
+.imdb-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:#f5c518;border-radius:6px;
+  padding:4px 10px;font-size:13px;font-weight:700;
+  color:#000;letter-spacing:0.5px;
+}
+.imdb-badge-label{font-size:10px;font-weight:700;letter-spacing:1px;}
+.badges-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem;}
+
+/* SCORE BREAKDOWN */
+.score-breakdown{margin:1.25rem 0;}
+.breakdown-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
+.breakdown-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.breakdown-label{font-size:14px;color:var(--text2);width:150px;flex-shrink:0;}
+.breakdown-bar-wrap{flex:1;height:9px;background:rgba(255,255,255,0.08);border-radius:5px;overflow:hidden;}
+.breakdown-bar{height:100%;border-radius:5px;transition:width 1.6s cubic-bezier(0.22,1,0.36,1);}
+.breakdown-score{font-size:14px;font-weight:700;width:32px;text-align:right;flex-shrink:0;}
+
+/* Mobile: declutter the filter/sort bar */
+@media(max-width:640px){
+  .filters{gap:7px;padding:0.75rem 0.85rem;}
+  .filter-btn{padding:7px 12px;font-size:12px;}
+  /* Wider posters + tighter section padding so exactly 2 full posters show
+     with a clear partial 3rd peeking in — signals "swipe for more" instead
+     of the cramped 3-and-a-sliver look at the smaller desktop size. */
+  .streaming-carousel-section{padding:1rem 0 1.25rem;}
+  .streaming-carousel-label{margin:0 1rem 0.6rem;}
+  .streaming-carousel{padding:0 1rem 6px;gap:10px;}
+  .carousel-card{width:44vw;max-width:190px;}
+  .carousel-poster-wrap{width:44vw;max-width:190px;height:63vw;max-height:270px;}
+  .grid-header{flex-direction:column;align-items:flex-start;gap:8px;}
+  .score-legend{width:100%;justify-content:flex-start;gap:8px 10px;font-size:12.5px;padding:12px 14px;flex-wrap:wrap;}
+  .legend-intro{width:100%;margin-bottom:4px;font-size:11px;}
+  .legend-item{flex:0 0 auto;}
+  .sort-select{font-size:13px;background-size:20px;}
+  .sort-by-label{font-size:10px;}
+  .select-wrap{min-width:0;}
+  .view-toggle{margin-left:auto;}
+  .view-btn{width:32px;height:32px;}
+  .filter-btn .tier-emoji{font-size:13px;}
+  .hero h1{font-size:2.2rem;}
+  .stats{gap:1.5rem;}
+  .search-input{font-size:16px;padding:13px 50px 13px 16px;}
+  .similar-wrap{grid-template-columns:repeat(2,1fr);}
+
+  /* --- Mobile modal: full-screen sheet; poster + content scroll together,
+         only the Close footer is pinned at the bottom --- */
+  .modal-overlay{padding:0;align-items:stretch;}
+  .modal{
+    max-width:100%;
+    max-height:100dvh;
+    height:100dvh;
+    border-radius:0;
+    border:none;
+    display:flex;
+    flex-direction:column;
+    transform:translateY(0);
+    overflow:hidden;
+  }
+  /* Wrap poster + body in one scroll region so the poster scrolls too */
+  .modal-poster-wrap{flex-shrink:0;}
+  .modal-scroll-region{
+    display:block;
+    flex:1 1 auto;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    min-height:0;
+  }
+  .modal-body{
+    padding:1rem;
+    padding-bottom:1rem;
+  }
+  /* Close/Share button: solid footer pinned at the very bottom, always visible */
+  .modal-actions{
+    position:static;
+    margin-top:0;
+    flex-shrink:0;
+    padding:12px 1rem calc(12px + env(safe-area-inset-bottom,0px));
+    background:var(--bg2);
+    border-top:1px solid var(--border);
+    gap:10px;
+    box-shadow:0 -4px 16px rgba(0,0,0,0.5);
+  }
+  .modal-close{width:44px;height:44px;font-size:24px;top:10px;right:10px;}
+  /* Toast sits above the pinned footer so it never covers Close */
+  .add-toast{bottom:90px;}
+  .modal-btn{padding:15px;font-size:15px;}
+  .add-modal-title, .add-title{font-size:1.4rem;}
+  .similar-card img, .similar-noposter{height:auto;}
+  .meta-grid{grid-template-columns:1fr 1fr;}
+  .breakdown-row{font-size:14px;}
+  .breakdown-label{font-size:14px;width:130px;}
+  .breakdown-score{font-size:15px;}
+  .modal-section-value{font-size:16.5px;line-height:1.75;}
+  .modal-section-label{font-size:12px;}
+  header{padding:0 1rem;height:56px;}
+  .logo{font-size:21px;}
+  .logo span{font-size:8.5px;letter-spacing:2.5px;margin-top:5px;line-height:1.4;}
+  .btn{padding:8px 12px;font-size:13px;}
+  .modal-poster{max-height:38vh;border-radius:0;}
+  .modal-poster-placeholder{border-radius:0;}
+  .modal-title{font-size:1.5rem;}
+  .add-modal{padding:1.5rem 1.25rem;}
+  .add-input{font-size:16px;}
+  .add-suggestion-item, .suggestion-item{padding:10px;}
+}
+@media(max-width:400px){
+  .filter-btn{padding:6px 10px;font-size:11px;}
+  .filters{gap:6px;}
+  .hero h1{font-size:1.9rem;}
+  .similar-wrap{grid-template-columns:repeat(2,1fr);}
+}
+
+.filter-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.filter-group-controls{margin-left:0;flex:1;display:flex;justify-content:space-between;gap:10px;}
+.filter-group-label{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#FFB020;margin-right:4px;white-space:nowrap;}
+.filter-divider{width:1px;align-self:stretch;background:rgba(255,255,255,0.12);margin:0 4px;}
+@media(max-width:640px){
+  .filter-group-controls{margin-left:0;width:100%;justify-content:flex-start;}
+  .filter-divider{display:none;}
+  .filter-group-label{width:100%;margin-bottom:2px;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Masala Meter<span>Gautham&#39;s Movie Recommendations</span></div>
+  <div class="header-actions">
+    <button class="btn btn-about" onclick="openAbout()">About Masala Meter</button>
+  </div>
+</header>
+
+<div class="streaming-carousel-section">
+  <p class="streaming-carousel-label"><span class="streaming-carousel-tv-icon">📺</span> New on Streaming</p>
+  <div class="streaming-carousel" id="streamingCarousel"></div>
+</div>
+
+<div class="hero">
+  <h1 class="hero-title">Find your next<br/><span>great Indian film</span></h1>
+  <p class="hero-desc">Honest scores from critic consensus, audience reception, and the <span class="inline-about-link" onclick="openAbout()">Gautham Score</span>. Find where to stream, and get similar-film suggestions — so you always know what's worth watching.</p>
+  <div class="hero-actions">
+    <button class="btn-hero btn-hero-primary" onclick="openAddModal()">+ Add a Movie</button>
+    <button class="btn-hero btn-hero-secondary" onclick="scrollToFilters()">Browse Database ↓</button>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat stat-clickable" onclick="filterByTierAndSort('all')"><div class="stat-num" id="totalCount">—</div><div class="stat-label">Movies</div></div>
+  <div class="stat stat-clickable" onclick="filterByTierAndSort('Vera Level')"><div class="stat-num" id="mustWatchCount">—</div><div class="stat-label">Vera Level</div></div>
+  <div class="stat stat-clickable" onclick="openAbout()"><div class="stat-num" id="avgScore">—</div><div class="stat-label">Avg Score</div></div>
+</div>
+
+<div class="filters" id="filtersBar">
+  <div class="filter-group filter-group-controls">
+  <div class="select-wrap select-wrap-sort">
+    <span class="select-icon sort-by-label">SORT BY:</span>
+    <select id="sortSelect" class="sort-select sort-select-labeled" onchange="onSortChange()">
+      <option value="streaming-since">📺 Newest to Stream</option>
+      <option value="year-new">Sort: Newest Released</option>
+      <option value="score-high">Sort: ★ Highest Rated</option>
+      <option value="recent">Sort: Recently Added</option>
+      <option value="year-old">Sort: Oldest Released</option>
+      <option value="score-low">Sort: Lowest Rated</option>
+      <option value="title">Sort: Title A–Z</option>
+    </select>
+  </div>
+  <div class="select-wrap select-wrap-lang">
+    <span class="select-icon sort-by-label">Languages</span>
+    <select id="langSelect" class="sort-select sort-select-labeled" onchange="onFilterSelect()">
+      <option value="all">All</option>
+      <option value="Tamil">Tamil</option>
+      <option value="Malayalam">Malayalam</option>
+      <option value="Hindi">Hindi</option>
+      <option value="Telugu">Telugu</option>
+      <option value="Kannada">Kannada</option>
+      <option value="English">English</option>
+    </select>
+  </div>
+  <div class="select-wrap select-wrap-year">
+    <span class="select-icon sort-by-label">Year</span>
+    <select id="yearSelect" class="sort-select sort-select-labeled" onchange="onFilterSelect()">
+      <option value="all">All</option>
+    </select>
+  </div>
+  <button id="allMoviesBtn" class="ctrl-btn" onclick="showAllMoviesNewest()">🎞️ All Movies</button>
+  <button id="newStreamBtn" class="ctrl-btn" onclick="toggleNewStreaming(this)">📺 New on Streaming<span id="newStreamCount"></span></button>
+  <button id="highRatedBtn" class="ctrl-btn" onclick="sortByHighestRated(this)">⭐ Highest Rated</button>
+  <button id="theaterWorthyBtn" class="ctrl-btn" onclick="toggleTheaterWorthy(this)">🎬 Theater Worthy</button>
+  </div>
+  <div class="view-toggle">
+    <button id="viewGrid" class="view-btn active" onclick="setView('grid')" title="Grid view" aria-label="Grid view">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    </button>
+    <button id="viewList" class="view-btn" onclick="setView('list')" title="List view" aria-label="List view">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4" width="4" height="4" rx="1"/><rect x="9" y="5" width="12" height="2" rx="1"/><rect x="3" y="10" width="4" height="4" rx="1"/><rect x="9" y="11" width="12" height="2" rx="1"/><rect x="3" y="16" width="4" height="4" rx="1"/><rect x="9" y="17" width="12" height="2" rx="1"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="search-wrap-outer">
+  <div class="search-wrap search-wrap-below-filters">
+    <input class="search-input" type="text" placeholder="Search the database by title, actor, genre..." id="searchInput" oninput="handleSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();filterMovies();hideSuggestions();}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" name="movie-search-field"/>
+    <div id="suggestions" class="suggestions"></div>
+    <button class="search-icon" onclick="filterMovies();hideSuggestions();" title="Search" aria-label="Search"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
+  </div>
+  <p class="search-hint">Can't find a movie? Tap "<span class="hint-add-link" onclick="openAddModal()">+ Add Movie</span>" to add any film.</p>
+</div>
+
+<div class="grid-wrap">
+  <div class="grid-header">
+    <p class="section-title" id="gridLabel">All Movies</p>
+    <div class="score-legend">
+      <span class="legend-intro">Gautham Score /100:</span>
+      <span class="legend-item legend-clickable" onclick="toggleTierFilter('Vera Level', this)"><span style="color:#10D96A;">🔥🔥🔥🔥</span> 85+</span>
+      <span class="legend-item legend-clickable" onclick="toggleTierFilter('Semma', this)"><span style="color:#5BA8FF;">🔥🔥🔥</span> 75+</span>
+      <span class="legend-item legend-clickable" onclick="toggleTierFilter('Parava illa', this)"><span style="color:#FFB020;">🔥🔥</span> 50+</span>
+      <span class="legend-item legend-clickable" onclick="toggleTierFilter('Mokkai', this)"><span style="color:#FF5C7A;">🔥</span> &lt;50</span>
+      <span class="legend-clear" id="legendClear" onclick="clearTierFilter()" style="display:none;">✕ Clear</span>
+    </div>
+  </div>
+  <div class="movies-grid" id="moviesGrid">
+    <div class="loading"><div class="spinner"></div>Loading movies...</div>
+  </div>
+</div>
+
+<footer>Built with ❤️ by <span>Gautham</span> · Powered by TMDB, OMDB & Gemini<br><span style="font-size:11px;color:var(--text3);">This product uses the TMDB API but is not endorsed or certified by TMDB.</span><br><span style="font-size:11px;color:var(--text3);display:inline-block;margin-top:8px;max-width:580px;">Scores are a weighted average across seven dimensions — writing, emotional impact, engagement, performances, rewatchability, critical consensus, and audience reception — drawn from reputation-weighted critics and calibrated against reference films. Even so, taste is personal: you may love what scored low, or vice versa. A well-researched guide, not a verdict. 🍿</span></footer>
+
+<!-- Movie Detail Modal -->
+<div class="modal-overlay" id="detailModal" onclick="closeModalOverlay(event,'detailModal')">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- Add Movie Modal -->
+<div class="modal-overlay" id="addModal" onclick="closeModalOverlay(event,'addModal')">
+  <div class="add-modal">
+    <h2 class="add-title">Add a Movie</h2>
+    <p class="add-desc">Type a movie name, actor, or director — we'll automatically fetch ratings, reviews, trailer and streaming info from TMDB, OMDB and Gemini.</p>
+    <div class="status-msg" id="addStatus"></div>
+    <div style="position:relative;">
+      <input class="add-input" type="text" id="movieTitleInput" placeholder="Movie, actor, or director — e.g. Vikram, Fahadh Faasil, Mani Ratnam" autocomplete="new-password" autocapitalize="words" autocorrect="off" spellcheck="false" name="movie-add-field" oninput="searchTMDBSuggestions()" onkeydown="if(event.key==='Enter'){event.preventDefault();submitMovie();}"/>
+      <div id="addSuggestions" class="suggestions"></div>
+    </div>
+    <p class="add-hint">💡 If the wrong movie shows up, try adding the language — e.g. "Gilli Tamil"</p>
+    <div class="add-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" style="flex:2" id="addBtn" onclick="submitMovie()">Fetch & Add Movie</button>
+    </div>
+  </div>
+</div>
+
+<!-- About Modal -->
+<div class="modal-overlay" id="aboutModal" onclick="closeModalOverlay(event,'aboutModal')">
+  <div class="about-modal">
+    <div class="about-header">
+      <h2 class="about-title">Masala<br/><span>Meter</span></h2>
+      <button class="modal-close" style="position:relative;top:auto;right:auto;" onclick="document.getElementById('aboutModal').classList.remove('open')">✕</button>
+    </div>
+    <p style="font-size:16px;color:var(--text);margin-bottom:1.5rem;line-height:1.7;">A curated recommendation system for Indian cinema. Combines critic consensus, audience reception, and a custom scoring model to surface films worth your time.</p>
+
+    <div class="about-section">
+      <p class="about-section-label">Gautham Score</p>
+      <div class="score-grid">
+        <div class="score-card"><div class="score-range" style="color:#10D96A">85–100</div><div class="score-label">🔥🔥🔥🔥 Vera Level</div><div class="score-bar" style="background:#10D96A"></div></div>
+        <div class="score-card"><div class="score-range" style="color:#5BA8FF">75–84</div><div class="score-label">🔥🔥🔥 Semma</div><div class="score-bar" style="background:#5BA8FF"></div></div>
+        <div class="score-card"><div class="score-range" style="color:#FFB020">50–74</div><div class="score-label">🔥🔥 Parava illa</div><div class="score-bar" style="background:#FFB020"></div></div>
+        <div class="score-card"><div class="score-range" style="color:#FF5C7A">Below 50</div><div class="score-label">🔥 Mokkai</div><div class="score-bar" style="background:#FF5C7A"></div></div>
+      </div>
+      <p style="font-size:14px;color:var(--text);line-height:1.6;">Score reflects: Writing quality · Emotional impact · Engagement & pacing · Performances · Rewatchability · Critical consensus · Audience reception</p>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">Review Sources</p>
+      <div class="source-row"><span>Lead film critic</span><span class="source-weight">40%</span></div>
+      <div class="source-row"><span>The Hindu</span><span class="source-weight">20%</span></div>
+      <div class="source-row"><span>Times of India</span><span class="source-weight">15%</span></div>
+      <div class="source-row"><span>Cinema Express</span><span class="source-weight">10%</span></div>
+      <div class="source-row"><span>Behindwoods</span><span class="source-weight">10%</span></div>
+      <div class="source-row"><span>Reddit r/Kollywood</span><span class="source-weight">5%</span></div>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">🎬 Theater Worthy</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">A separate question from the Gautham Score — does this film's <b>scale, visual effects, sound design, or communal mass-audience energy</b> make the theatrical experience meaningfully better than watching at home? A great small drama can score high without earning this badge (nothing's lost on a couch); a spectacle film can earn it even with a middling score. This badge only appears for films released in roughly the last 3 months — old catalog titles are long out of theaters, so the flag isn't shown for them even if it applies.</p>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">Confidence Score</p>
+      <div class="conf-row">
+        <span class="conf-badge tier-vera">High</span>
+        <span style="font-size:15px;color:var(--text)">Multiple major critics broadly agree</span>
+      </div>
+      <div class="conf-row">
+        <span class="conf-badge tier-parava">Medium</span>
+        <span style="font-size:15px;color:var(--text)">Some coverage, mixed consensus</span>
+      </div>
+      <div class="conf-row">
+        <span class="conf-badge tier-mokkai">Low</span>
+        <span style="font-size:15px;color:var(--text)">Limited critic coverage</span>
+      </div>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">Important Notes</p>
+      <div class="about-note">Every score is a weighted average across seven dimensions — writing quality, emotional impact, engagement & pacing, performances, rewatchability, critical consensus, and audience reception — drawing on reputation-weighted critics and calibrated against reference films at each tier. It's a researched, consistent yardstick, not a casual rating. That said, taste is personal: even a rigorous score can't predict what <em>you</em> will love. If a pick doesn't land for you, that's the gap between aggregate quality and individual taste — not a flaw in either. 🍿</div>
+      <div class="about-note">When multiple films share the same title, this database always prefers the Indian release.</div>
+      <div class="about-note">The Gautham Score is a recommendation tool, not an objective measure of quality. Scores may be revised as more reviews become available.</div>
+      <div class="about-note">Streaming availability and OTT information may change over time.</div>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">Disclaimer</p>
+      <div class="about-note">This is a non-commercial fan project created for personal and educational enjoyment of Indian cinema. It is free, carries no advertising, sells nothing, and collects no user data.</div>
+      <div class="about-note">All ratings, scores, and review summaries are <strong>statements of subjective opinion</strong> — not assertions of fact — offered as film criticism and commentary. They are not intended to defame, disparage, or cause harm to any film, studio, artist, or individual.</div>
+      <div class="about-note">Movie titles, posters, images, and factual data are the property of their respective owners and are used here for identification, commentary, and reference purposes, consistent with fair-use principles. No ownership is claimed over any third-party material.</div>
+      <div class="about-note">No guarantee is made as to the accuracy or completeness of any information. Use this site as a guide only.</div>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">Data & Attribution</p>
+      <div class="about-note" style="border-left-color:#01b4e4;">This product uses the TMDB API but is not endorsed or certified by TMDB. Movie data, posters, and images are provided by <a href="https://www.themoviedb.org/" target="_blank" style="color:#01b4e4;">The Movie Database (TMDB)</a>.</div>
+      <div class="about-note">IMDb ratings are shown for reference only, sourced via the OMDB API. This site is not affiliated with, endorsed by, or connected to IMDb or Amazon.</div>
+      <div class="about-note">Streaming platform names (Netflix, Amazon Prime Video, Disney+ Hotstar, ZEE5, and others) and Spotify are used only to identify where a film or song may be found, with links to those services' own public pages. This site is not affiliated with, endorsed by, or sponsored by Netflix, Amazon, Spotify, or any other streaming or music platform referenced.</div>
+      <div class="about-note">This is a personal, non-commercial project made for friends. No ads, no payments, no data selling. Movie posters remain the property of their respective studios and are shown for identification purposes.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbz9ngvixIyBdUhi5caTheX74ppJyQtjFB_rvBbIfs4OS3nLJ-sY8vRLUDmSEZYbaEp2/exec";
+let allMovies = [];
+let currentFilter = "all";
+// Separate from currentFilter — this refines WITHIN whatever's currently
+// showing (e.g. New on Streaming) rather than replacing it. Set by clicking
+// a fire-tier legend item; click the same one again to clear it.
+let currentTierFilter = "all";
+
+function getBarColor(score) {
+  const s = Number(score);
+  if (s >= 85) return "#10D96A";
+  if (s >= 70) return "#5BA8FF";
+  if (s >= 50) return "#FFB020";
+  return "#FF5C7A";
+}
+
+function buildStreamingButtons(m) {
+  let ott = m.OTTInfo || m.OTTinfo || m.Streaming || "";
+  // TMDB/JustWatch often lists an ad-supported tier as a SEPARATE entry
+  // alongside the base platform (e.g. "Netflix, Netflix Standard with Ads")
+  // — redundant for display purposes, so drop the "with ads" variants and
+  // just show the clean platform name once.
+  if (ott) {
+    const cleaned = ott.split(",")
+      .map(s => s.trim())
+      .filter(s => !/with ads/i.test(s))
+      .filter((s, i, arr) => arr.indexOf(s) === i) // dedupe
+      .join(", ");
+    // Fallback: if filtering removed everything (only an ad-tier was ever
+    // listed, no clean base name), keep the original rather than show nothing.
+    if (cleaned) ott = cleaned;
+  }
+  const title = m.Title || "";
+  const jwLink = `https://www.justwatch.com/us/search?q=${encodeURIComponent(title)}`;
+  const reelgoodLink = `https://reelgood.com/search?q=${encodeURIComponent(title)}`;
+
+  // Guard: if the film hasn't been released yet, never show streaming/theaters —
+  // TMDB sometimes lists providers for announced/pre-order titles before release.
+  const relRaw = m.ReleaseDate || "";
+  const relTime = new Date(relRaw).getTime();
+  if (!isNaN(relTime) && relTime > Date.now()) {
+    const relStr = new Date(relTime).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+    return `<div class="modal-section"><div class="modal-section-label">Where to Watch</div>
+      <div style="color:#FFB020;font-size:14px;font-weight:700;margin-bottom:6px;">🗓️ Not released yet</div>
+      <div class="ott-note">Expected ${relStr}. <a href="${jwLink}" target="_blank" style="color:#FFB020;">Check JustWatch →</a></div></div>`;
+  }
+
+  // No streaming data — figure out if it's likely still in theaters (recent release)
+  if (!ott) {
+    if (isInTheaters(m)) {
+      const showtimes = `https://www.google.com/search?q=${encodeURIComponent(title + " showtimes near me")}`;
+      return `<div class="modal-section"><div class="modal-section-label">Where to Watch</div>
+        <div style="color:#FFB020;font-size:14px;font-weight:700;margin-bottom:8px;">🎬 Likely in Theaters</div>
+        <div class="ott-wrap">
+          <a href="${showtimes}" target="_blank" class="ott-btn" style="--ott-color:#E8442C">🎟️ Find Showtimes Near You</a>
+        </div>
+        <div class="ott-note">Not on streaming yet. <a href="${jwLink}" target="_blank" style="color:#FFB020;">Check JustWatch →</a></div></div>`;
+    }
+
+    // Older film with no streaming data — show a JustWatch lookup link
+    return `<div class="modal-section"><div class="modal-section-label">Where to Watch</div>
+      <div class="ott-note">No US streaming data found. <a href="${jwLink}" target="_blank" style="color:#FFB020;">Check JustWatch →</a></div></div>`;
+  }
+
+  // Known platforms: name, brand color, search URL builder
+  const platforms = [
+    { keys:["netflix"], label:"Netflix", color:"#E50914", url:t=>`https://www.netflix.com/search?q=${encodeURIComponent(t)}` },
+    { keys:["prime","amazon"], label:"Prime Video", color:"#00A8E1", url:t=>`https://www.primevideo.com/search?phrase=${encodeURIComponent(t)}` },
+    { keys:["hotstar","disney"], label:"Hotstar", color:"#1F80E0", url:t=>`https://www.hotstar.com/in/search?q=${encodeURIComponent(t)}` },
+    { keys:["sun nxt","sunnxt"], label:"Sun NXT", color:"#E8442C", url:t=>`https://www.sunnxt.com/search/${encodeURIComponent(t)}` },
+    { keys:["zee","zee5"], label:"ZEE5", color:"#6A1B9A", url:t=>`https://www.zee5.com/search?q=${encodeURIComponent(t)}` },
+    { keys:["sony","liv"], label:"Sony LIV", color:"#000000", url:t=>`https://www.sonyliv.com/search?searchTerm=${encodeURIComponent(t)}` },
+    { keys:["aha"], label:"aha", color:"#FF7E00", url:t=>`https://www.aha.video/search?q=${encodeURIComponent(t)}` },
+    { keys:["jiocinema","jio"], label:"JioCinema", color:"#A020F0", url:t=>`https://www.jiocinema.com/search/${encodeURIComponent(t)}` },
+    { keys:["hulu"], label:"Hulu", color:"#1CE783", url:t=>`https://www.hulu.com/search?q=${encodeURIComponent(t)}` },
+    { keys:["youtube"], label:"YouTube", color:"#FF0000", url:t=>`https://www.youtube.com/results?search_query=${encodeURIComponent(t+" full movie")}` },
+  ];
+
+  const ottLower = ott.toLowerCase();
+  const found = [];
+  platforms.forEach(p => {
+    if (p.keys.some(k => ottLower.includes(k))) {
+      found.push(`<a href="${p.url(title)}" target="_blank" class="ott-btn" style="--ott-color:${p.color}">${p.label}</a>`);
+    }
+  });
+
+  // If no known platform matched, just show the text
+  // Two independent sources, not just one — JustWatch is actually the same
+  // data TMDB's own API pulls from, so Reelgood (a separate company/data
+  // pipeline) gives a genuinely independent second check.
+  const jwNote = `<a href="${jwLink}" target="_blank" style="color:#FFB020;font-size:12px;">Verify on JustWatch →</a> · <a href="${reelgoodLink}" target="_blank" style="color:#FFB020;font-size:12px;">Reelgood →</a>`;
+  const inner = found.length
+    ? `<div class="ott-wrap">${found.join("")}</div><div class="ott-note">${ott} · ${jwNote}</div>`
+    : `<div class="modal-section-value">${ott} · ${jwNote}</div>`;
+
+  // "New on Streaming" badge — shown when the film is on streaming AND was
+  // released within the last 5 months (matches the New on Streaming filter).
+  let newBadge = "";
+  if (ott) {
+    const relTime = new Date(m.ReleaseDate || m.Year || "").getTime();
+    const released = !isNaN(relTime) && relTime <= Date.now();
+    const recentRelease = released && relTime >= Date.now() - 5*30*24*60*60*1000;
+    if (recentRelease) {
+      newBadge = `<div style="margin-top:8px;color:#1DD3B0;font-size:13px;font-weight:600;">📺 New on Streaming</div>`;
+    }
+  }
+
+  // Date it actually first became available on streaming (separate from
+  // theatrical release date above it in the modal).
+  let sinceBadge = "";
+  const sinceRaw = m.StreamingSince || m.Streamingsince || "";
+  const sinceTime = new Date(sinceRaw).getTime();
+  if (ott && !isNaN(sinceTime)) {
+    const sinceStr = new Date(sinceTime).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+    sinceBadge = `<div style="margin-top:6px;color:var(--text2);font-size:12px;">Available to stream since ${sinceStr}</div>`;
+  }
+
+  return `<div class="modal-section"><div class="modal-section-label">Where to Watch</div>${inner}${newBadge}${sinceBadge}</div>`;
+}
+
+function buildMetaGrid(m) {
+  const cast = m.Cast || "";
+  const music = m.MusicDirector || "";
+  const songs = m.HitSongs || "";
+  let castPhotos = [];
+  try {
+    if (m.CastPhotos) castPhotos = JSON.parse(m.CastPhotos);
+  } catch (e) { castPhotos = []; }
+
+  let html = "";
+  if (castPhotos.length) {
+    // Photo strip — only for movies re-scored since this feature was added.
+    const photoItems = castPhotos.map(p => `
+      <div class="cast-photo-item">
+        ${p.photo
+          ? `<img class="cast-photo-img" src="${p.photo}" alt="${p.name}" loading="lazy"/>`
+          : `<div class="cast-photo-placeholder">🎭</div>`}
+        <a class="cast-photo-name" href="https://www.google.com/search?q=${encodeURIComponent(p.name + ' actor')}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${p.name}</a>
+      </div>`).join("");
+    html += `<div class="modal-section"><div class="modal-section-label">Cast</div><div class="cast-photo-strip">${photoItems}</div></div>`;
+  } else if (cast) {
+    // Fallback for movies not yet re-scored since cast photos were added.
+    html += `<div class="meta-grid"><div class="meta-block"><div class="meta-block-label">Cast</div><div class="meta-block-value">${cast}</div></div></div>`;
+  }
+
+  if (music) html += `<div class="meta-grid"><div class="meta-block"><div class="meta-block-label">Music</div><div class="meta-block-value">${music}</div></div></div>`;
+  if (songs) {
+    const movieName = m.Title || "";
+    const songLinks = songs.split(",").map(s => {
+      const song = s.trim();
+      if (!song) return "";
+      const query = encodeURIComponent(song + " " + movieName);
+      return `<a href="https://open.spotify.com/search/${query}/tracks" target="_blank" class="song-link">♪ ${song}</a>`;
+    }).filter(Boolean).join("");
+    html += `<div class="modal-section"><div class="modal-section-label">Hit Songs</div><div class="songs-wrap">${songLinks}</div></div>`;
+  }
+  return html;
+}
+
+function buildStoryline(text) {
+  const t = (text || "").trim();
+  if (!t) return "";
+  // Always collapsed to one line by default — click "Read more" to reveal.
+  const id = "story" + Math.random().toString(36).slice(2, 8);
+  return `<div class="modal-section-value story-clamp" id="${id}">${t}</div>
+    <button class="story-toggle" onclick="toggleStory('${id}', this)">Read more ▾</button>`;
+}
+
+function toggleStory(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const expanded = el.classList.toggle("story-open");
+  btn.textContent = expanded ? "Read less ▴" : "Read more ▾";
+}
+
+function buildTrivia(m) {
+  const raw = (m.Trivia || "").trim();
+  if (!raw) return "";
+  // Split on pipe (preferred) or fall back to newlines
+  const facts = raw.split("|").map(f => f.trim()).filter(Boolean);
+  if (!facts.length) return "";
+  const items = facts.map(f => `<li class="trivia-item">${f}</li>`).join("");
+  return `<div class="modal-section"><div class="modal-section-label">Trivia</div><ul class="trivia-list">${items}</ul></div>`;
+}
+
+function buildScoreBreakdown(m) {
+  const pillars = [
+    {key:"WritingQuality", label:"Writing Quality"},
+    {key:"EmotionalImpact", label:"Emotional Impact"},
+    {key:"EngagementPacing", label:"Engagement & Pacing"},
+    {key:"Performances", label:"Performances"},
+    {key:"Rewatchability", label:"Rewatchability"},
+    {key:"CriticalConsensus", label:"Critical Consensus"},
+    {key:"AudienceReception", label:"Audience Reception"}
+  ];
+  const hasPillars = pillars.some(p => m[p.key] && Number(m[p.key]) > 0);
+  if (!hasPillars) return "";
+  const rows = pillars.map(p => {
+    const score = Number(m[p.key]) || 0;
+    if (!score) return "";
+    const color = getBarColor(score);
+    return `<div class="breakdown-row">
+      <span class="breakdown-label">${p.label}</span>
+      <div class="breakdown-bar-wrap"><div class="breakdown-bar" data-target="${score}" style="width:0%;background:${color}"></div></div>
+      <span class="breakdown-score" style="color:${color}">${score}</span>
+    </div>`;
+  }).join("");
+  return `<div class="score-breakdown"><div class="breakdown-title">Score Breakdown</div>${rows}</div>`;
+}
+
+let cameFromSharedLink = false;
+async function loadMovies() {
+  try {
+    const res = await fetch(API_URL + "?action=movies");
+    const data = await res.json();
+    // Only show fully-processed movies — skip rows that have a title but no
+    // score yet (incomplete/stuck entries that would render as blank cards).
+    allMovies = data.filter(m => m.Title && m.GauthamScore !== "" && m.GauthamScore != null);
+    updateStats();
+    updateNewStreamingBadge();
+    populateYears();
+    renderStreamingCarousel();
+
+    // Landing page defaults to "New on Streaming" — but never show a new
+    // visitor an empty grid. If nothing currently qualifies, fall back to
+    // the normal full catalog view instead.
+    const hasNewStreaming = allMovies.some(isNewOnStreaming);
+    const btn = document.getElementById("newStreamBtn");
+    const sortSelect = document.getElementById("sortSelect");
+    if (hasNewStreaming) {
+      currentFilter = "new-streaming";
+      currentSort = "streaming-since";
+      if (btn) btn.classList.add("active");
+      if (sortSelect) sortSelect.value = "streaming-since";
+    } else {
+      currentFilter = "all";
+      currentSort = "year-new";
+      if (sortSelect) sortSelect.value = "year-new";
+    }
+
+    filterMovies();
+    // If opened via a shared link (?movie=Title), open that movie's review.
+    // Match against allMovies, then open by setting the current array so the
+    // index lines up (openMovie reads from _currentMovies).
+    const params = new URLSearchParams(location.search);
+    const shared = params.get("movie");
+    if (shared) {
+      const want = shared.trim().toLowerCase();
+      let target = allMovies.find(m => String(m.Title||"").trim().toLowerCase() === want);
+      if (!target) target = allMovies.find(m => String(m.Title||"").trim().toLowerCase().includes(want));
+      if (target) {
+        cameFromSharedLink = true;
+        const allIdx = allMovies.indexOf(target);
+        setTimeout(() => {
+          const prev = window._currentMovies;      // the filtered grid view
+          window._currentMovies = allMovies;        // align index for this open
+          openMovie(allIdx);
+          window._currentMovies = prev;             // restore so card clicks stay correct
+          cameFromSharedLink = false;               // only show the banner for this first shared movie
+        }, 400);
+      }
+    }
+  } catch(err) {
+    document.getElementById("moviesGrid").innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">⚠️</div><div class="empty-title">Couldn't load movies</div><p>Check your connection and try refreshing.</p></div>`;
+  }
+}
+
+function updateStats() {
+  const total = allMovies.length;
+  const vera = allMovies.filter(m => getTierFromScore(m.GauthamScore) === "Vera Level").length;
+  const scores = allMovies.map(m => Number(m.GauthamScore)).filter(s => s > 0);
+  const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
+  countUp(document.getElementById("totalCount"), total);
+  countUp(document.getElementById("mustWatchCount"), vera);
+  countUp(document.getElementById("avgScore"), avg);
+}
+
+// Animate a number ticking up from 0 to its value
+function countUp(el, target) {
+  if (!el) return;
+  if (!target) { el.textContent = "—"; return; }
+  const duration = 1800;
+  const start = performance.now();
+  function tick(now) {
+    const p = Math.min((now - start) / duration, 1);
+    // ease-out
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(target * eased);
+    if (p < 1) requestAnimationFrame(tick);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(tick);
+}
+
+function getTierFromScore(score) {
+  const s = Number(score);
+  if (s >= 85) return "Vera Level";
+  if (s >= 75) return "Semma";
+  if (s >= 50) return "Parava illa";
+  if (s > 0) return "Mokkai";
+  return null;
+}
+
+// Shared definition used by both the "New on Streaming" filter toggle and
+// the small ribbon badge on movie cards, so they always agree with each
+// other: on US streaming right now, AND actually LANDED on streaming within
+// the last 5 months (StreamingSince) — not when it was theatrically
+// released. A film can release in theaters, then hit streaming many months
+// later; it should still count as "new" the moment it actually arrives.
+function isNewOnStreaming(m) {
+  const ott = m.OTTInfo || m.OTTinfo || m.Streaming || "";
+  if (!ott) return false;
+  const cutoff = Date.now() - 5 * 30 * 24 * 60 * 60 * 1000;
+
+  const sinceRaw = m.StreamingSince || m.Streamingsince || "";
+  const since = new Date(sinceRaw).getTime();
+  if (!isNaN(since)) {
+    if (since > Date.now()) return false;
+    return since >= cutoff;
+  }
+
+  // Fallback for older rows that don't have a StreamingSince stamp yet —
+  // use release date as a rough approximation until they're re-scored.
+  const relRaw = m.ReleaseDate || m.Year || "";
+  const released = new Date(relRaw).getTime();
+  if (isNaN(released)) return false;
+  if (released > Date.now()) return false;
+  return released >= cutoff;
+}
+
+// "Worth watching in theaters" is a genuinely different question from the
+// film's overall quality score — Gemini's TheaterWorthy field answers "does
+// this film's scale/spectacle/sound genuinely benefit from a theater" for
+// EVERY movie, but the badge only makes sense to SHOW for genuinely recent
+// releases (an old catalog film flagged this way is moot — it's long out
+// of theaters). ~90 days is a reasonable theatrical-window length.
+function isTheaterWorthy(m) {
+  if (m.TheaterWorthy !== "Yes") return false;
+  const relRaw = m.ReleaseDate || m.Year || "";
+  const released = new Date(relRaw).getTime();
+  if (isNaN(released)) return false;
+  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  return released >= cutoff && released <= Date.now() + 14 * 24 * 60 * 60 * 1000; // small forward buffer for imminent releases
+}
+
+// Builds the Year dropdown's options from whatever years actually exist in
+// the catalog, newest first — same pattern as the old Genre dropdown used
+// to work, just for Year instead.
+// Carousel indexes against allMovies directly, but openMovie() reads from
+// window._currentMovies (the currently-filtered grid) — those can differ
+// in size/order, so a raw allMovies index could open the WRONG movie.
+// Same safe pattern already used for shared-link opens: swap in allMovies
+// temporarily, open, then restore whatever the grid was actually showing.
+function openMovieFromCarousel(idx) {
+  const prev = window._currentMovies;
+  window._currentMovies = allMovies;
+  openMovie(idx);
+  window._currentMovies = prev;
+}
+
+// Populates the "New on Streaming" carousel at the very top of the page —
+// real poster content up front instead of just a text hero, matching the
+// pattern from Letterboxd/JustWatch/Hulu of leading with actual movies.
+function renderStreamingCarousel() {
+  const container = document.getElementById("streamingCarousel");
+  if (!container) return;
+  const streaming = allMovies
+    .filter(isNewOnStreaming)
+    .sort((a,b) => streamingSinceKey(b) - streamingSinceKey(a))
+    .slice(0, 20);
+
+  if (!streaming.length) {
+    container.innerHTML = `<div class="carousel-empty">Nothing new on streaming right now — check back soon.</div>`;
+    return;
+  }
+
+  container.innerHTML = streaming.map(m => {
+    const idx = allMovies.indexOf(m);
+    return `<div class="carousel-card" onclick="openMovieFromCarousel(${idx})">
+      <div class="carousel-poster-wrap">
+        ${m.PosterURL
+          ? `<img class="carousel-poster" src="${m.PosterURL}" alt="${m.Title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="carousel-poster-placeholder" style="display:none">🎬</div>`
+          : `<div class="carousel-poster-placeholder">🎬</div>`}
+      </div>
+      <div class="carousel-title">${m.Title}</div>
+    </div>`;
+  }).join("");
+
+  setupCarouselAutoScroll(container);
+}
+
+// Advances the carousel by one card every 5 seconds, looping back to the
+// start once it reaches the end. Pauses whenever the person is actually
+// touching/dragging it themselves, so auto-scroll never fights a manual
+// swipe — resumes a couple seconds after they let go.
+let carouselAutoScrollTimer = null;
+function setupCarouselAutoScroll(container) {
+  if (carouselAutoScrollTimer) clearInterval(carouselAutoScrollTimer);
+
+  const tick = () => {
+    const card = container.querySelector(".carousel-card");
+    if (!card) return;
+    const step = card.offsetWidth + 12; // card width + gap
+    const atEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 10;
+    container.scrollTo({
+      left: atEnd ? 0 : container.scrollLeft + step,
+      behavior: "smooth"
+    });
+  };
+
+  carouselAutoScrollTimer = setInterval(tick, 5000);
+
+  let resumeTimeout = null;
+  const pause = () => {
+    clearInterval(carouselAutoScrollTimer);
+    clearTimeout(resumeTimeout);
+  };
+  const resumeSoon = () => {
+    clearTimeout(resumeTimeout);
+    resumeTimeout = setTimeout(() => {
+      carouselAutoScrollTimer = setInterval(tick, 5000);
+    }, 3000);
+  };
+
+  container.addEventListener("touchstart", pause, { passive: true });
+  container.addEventListener("touchend", resumeSoon, { passive: true });
+  container.addEventListener("mousedown", pause);
+  container.addEventListener("mouseup", resumeSoon);
+}
+
+function populateYears() {
+  const sel = document.getElementById("yearSelect");
+  if (!sel) return;
+  const years = [...new Set(allMovies.map(m => String(m.Year||"").trim()).filter(Boolean))]
+    .sort((a, b) => Number(b) - Number(a));
+  sel.innerHTML = '<option value="all">All</option>' +
+    years.map(y => `<option value="${y}">${y}</option>`).join("");
+}
+
+function getTierClass(tier, score) {
+  const t = score ? getTierFromScore(score) : tier;
+  if(t==="Vera Level") return "tier-vera";
+  if(t==="Semma") return "tier-semma";
+  if(t==="Parava illa") return "tier-parava";
+  if(t==="Mokkai") return "tier-mokkai";
+  return "tier-unknown";
+}
+
+function getTierEmoji(tier, score) {
+  const t = score ? getTierFromScore(score) : tier;
+  if(t==="Vera Level") return "🔥🔥🔥🔥";
+  if(t==="Semma") return "🔥🔥🔥";
+  if(t==="Parava illa") return "🔥🔥";
+  if(t==="Mokkai") return "🔥";
+  return "";
+}
+
+function getTierLabel(tier, score) {
+  const legacy = {
+    "Must Watch": "Vera Level",
+    "Strong Recommend": "Semma",
+    "Worth Watching": "Parava illa",
+    "Skip": "Mokkai"
+  };
+  if(score) return getTierFromScore(score) || "";
+  return legacy[tier] || tier || "";
+}
+
+function setView(view) {
+  const grid = document.getElementById("moviesGrid");
+  const gridBtn = document.getElementById("viewGrid");
+  const listBtn = document.getElementById("viewList");
+  if(view === "list") {
+    grid.classList.add("list-view");
+    listBtn.classList.add("active");
+    gridBtn.classList.remove("active");
+  } else {
+    grid.classList.remove("list-view");
+    gridBtn.classList.add("active");
+    listBtn.classList.remove("active");
+  }
+}
+
+function renderMovies(movies) {
+  window._currentMovies = movies;
+  const grid = document.getElementById("moviesGrid");
+  if(!movies.length){
+    const currentQuery = (document.getElementById("searchInput")?.value || "").trim();
+    const safeQuery = currentQuery.replace(/'/g, "\\'");
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <div class="empty-icon">🎬</div>
+      <div class="empty-title">No movies found</div>
+      <p>Try a different search or filter.</p>
+      ${currentQuery ? `<button class="btn btn-primary" style="margin-top:1rem;" onclick="openAddModal('${safeQuery}')">+ Add "${currentQuery}"</button>` : ""}
+    </div>`;
+    return;
+  }
+  grid.innerHTML = movies.map((m,i)=>{
+    const isNew = isNewOnStreaming(m);
+    const newRibbon = isNew ? `<div class="card-new-ribbon">New to Stream</div>` : "";
+    const theaterBadge = isTheaterWorthy(m) ? `<div class="card-theater-badge">🎬 Theater Worthy</div>` : "";
+    return `
+    <div class="card" onclick="openMovie(${i})" style="animation-delay:${Math.min(i,12)*0.04}s">
+      <div class="card-poster-wrap">
+      ${m.PosterURL
+        ?`<img class="card-poster" src="${m.PosterURL}" alt="${m.Title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="card-poster-placeholder" style="display:none">🎬</div>`
+        :`<div class="card-poster-placeholder">🎬</div>`}
+      ${newRibbon}
+      ${theaterBadge}
+      </div>
+      <div class="card-body">
+        <div class="card-info">
+          <div class="card-title">${m.Title}</div>
+          <div class="card-meta">${m.Year||""} ${m.Director?"· "+m.Director:""}</div>
+        </div>
+        <span class="card-score ${getTierClass(m.ConsensusTier, m.GauthamScore)}">${m.GauthamScore||"—"} ${getTierEmoji(m.ConsensusTier, m.GauthamScore)}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// Shared "in theaters" check: recent release (<=45 days) with no streaming data
+function isInTheaters(m) {
+  const ott = m.OTTInfo || m.OTTinfo || m.Streaming || "";
+  if (ott) return false;
+  const relRaw = m.ReleaseDate || m.Year || "";
+  const relTime = new Date(relRaw).getTime();
+  if (isNaN(relTime)) return false;
+  const daysSince = (Date.now() - relTime) / (24*60*60*1000);
+  return daysSince >= 0 && daysSince <= 60;
+}
+
+// Fuzzy match — handles partial words and minor misspellings
+function fuzzyMatch(str, query) {
+  if (str === null || str === undefined || !query) return false;
+  str = String(str).toLowerCase();
+  query = String(query).toLowerCase().trim();
+  if (!query) return false;
+
+  // 1. Direct substring match
+  if (str.includes(query)) return true;
+
+  // 2. Space-insensitive match: "maniratnam" should match "mani ratnam"
+  //    Compare with all spaces removed on both sides.
+  const strNoSpace = str.replace(/\s+/g, "");
+  const queryNoSpace = query.replace(/\s+/g, "");
+  if (queryNoSpace.length >= 3 && strNoSpace.includes(queryNoSpace)) return true;
+
+  // 3. Multi-word query: EVERY query word must appear in str (as a substring).
+  //    This keeps "mani ratnam" from matching unrelated films — both words required.
+  const words = query.split(/\s+/).filter(Boolean);
+  if (words.length > 1) {
+    if (words.every(w => str.includes(w))) return true;
+    return false; // multi-word: if not all words present, no match (prevents false positives)
+  }
+
+  // 4. Single-word typo tolerance (only for words long enough to be meaningful).
+  //    Require the candidate word to START the same way, to avoid loose matches.
+  if (query.length >= 4) {
+    const strWords = str.split(/\s+/);
+    return strWords.some(sw => {
+      if (Math.abs(sw.length - query.length) > 2) return false;
+      if (sw[0] !== query[0]) return false; // must share first letter
+      let matches = 0;
+      for (let i = 0; i < Math.min(sw.length, query.length); i++) {
+        if (sw[i] === query[i]) matches++;
+      }
+      return matches / Math.max(sw.length, query.length) > 0.8;
+    });
+  }
+
+  return false;
+}
+
+function handleSearchInput() {
+  filterMovies();
+  showSuggestions();
+}
+
+// Shared by both the suggestions dropdown and the main grid search — a
+// title match should always outrank a match buried in a long review
+// paragraph. Without this, common words (e.g. "with") match almost the
+// entire catalog via description text alone, making search feel broken
+// even though it's technically "working."
+function relevanceScore(m, q) {
+  const title = String(m.Title || "").toLowerCase();
+  if (title === q) return 100;                    // exact title match
+  if (title.startsWith(q)) return 90;              // title starts with query
+  if (fuzzyMatch(m.Title, q)) return 80;            // title contains query
+  // Cast ranks above Director — searching by actor name is far more common
+  // than a coincidental substring match in a director's name (e.g. a
+  // search for actor "Suriya" was being outranked by director "S.J.
+  // Suryah" purely because Director was checked first).
+  if (fuzzyMatch(m.Cast, q)) return 55;
+  if (fuzzyMatch(m.Director, q)) return 50;
+  if (fuzzyMatch(m.MusicDirector, q)) return 40;
+  if (fuzzyMatch(m.Genre, q)) return 30;
+  if (fuzzyMatch(m.Language, q)) return 30;
+  if (fuzzyMatch(String(m.Year||""), q)) return 25;
+  if (fuzzyMatch(m.ReviewSummary, q)) return 10;    // weakest — free text, prone to false positives
+  if (fuzzyMatch(m.Takeaway, q)) return 10;
+  return 0;
+}
+
+function showSuggestions() {
+  const input = document.getElementById("searchInput");
+  const q = input.value.toLowerCase().trim();
+  const box = document.getElementById("suggestions");
+  if(!box) return;
+  if(!q || q.length < 1) { box.style.display="none"; box.innerHTML=""; return; }
+
+  const matches = allMovies
+    .map(m => ({ m, score: relevanceScore(m, q) }))
+    .filter(x => x.score >= 25)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+    .map(x => x.m);
+
+  if(matches.length === 0) { box.style.display="none"; box.innerHTML=""; return; }
+
+  box.innerHTML = matches.map((m) => {
+    const poster = m.PosterURL ? `<img class="suggestion-poster" src="${m.PosterURL}" alt=""/>` : `<div class="suggestion-poster"></div>`;
+    const tierClass = getTierClass(m.ConsensusTier, m.GauthamScore);
+    return `<div class="suggestion-item" onclick="pickSuggestion('${String(m.Title||'').replace(/'/g,"\\'")}')">
+      ${poster}
+      <div class="suggestion-info">
+        <div class="suggestion-title">${m.Title||""}</div>
+        <div class="suggestion-meta">${m.Year||""} ${m.Director?"· "+m.Director:""}</div>
+      </div>
+      <span class="suggestion-score ${tierClass}">${m.GauthamScore||"—"}</span>
+    </div>`;
+  }).join("");
+
+  // Absolute positioning (CSS) keeps the dropdown attached to the search box
+  // and scrolling with the page, so taps land correctly on mobile.
+  box.style.display = "block";
+}
+
+function pickSuggestion(title) {
+  document.getElementById("searchInput").value = title;
+  hideSuggestions();
+  filterMovies();
+  // Open the movie directly
+  setTimeout(() => {
+    const idx = (window._currentMovies||allMovies).findIndex(m => m.Title === title);
+    if(idx >= 0) openMovie(idx);
+  }, 100);
+}
+
+function hideSuggestions() {
+  const box = document.getElementById("suggestions");
+  if(box){ box.style.display="none"; box.innerHTML=""; }
+}
+
+// Close suggestions when clicking outside
+document.addEventListener("click", e => {
+  if(!e.target.closest(".search-wrap")) hideSuggestions();
+});
+
+function filterMovies() {
+  const q = document.getElementById("searchInput").value.toLowerCase().trim();
+
+  let filtered = allMovies;
+
+  // IMPORTANT:
+  // If the user is typing in Search, search the ENTIRE movie list.
+  // Do not let active tier/language/genre filters hide matching movies.
+  // Uses the same relevance scoring as the suggestions dropdown, with a
+  // minimum threshold — otherwise a single common word (e.g. "with") can
+  // match hundreds of movies via description text alone and the grid
+  // barely narrows at all, even though search is technically "matching."
+  if (q) {
+    filtered = allMovies
+      .map(m => ({ m, score: relevanceScore(m, q) }))
+      .filter(x => x.score >= 25)   // drop weak description-only matches
+      .sort((a, b) => b.score - a.score)
+      .map(x => x.m);
+  } else {
+    if (currentFilter === "new-streaming") {
+      // "New on Streaming" = films that are actually on US streaming now AND
+      // were released within the last 5 months. Simple and reliable — a film
+      // shows here from when it lands on streaming until ~5 months post-release,
+      // then rolls off into the regular catalog automatically.
+      filtered = filtered.filter(isNewOnStreaming);
+    } else if (currentFilter === "theater-worthy") {
+      filtered = filtered.filter(isTheaterWorthy);
+    } else if (currentFilter !== "all") {
+      filtered = filtered.filter(m => getTierFromScore(m.GauthamScore) === currentFilter);
+    }
+
+    // Tier filter (fire-legend clicks) is SEPARATE from currentFilter above —
+    // it refines whatever's currently showing (e.g. New on Streaming) rather
+    // than replacing it. currentFilter itself can still directly BE a tier
+    // (from the stats-bar Vera Level click, or a genre-select-style tier
+    // pick elsewhere), so avoid double-filtering by the same tier twice.
+    if (currentTierFilter !== "all" && currentFilter !== currentTierFilter) {
+      filtered = filtered.filter(m => getTierFromScore(m.GauthamScore) === currentTierFilter);
+    }
+
+    const langSel = document.getElementById("langSelect");
+    // Only apply language filtering if the loaded data actually has a Language field.
+    if (
+      langSel &&
+      langSel.value !== "all" &&
+      allMovies.some(m => m.Language)
+    ) {
+      filtered = filtered.filter(m => (m.Language || "") === langSel.value);
+    }
+
+    const yearSel = document.getElementById("yearSelect");
+    if (yearSel && yearSel.value !== "all") {
+      filtered = filtered.filter(m => String(m.Year||"").trim() === yearSel.value);
+    }
+  }
+
+  filtered = sortMovies(filtered);
+  document.getElementById("gridLabel").textContent =
+    filtered.length + " movie" + (filtered.length !== 1 ? "s" : "");
+
+  renderMovies(filtered);
+}
+
+function releaseKey(m) {
+  // Use full release date (YYYY-MM-DD) if present for precise ordering; else just the year
+  const rd = m.ReleaseDate || m.Releasedate || "";
+  if(rd && /^\d{4}-\d{2}-\d{2}/.test(rd)) {
+    return Number(rd.substring(0,4))*10000 + Number(rd.substring(5,7))*100 + Number(rd.substring(8,10));
+  }
+  return Number(m.Year||0)*10000; // year-only: sorts within year stays original order
+}
+
+// For the "New on Streaming" view — order by when it actually LANDED on
+// streaming (StreamingSince), not its theatrical release date. Falls back
+// to release date if StreamingSince is missing for some reason.
+function streamingSinceKey(m) {
+  const since = m.StreamingSince || m.Streamingsince || "";
+  const t = new Date(since).getTime();
+  if (!isNaN(t)) return t;
+  return releaseKey(m);
+}
+
+function sortMovies(movies) {
+  const sortBy = currentSort || "year-new";
+  const sorted = [...movies];
+  switch(sortBy) {
+    case "streaming-since": sorted.sort((a,b)=>streamingSinceKey(b)-streamingSinceKey(a)); break;
+    case "recent": sorted.sort((a,b)=>allMovies.indexOf(b)-allMovies.indexOf(a)); break;
+    case "score-high": sorted.sort((a,b)=>Number(b.GauthamScore||0)-Number(a.GauthamScore||0)); break;
+    case "score-low": sorted.sort((a,b)=>Number(a.GauthamScore||0)-Number(b.GauthamScore||0)); break;
+    case "year-new": sorted.sort((a,b)=>releaseKey(b)-releaseKey(a)); break;
+    case "year-old": sorted.sort((a,b)=>releaseKey(a)-releaseKey(b)); break;
+    case "title": sorted.sort((a,b)=>String(a.Title||"").localeCompare(String(b.Title||""))); break;
+  }
+  return sorted;
+}
+
+function applySorting() {
+  filterMovies();
+}
+
+// Shared by all three standalone toggle filters (New on Streaming, Highest
+// Rated, Theater Worthy) — they're mutually exclusive (currentFilter/
+// New on Streaming and Theater Worthy are CONTENT filters — mutually
+// exclusive with each other (a movie is either being filtered by one or
+// the other, not both). Highest Rated is deliberately NOT in this group
+// anymore — it's a pure SORT overlay that can apply on top of whichever
+// content filter (if any) is active, so "Highest Rated" while on New on
+// Streaming shows the highest-rated NEW-ON-STREAMING movies, not a reset
+// to the whole catalog.
+function clearOtherToggleButtons(exceptId) {
+  ["newStreamBtn", "theaterWorthyBtn"].forEach(id => {
+    if (id === exceptId) return;
+    const btn = document.getElementById(id);
+    if (btn) btn.classList.remove("active");
+  });
+}
+
+// Direct shortcut to "everything, newest release first" — same result as
+// picking that option from the Sort dropdown, but one click instead of
+// two, and doesn't require knowing the dropdown has this option at all.
+// Content-filter buttons (New on Streaming, Theater Worthy, All Movies)
+// should always show their FULL result set by default — otherwise a
+// forgotten Year or Language selection can silently intersect with the
+// button's results and produce a confusing "0 movies found" with no
+// obvious explanation why.
+function resetYearAndLanguage() {
+  const yearSel = document.getElementById("yearSelect");
+  const langSel = document.getElementById("langSelect");
+  if (yearSel) yearSel.value = "all";
+  if (langSel) langSel.value = "all";
+}
+
+// The REAL cause of the cutoff: the header is position:sticky with a 60px
+// height, permanently sitting on top of the viewport — a 16px buffer was
+// nowhere near enough to clear it, so it was covering exactly the Sort/
+// Language/Year row every time. Now accounts for the actual sticky header
+// height plus a bit of breathing room.
+function scrollToFilters() {
+  const el = document.getElementById("filtersBar");
+  if (!el) return;
+  const headerEl = document.querySelector("header");
+  const headerHeight = headerEl ? headerEl.offsetHeight : 60;
+  const top = el.getBoundingClientRect().top + window.scrollY - headerHeight - 16;
+  window.scrollTo({ top, behavior: "smooth" });
+}
+
+function showAllMoviesNewest() {
+  currentFilter = "all";
+  currentTierFilter = "all";
+  currentSort = "year-new";
+  const sortSelect = document.getElementById("sortSelect");
+  if (sortSelect) sortSelect.value = "year-new";
+  clearOtherToggleButtons(null);
+  document.getElementById("highRatedBtn")?.classList.remove("active");
+  document.querySelectorAll(".legend-clickable").forEach(item => item.classList.remove("legend-active"));
+  const clearBtn = document.getElementById("legendClear");
+  if (clearBtn) clearBtn.style.display = "none";
+  resetYearAndLanguage();
+  filterMovies();
+}
+
+let currentSort = "streaming-since";
+function onSortChange() {
+  currentSort = document.getElementById("sortSelect").value;
+  const btn = document.getElementById("newStreamBtn");
+  if (currentSort === "streaming-since") {
+    currentFilter = "new-streaming";
+    clearOtherToggleButtons("newStreamBtn");
+    if (btn) btn.classList.add("active");
+  } else {
+    // Picking ANY plain sort order (Highest Rated, Newest Released, etc.)
+    // always returns to "all movies" — a reliable way to escape New on
+    // Streaming, Theater Worthy, or Highest Rated, regardless of which one
+    // (if any) was active before. This is what makes the dropdown a
+    // trustworthy "show me everything again" escape hatch.
+    currentFilter = "all";
+    clearOtherToggleButtons(null);
+  }
+  // Keep the dedicated Highest Rated button's glow in sync regardless of
+  // whether "score-high" was set via the button or the dropdown.
+  document.getElementById("highRatedBtn")?.classList.toggle("active", currentSort === "score-high");
+  filterMovies();
+}
+
+// When a Language/Genre filter is chosen (especially on mobile), clear any
+// lingering search text + suggestions so the filter actually applies, then
+// scroll the results into view so it's obvious something happened.
+function onFilterSelect() {
+  const searchInput = document.getElementById("searchInput");
+  if (searchInput && searchInput.value) {
+    searchInput.value = "";
+  }
+  hideSuggestions();
+  filterMovies();
+  // Scroll to the grid so the filtered results are visible (mobile-friendly)
+  const grid = document.getElementById("moviesGrid");
+  if (grid) {
+    setTimeout(() => grid.scrollIntoView({behavior:"smooth", block:"start"}), 50);
+  }
+}
+
+function setFilter(filter,btn) {
+  currentFilter=filter;
+  document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  // Turning on a tier filter cancels the New on Streaming toggle
+  const nsBtn = document.getElementById("newStreamBtn");
+  if(nsBtn) nsBtn.classList.remove("active");
+  filterMovies();
+}
+
+// New on Streaming toggle (separate control next to Sort/Genre/Languages)
+// Shows a live count of how many movies currently qualify as "New on
+// Streaming" right on the toggle button (e.g. "New on Streaming  5"), and
+// gives it a few gentle pulses on page load if there are any — a plain
+// button sitting among dropdowns is easy to overlook otherwise.
+function updateNewStreamingBadge() {
+  const btn = document.getElementById("newStreamBtn");
+  const countEl = document.getElementById("newStreamCount");
+  if (!btn || !countEl) return;
+  const count = allMovies.filter(isNewOnStreaming).length;
+  countEl.innerHTML = count > 0 ? `<span class="new-stream-count">${count}</span>` : "";
+  if (count > 0 && !btn.dataset.pulsed) {
+    btn.dataset.pulsed = "true";
+    btn.classList.add("attention-pulse");
+    setTimeout(() => btn.classList.remove("attention-pulse"), 5000);
+  }
+}
+
+// Simple, standalone button: just re-sorts whatever's currently showing by
+// score, regardless of which filter (if any) is active — no coupling with
+// the New on Streaming toggle or dropdown, so it can't "mess up" like
+// trying to combine them through the dropdown did.
+// Used by the stats bar (Movies / Vera Level) and the Gautham Score fire-tier
+// legend — jumps straight to the grid, filtered to that tier (or "all" for
+// the plain Movies count) and sorted newest-release-first.
+// Fire-tier legend clicks: refine WHATEVER is currently showing (e.g. New
+// on Streaming) rather than navigating away to a fresh "all movies" view.
+// Clicking the same tier again clears it back to "all tiers" within the
+// current view. Does NOT touch currentFilter or currentSort, so context
+// (New on Streaming, a language filter, etc.) is fully preserved.
+function toggleTierFilter(tier, el) {
+  currentTierFilter = (currentTierFilter === tier) ? "all" : tier;
+  document.querySelectorAll(".legend-clickable").forEach(item => item.classList.remove("legend-active"));
+  if (currentTierFilter !== "all" && el) {
+    el.classList.add("legend-active");
+  }
+  const clearBtn = document.getElementById("legendClear");
+  if (clearBtn) clearBtn.style.display = currentTierFilter !== "all" ? "inline-flex" : "none";
+  filterMovies();
+}
+
+// Explicit, visible way back to "all tiers" within whatever view is
+// currently showing (e.g. New on Streaming) — relying only on "click the
+// same tier again to deselect" wasn't obvious enough on its own.
+function clearTierFilter() {
+  currentTierFilter = "all";
+  document.querySelectorAll(".legend-clickable").forEach(item => item.classList.remove("legend-active"));
+  const clearBtn = document.getElementById("legendClear");
+  if (clearBtn) clearBtn.style.display = "none";
+  filterMovies();
+}
+
+function filterByTierAndSort(tier) {
+  currentFilter = tier;
+  currentTierFilter = "all"; // fresh navigation — clear any lingering legend refinement
+  currentSort = "year-new";
+  const sortSelect = document.getElementById("sortSelect");
+  if (sortSelect) sortSelect.value = "year-new";
+  clearOtherToggleButtons(null);
+  document.getElementById("highRatedBtn")?.classList.remove("active");
+  document.querySelectorAll(".legend-clickable").forEach(item => item.classList.remove("legend-active"));
+  const clearBtn = document.getElementById("legendClear");
+  if (clearBtn) clearBtn.style.display = "none";
+  resetYearAndLanguage();
+  filterMovies();
+  document.getElementById("moviesGrid").scrollIntoView({behavior:"smooth"});
+}
+
+// Pure sort overlay now — does NOT touch currentFilter, so it stays within
+// whatever content filter (New on Streaming, Theater Worthy, or none) is
+// currently active, just re-ordering those results by score.
+function sortByHighestRated(btn) {
+  const isOn = btn.classList.toggle("active");
+  const sortSelect = document.getElementById("sortSelect");
+  clearTierFilter();
+  if (isOn) {
+    currentSort = "score-high";
+    if (sortSelect) sortSelect.value = "score-high";
+  } else {
+    // Revert to whatever sort makes sense for the current filter, not a
+    // blind default — otherwise turning this off could silently change
+    // which movies are showing (e.g. drop out of New on Streaming's own
+    // natural order).
+    currentSort = (currentFilter === "new-streaming") ? "streaming-since" : "year-new";
+    if (sortSelect) sortSelect.value = currentSort;
+  }
+  filterMovies();
+}
+
+// Standalone filter, like New on Streaming — shows only recent releases
+// (see isTheaterWorthy's ~90-day window) that Gemini flagged as genuinely
+// benefiting from the big screen. Always resets to its own natural
+// default (year-new) and clears Highest Rated, rather than trying to
+// preserve a previous sort — that "preserve across filters" behavior
+// caused more confusion than it solved (e.g. narrowing to a year, sorting
+// by score, then clicking New on Streaming and getting a silently
+// score-sorted result instead of the landing page's actual default).
+// Also clears any fire-tier legend refinement — clicking one of these
+// standalone buttons is a fresh navigation, not a continuation of
+// whatever tier you'd narrowed to before.
+function toggleTheaterWorthy(btn) {
+  const isOn = btn.classList.toggle("active");
+  const sortSelect = document.getElementById("sortSelect");
+  clearTierFilter();
+  currentFilter = isOn ? "theater-worthy" : "all";
+  if (isOn) {
+    clearOtherToggleButtons("theaterWorthyBtn");
+    document.getElementById("highRatedBtn")?.classList.remove("active");
+    resetYearAndLanguage();
+    currentSort = "year-new";
+    if (sortSelect) sortSelect.value = "year-new";
+  }
+  filterMovies();
+}
+
+function toggleNewStreaming(btn) {
+  const isOn = btn.classList.toggle("active");
+  const sortSelect = document.getElementById("sortSelect");
+  clearTierFilter();
+  if (isOn) {
+    currentFilter = "new-streaming";
+    clearOtherToggleButtons("newStreamBtn");
+    document.getElementById("highRatedBtn")?.classList.remove("active");
+    resetYearAndLanguage();
+    currentSort = "streaming-since";
+    if (sortSelect) sortSelect.value = "streaming-since";
+  } else {
+    currentFilter = "all";
+    document.getElementById("highRatedBtn")?.classList.remove("active");
+    currentSort = "year-new";
+    if (sortSelect) sortSelect.value = "year-new";
+  }
+  filterMovies();
+}
+
+function buildSimilarMovies(m) {
+  // "Discover More" — TMDB recommendations only (loaded async, escapes small-list weakness)
+  setTimeout(() => loadTMDBRecommendations(m.Title, m.Year, m.Language, m.Director, m.Genre), 50);
+  return `<div class="modal-section"><div class="modal-section-label">Discover More — Similar Films</div>
+    <div id="tmdbRecs" class="similar-wrap"><div class="recs-loading"><span class="toast-spinner"></span> Finding similar films… (this takes a few seconds)</div></div></div>`;
+}
+
+async function loadTMDBRecommendations(title, year, lang, director, genre) {
+  const box = document.getElementById("tmdbRecs");
+  if(!box) return;
+  try {
+    const langCode = {Tamil:"ta",Hindi:"hi",Telugu:"te",Malayalam:"ml",Kannada:"kn",Bengali:"bn",Marathi:"mr",Punjabi:"pa"}[lang] || "";
+    const url = API_URL + "?action=recommend&title=" + encodeURIComponent(title) +
+      "&year=" + encodeURIComponent(year||"") +
+      "&lang=" + encodeURIComponent(langCode) +
+      "&director=" + encodeURIComponent(director||"") +
+      "&genre=" + encodeURIComponent(genre||"");
+    const res = await fetch(url);
+    const responseText = await res.text();
+    let recs;
+    try {
+      recs = JSON.parse(responseText);
+    } catch(parseErr) {
+      // Response wasn't JSON (e.g. an Apps Script error/HTML page)
+      throw new Error("Bad response: " + responseText.slice(0, 80));
+    }
+    if(recs && recs.status === "unavailable") {
+      box.innerHTML = `<div class="recs-loading">Similar films are temporarily unavailable — check back soon.</div>`;
+      return;
+    }
+    if(!recs || recs.length === 0) {
+      box.innerHTML = `<div class="recs-loading">No similar films found for this title right now.</div>`;
+      return;
+    }
+    const haveTitles = new Set(allMovies.map(mm => String(mm.Title||"").toLowerCase()));
+    box.innerHTML = recs.slice(0,8).map(r => {
+      const inList = haveTitles.has(String(r.title||"").toLowerCase());
+      const poster = r.poster ? `<img src="${r.poster}" alt=""/>` : `<div class="similar-noposter">🎬</div>`;
+      const safeTitle = String(r.title||"").replace(/'/g,"\\'");
+      const badge = inList
+        ? `<div class="rec-badge rec-have">✓ In list</div>`
+        : `<div class="rec-badge rec-add">+ Add</div>`;
+      const action = inList
+        ? `onclick="openMovieByTitle('${safeTitle}')"`
+        : `onclick="addFromRec('${safeTitle}','${r.year||""}', this)"`;
+      const reasonAttr = r.reason ? `title="${(r.reason||"").replace(/"/g,"&quot;")}"` : "";
+      const reasonText = r.reason ? `<div class="similar-reason">${r.reason}</div>` : "";
+      return `<div class="similar-card" ${action} ${reasonAttr}>
+        ${poster}
+        <div class="similar-title">${r.title||""}</div>
+        ${reasonText}
+        ${badge}
+      </div>`;
+    }).join("");
+  } catch(err) {
+    box.innerHTML = `<div class="recs-loading">Couldn't load suggestions.<br><span style="font-size:11px;color:#FF5C7A;">${(err && err.message) || err}</span></div>`;
+    console.error("Recommendations error:", err);
+  }
+}
+
+function addFromRec(title, year, cardEl) {
+  // Add the recommended movie in the BACKGROUND — keep the detail modal open
+  // so the user stays on the current film and can add more suggestions.
+  const fullTitle = year ? (title + " " + year) : title;
+
+  // Visual feedback on the card itself
+  if(cardEl) {
+    cardEl.onclick = null; // prevent double-add
+    cardEl.style.opacity = "0.6";
+    const badge = cardEl.querySelector(".rec-badge");
+    if(badge){ badge.textContent = "Adding…"; badge.classList.remove("rec-add"); badge.classList.add("rec-have"); }
+  }
+
+  // Fire the add request (no-cors: fire and forget)
+  try {
+    fetch(API_URL, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({Title:fullTitle, Year:year||""}),
+      mode:"no-cors"
+    });
+  } catch(err){ /* no-cors: can't read response anyway */ }
+
+  // Toast so they know it's happening — modal stays open
+  showAddToast(title);
+
+  // Refresh the grid in the background after ~38s without disturbing the open modal
+  setTimeout(async()=>{
+    const scrollY = window.scrollY;
+    await loadMovies();
+    window.scrollTo(0, scrollY);
+    updateAddToast(title);
+    if(cardEl){ const b = cardEl.querySelector(".rec-badge"); if(b) b.textContent = "✓ Added"; }
+  }, 38000);
+}
+
+function openMovieByTitle(title) {
+  const idx = (window._currentMovies||allMovies).findIndex(m => m.Title === title);
+  if(idx >= 0) { openMovie(idx); return; }
+  // If not in current view, find in allMovies
+  const allIdx = allMovies.findIndex(m => m.Title === title);
+  if(allIdx >= 0) {
+    window._currentMovies = allMovies;
+    openMovie(allIdx);
+  }
+}
+
+function openMovie(index) {
+  const m=(window._currentMovies||allMovies)[index];
+  if(!m) return;
+  const relRawTop = m.ReleaseDate || "";
+  const relTimeTop = new Date(relRawTop).getTime();
+  const formattedReleaseDate = !isNaN(relTimeTop)
+    ? new Date(relTimeTop).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})
+    : (m.Year || "");
+  document.getElementById("modalContent").innerHTML=`
+    <div class="modal-scroll-region">
+    ${cameFromSharedLink ? `<div class="shared-link-banner" onclick="closeDetail(); document.getElementById('moviesGrid').scrollIntoView({behavior:'smooth'});">
+      🎬 This is one of 600+ movies on Masala Meter — <span class="shared-link-cta">tap to explore them all →</span>
+    </div>` : ""}
+    ${m.PosterURL
+      ?`<div class="modal-poster-wrap"><img class="modal-poster" src="${m.PosterURL}" alt="${m.Title}"/><button class="modal-close" onclick="closeDetail()">✕</button></div>`
+      :`<div class="modal-poster-placeholder">🎬<button class="modal-close" onclick="closeDetail()">✕</button></div>`}
+    <div class="modal-body">
+      <h2 class="modal-title">${m.Title}</h2>
+      <p class="modal-meta">${[formattedReleaseDate,m.Language?`<span class="meta-language">${m.Language}</span>`:"",m.Director,m.Genre?`<span class="meta-genre">${m.Genre}</span>`:""].filter(Boolean).join(" · ")}</p>
+      <div class="badges-row">
+        ${m.GauthamScore?`<div class="gmdb-badge" onclick="openAbout()" style="cursor:pointer;" title="Tap to see what this score means"><span class="gmdb-badge-label">GAUTHAM SCORE</span>${m.GauthamScore}</div>`:""}
+        ${m.IMDbRating&&m.IMDbRating!=="N/A"?`<div class="imdb-badge"><span class="imdb-badge-label">IMDb</span>★ ${m.IMDbRating}</div>`:""}
+        ${(m.ConsensusTier||m.GauthamScore)?`<span class="modal-badge ${getTierClass(m.ConsensusTier, m.GauthamScore)}" onclick="openAbout()" style="cursor:pointer;" title="Tap to see what this tier means">${getTierEmoji(m.ConsensusTier, m.GauthamScore)} ${getTierLabel(m.ConsensusTier, m.GauthamScore)}</span>`:""}
+      </div>
+      ${isTheaterWorthy(m)?`<p style="font-size:14px;color:#ff9e9e;margin-bottom:1rem;"><b style="color:#ff6b6b;">🎬 Theater Worthy:</b> ${m.TheaterWorthyReason?`<span style="font-style:italic;">${m.TheaterWorthyReason}</span>`:""}</p>`:""}
+      ${buildStreamingButtons(m)}
+      ${m.Takeaway?`<div class="takeaway">${m.Takeaway}</div>`:""}
+      ${buildMetaGrid(m)}
+      ${m.ReviewSummary?`<div class="modal-section"><div class="modal-section-label">Review</div><div class="modal-section-value">${m.ReviewSummary}</div></div>`:""}
+      ${m.Storyline?`<div class="modal-section"><div class="modal-section-label">Storyline</div>${buildStoryline(m.Storyline)}</div>`:""}
+      ${buildScoreBreakdown(m)}
+      ${m.ScoreReasoning?`<div class="modal-section"><div class="modal-section-label">Score Reasoning</div><div class="modal-section-value">${m.ScoreReasoning}</div></div>`:""}
+      ${buildTrivia(m)}
+      ${m.Confidence?`<div class="modal-section"><div class="modal-section-label">Confidence</div><div class="modal-section-value">${m.Confidence}</div></div>`:""}
+      ${m.ReviewSources?`<div class="modal-section"><div class="modal-section-label">Sources</div><div class="modal-section-value" style="font-size:12px;color:var(--text2)">${m.ReviewSources}</div></div>`:""}
+      ${m.Trailer?`<div class="modal-section"><a class="modal-btn modal-btn-primary" href="${m.Trailer}" target="_blank" style="display:flex;">▶ Watch Trailer</a></div>`:""}
+      ${buildSimilarMovies(m)}
+      </div>
+    </div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-share" onclick="shareMovie('${String(m.Title||'').replace(/'/g,"\\'")}', '${m.Year||''}', '${String(m.PosterURL||'').replace(/'/g,"\\'")}')">↗ Share</button>
+        <button class="modal-btn modal-btn-secondary" onclick="closeDetail()" style="flex:1;">Close</button>
+      </div>`;
+  document.getElementById("detailModal").classList.add("open");
+  history.pushState({modal:true}, "", "");
+
+  // Animate the score breakdown bars: fill from 0 to their value as they
+  // scroll into view (catches the eye as people scroll the detail).
+  requestAnimationFrame(() => {
+    const bars = document.querySelectorAll("#modalContent .breakdown-bar[data-target]");
+    if (!bars.length) return;
+
+    const fill = (b) => { b.style.width = (b.dataset.target || 0) + "%"; };
+
+    // Determine the actual scrolling container. The detail modal (#modalContent,
+    // the .modal element) scrolls on desktop (overflow-y:auto, max-height:90vh).
+    // On mobile, .modal-scroll-region scrolls. Pick whichever is a real
+    // scroll container; otherwise fall back to the viewport.
+    let scrollRegion = document.querySelector("#modalContent .modal-scroll-region");
+    if (scrollRegion) {
+      const disp = getComputedStyle(scrollRegion).display;
+      const ov = getComputedStyle(scrollRegion).overflowY;
+      if (disp === "contents" || (ov !== "auto" && ov !== "scroll")) scrollRegion = null;
+    }
+    if (!scrollRegion) {
+      const modalEl = document.getElementById("modalContent"); // the .modal div
+      if (modalEl) {
+        const ov = getComputedStyle(modalEl).overflowY;
+        if (ov === "auto" || ov === "scroll") scrollRegion = modalEl;
+      }
+    }
+
+    let observerRoot = scrollRegion; // null => viewport
+
+    const io = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) { fill(entry.target); obs.unobserve(entry.target); }
+      });
+    }, { root: observerRoot, threshold: 0.1 });
+    bars.forEach(b => io.observe(b));
+
+    // Robust fallback: after a short beat, fill any bar already in view, and
+    // set up a scroll listener as a backup trigger for the rest.
+    const tryFillVisible = () => {
+      const container = scrollRegion || document.documentElement;
+      const cRect = scrollRegion ? scrollRegion.getBoundingClientRect() : {top:0, bottom:window.innerHeight};
+      bars.forEach(b => {
+        if (b.style.width !== "0%") return;
+        const r = b.getBoundingClientRect();
+        const viewTop = scrollRegion ? cRect.top : 0;
+        const viewBot = scrollRegion ? cRect.bottom : window.innerHeight;
+        if (r.top < viewBot && r.bottom > viewTop) fill(b);
+      });
+    };
+    setTimeout(tryFillVisible, 350);
+    const scrollTarget = scrollRegion || window;
+    const onScroll = () => { tryFillVisible(); };
+    scrollTarget.addEventListener("scroll", onScroll, { passive: true });
+    // stop listening once all filled or after 15s
+    const stopper = setInterval(() => {
+      const remaining = [...bars].some(b => b.style.width === "0%");
+      if (!remaining) { scrollTarget.removeEventListener("scroll", onScroll); clearInterval(stopper); }
+    }, 1000);
+    setTimeout(() => { scrollTarget.removeEventListener("scroll", onScroll); clearInterval(stopper); }, 15000);
+  });
+}
+
+function closeModalOverlay(e,id){if(e.target===document.getElementById(id)){if(id==="detailModal"){closeDetail();}else{document.getElementById(id).classList.remove("open");}}}
+
+// Share a movie — native share sheet on mobile, copy-link fallback on desktop
+async function shareMovie(title, year, posterUrl) {
+  // Always link to the live site so friends land on the full review here.
+  const SITE = "https://gvgfr.github.io/GMDB/";
+  const url = SITE + "?movie=" + encodeURIComponent(title);
+  const text = `"${title}"${year?" ("+year+")":""} — read the review on Gautham's Masala Meter:`;
+
+  function showCopyToast(msg) {
+    const t = document.createElement("div");
+    t.textContent = msg;
+    t.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1DD3B0;color:#04231d;font-weight:700;padding:10px 18px;border-radius:24px;z-index:99999;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,0.4);";
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 2200);
+  }
+
+  function copyFallback() {
+    navigator.clipboard.writeText(text + " " + url)
+      .then(() => showCopyToast("Review link copied ✓"))
+      .catch(() => showCopyToast("Couldn't copy — long-press to copy manually"));
+  }
+
+  // Try to include the actual poster image in the native share sheet, so it
+  // shows the right movie thumbnail immediately (not dependent on link-preview
+  // metadata, which a static site can't vary per-movie). Routed through our
+  // own backend (action=posterProxy) instead of fetching TMDB directly —
+  // TMDB's image CDN inconsistently includes the CORS header browsers need
+  // to read image bytes (a known issue on their end, confirmed via their
+  // own support forum), so a direct fetch works "sometimes" depending on
+  // luck. A server-to-server fetch from Apps Script has no such restriction.
+  let posterFile = null;
+  if (posterUrl && navigator.canShare) {
+    try {
+      const proxyResp = await fetch(API_URL + "?action=posterProxy&url=" + encodeURIComponent(posterUrl));
+      const proxyData = await proxyResp.json();
+      if (proxyData && proxyData.data) {
+        const byteChars = atob(proxyData.data);
+        const byteNumbers = new Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: proxyData.mimeType || "image/jpeg" });
+        const file = new File([blob], "poster.jpg", { type: blob.type });
+        if (navigator.canShare({ files: [file] })) posterFile = file;
+      }
+    } catch (e) { /* poster fetch failed — fall through without image */ }
+  }
+
+  if (navigator.share) {
+    const payload = posterFile
+      ? { title: "Masala Meter", text: text, url: url, files: [posterFile] }
+      : { title: "Masala Meter", text: text, url: url };
+    try {
+      await navigator.share(payload);
+      return; // genuinely shared successfully
+    } catch (err) {
+      // AbortError = user manually cancelled the share sheet — respect that
+      // silently, don't show a fallback toast for a deliberate cancellation.
+      if (err && err.name === "AbortError") return;
+      // Any OTHER failure (including image-share not being supported in this
+      // exact context) — don't fail silently. Retry without the image once,
+      // then fall back to clipboard copy so the user always gets SOMETHING.
+      if (posterFile) {
+        try {
+          await navigator.share({ title: "Masala Meter", text: text, url: url });
+          return;
+        } catch (err2) {
+          if (err2 && err2.name === "AbortError") return;
+        }
+      }
+      copyFallback();
+    }
+  } else {
+    copyFallback();
+  }
+}
+
+// Close the movie detail and return to the full library (clears any active search)
+function closeDetail() {
+  document.getElementById("detailModal").classList.remove("open");
+  const searchInput = document.getElementById("searchInput");
+  if (searchInput && searchInput.value) {
+    searchInput.value = "";
+    hideSuggestions();
+    filterMovies();
+  }
+}
+
+function openAddModal(prefillTitle){
+  document.getElementById("movieTitleInput").value = prefillTitle || "";
+  document.getElementById("addStatus").style.display="none";
+  document.getElementById("addBtn").disabled=false;
+  document.getElementById("addBtn").textContent="Fetch & Add Movie";
+  document.getElementById("addModal").classList.add("open");
+  setTimeout(()=>{
+    document.getElementById("movieTitleInput").focus();
+    // Setting .value directly doesn't fire the input event a real keystroke
+    // would, so the real TMDB suggestion dropdown wouldn't otherwise show
+    // up for a pre-filled title — trigger it explicitly so this behaves
+    // exactly as if the user had typed it themselves.
+    if (prefillTitle) searchTMDBSuggestions();
+  }, 100);
+}
+
+function openAbout(){document.getElementById("aboutModal").classList.add("open");}
+
+let tmdbSearchTimer = null;
+function searchTMDBSuggestions() {
+  const input = document.getElementById("movieTitleInput");
+  const box = document.getElementById("addSuggestions");
+  const q = input.value.trim();
+  if(q.length < 2) { box.classList.remove("show"); box.innerHTML=""; return; }
+
+  // Debounce — wait 350ms after typing stops
+  clearTimeout(tmdbSearchTimer);
+  tmdbSearchTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(API_URL + "?action=search&q=" + encodeURIComponent(q));
+      const results = await res.json();
+      if(!results || results.length === 0) { box.classList.remove("show"); box.innerHTML=""; return; }
+      const langNames = {ta:"Tamil",hi:"Hindi",te:"Telugu",ml:"Malayalam",kn:"Kannada",en:"English"};
+      box.innerHTML = results.map(m => {
+        const poster = m.poster ? `<img class="suggestion-poster" src="${m.poster}" alt=""/>` : `<div class="suggestion-poster"></div>`;
+        const lang = langNames[m.lang] || m.lang || "";
+        const safeTitle = String(m.title||"").replace(/'/g,"\\'");
+        return `<div class="suggestion-item" onclick="pickAddSuggestion('${safeTitle}', '${m.year||""}')">
+          ${poster}
+          <div class="suggestion-info">
+            <div class="suggestion-title">${m.title||""}</div>
+            <div class="suggestion-meta">${m.year||""} ${lang?"· "+lang:""}</div>
+          </div>
+        </div>`;
+      }).join("");
+      box.classList.add("show");
+    } catch(err) {
+      box.classList.remove("show");
+    }
+  }, 350);
+}
+
+function pickAddSuggestion(title, year) {
+  // Put "Title Year" in the box — the year disambiguates which version (e.g. Dilwale 2015)
+  const input = document.getElementById("movieTitleInput");
+  input.value = year ? (title + " " + year) : title;
+  input.dataset.exactYear = year || "";
+  const box = document.getElementById("addSuggestions");
+  box.classList.remove("show");
+  box.innerHTML = "";
+}
+
+async function submitMovie(){
+  const input=document.getElementById("movieTitleInput");
+  const title=input.value.trim();
+  if(!title) return;
+
+  // Block obviously-adult titles before they reach the server
+  if (/\b(xxx|porn|erotic|erotica|hardcore|softcore|nsfw|18\+)\b/i.test(title)) {
+    alert("Adult content isn't allowed on Masala Meter. Please add a mainstream film.");
+    return;
+  }
+
+  const exactYear = input.dataset.exactYear || "";
+
+  // Check if this movie is already in the list (strip trailing year for comparison)
+  const cleanTitle = title.replace(/\s+(19|20)\d{2}$/, "").trim().toLowerCase();
+  const existing = allMovies.find(m => String(m.Title||"").toLowerCase() === cleanTitle ||
+                                       String(m.Title||"").toLowerCase() === title.toLowerCase());
+  if(existing) {
+    const proceed = confirm(`"${existing.Title}" is already in your list (scored ${existing.GauthamScore||"—"}).\n\nAdd it again anyway?`);
+    if(!proceed) {
+      // Open the existing movie instead
+      input.value = "";
+      input.dataset.exactYear = "";
+      document.getElementById("addModal").classList.remove("open");
+      const idx = (window._currentMovies||allMovies).findIndex(m => m.Title === existing.Title);
+      if(idx >= 0) openMovie(idx);
+      return;
+    }
+  }
+
+  // Fire the request
+  try {
+    fetch(API_URL, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({Title:title, Year:exactYear}),
+      mode:"no-cors"
+    });
+  } catch(err){ /* no-cors: we can't read response anyway */ }
+
+  // Clear and close the modal immediately so people can keep browsing
+  input.value = "";
+  input.dataset.exactYear = "";
+  input.dataset.exactTitle = "";
+  document.getElementById("addModal").classList.remove("open");
+
+  // Show a floating toast that counts down — people can browse meanwhile
+  showAddToast(title);
+
+  // Auto-refresh the grid after ~38s WITHOUT jumping to top
+  setTimeout(async()=>{
+    const scrollY = window.scrollY;
+    await loadMovies();
+    window.scrollTo(0, scrollY); // keep their scroll position
+    updateAddToast(title);
+  }, 38000);
+}
+
+function showAddToast(title) {
+  let toast = document.getElementById("addToast");
+  if(!toast) {
+    toast = document.createElement("div");
+    toast.id = "addToast";
+    toast.className = "add-toast";
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<span class="toast-spinner"></span> Adding <b>${title}</b>… ready in ~35s. Keep browsing!`;
+  toast.classList.add("show");
+}
+
+function updateAddToast(title) {
+  const toast = document.getElementById("addToast");
+  if(!toast) return;
+  toast.innerHTML = `✅ <b>${title}</b> added! <button class="toast-btn" onclick="jumpToMovie('${title.replace(/'/g,"\\'")}')">View it</button>`;
+  setTimeout(()=>{ toast.classList.remove("show"); }, 8000);
+}
+
+function jumpToMovie(title) {
+  // Search the FULL catalog (allMovies), not window._currentMovies — that's
+  // the currently filtered grid (e.g. "New on Streaming," now the landing
+  // page default), and a freshly-added movie almost never qualifies for
+  // that filter yet, so it would never be found there.
+  //
+  // Also strip any trailing year/language hint (e.g. "Dilwale 2015" or
+  // "Gilli Tamil") before matching — those disambiguation hints are used
+  // for the search box, but the movie ends up stored under its clean
+  // official title once processed, so searching for the raw input would
+  // never match.
+  const languageWords = "tamil|hindi|telugu|malayalam|kannada|bengali|marathi";
+  let cleanWant = title.trim()
+    .replace(/\s+(19|20)\d{2}$/i, "")
+    .replace(new RegExp("\\s+(" + languageWords + ")$", "i"), "")
+    .trim()
+    .toLowerCase();
+  if (!cleanWant) cleanWant = title.trim().toLowerCase();
+
+  let target = allMovies.find(m => String(m.Title||"").trim().toLowerCase() === cleanWant);
+  if (!target) target = allMovies.find(m => String(m.Title||"").trim().toLowerCase().includes(cleanWant));
+  if (!target) target = allMovies.find(m => cleanWant.includes(String(m.Title||"").trim().toLowerCase()) && m.Title);
+
+  const toast = document.getElementById("addToast");
+  if (toast) toast.classList.remove("show");
+  if (!target) return;
+  const allIdx = allMovies.indexOf(target);
+  document.getElementById("moviesGrid").scrollIntoView({behavior:"smooth"});
+  setTimeout(() => {
+    const prev = window._currentMovies;      // the filtered grid view
+    window._currentMovies = allMovies;        // align index for this open
+    openMovie(allIdx);
+    window._currentMovies = prev;             // restore so card clicks stay correct
+  }, 400);
+}
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    if(document.getElementById("detailModal").classList.contains("open")){ closeDetail(); }
+    ["addModal","aboutModal"].forEach(id=>document.getElementById(id).classList.remove("open"));
+  }
+});
+
+// Back button closes modal instead of leaving site
+window.addEventListener("popstate", () => {
+  const anyOpen = ["detailModal","addModal","aboutModal"].some(id =>
+    document.getElementById(id).classList.contains("open")
+  );
+  if (anyOpen) {
+    ["detailModal","addModal","aboutModal"].forEach(id =>
+      document.getElementById(id).classList.remove("open")
+    );
+  }
+});
+
+loadMovies();
+</script>
+</body>
+</html>
