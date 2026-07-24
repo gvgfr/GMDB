@@ -438,8 +438,15 @@ footer span{color:var(--red);}
   .modal-overlay{padding:0;align-items:stretch;}
   .modal{
     max-width:100%;
+    /* 100dvh is computed against Safari's optimistic (toolbar-collapsed)
+       viewport at the moment the modal opens, not the actual visible one —
+       that stranded the Share/Close footer below the fold. --app-vh is
+       measured live off visualViewport and kept in sync by JS, so it can't
+       go stale; 100dvh only covers the instant before that JS runs. */
     max-height:100dvh;
+    max-height:calc(var(--app-vh, 1vh) * 100);
     height:100dvh;
+    height:calc(var(--app-vh, 1vh) * 100);
     border-radius:0;
     border:none;
     display:flex;
@@ -726,6 +733,19 @@ footer span{color:var(--red);}
 </div>
 
 <script>
+// Real, live viewport height for the mobile full-screen modal (see .modal
+// CSS) — window.visualViewport reflects Safari's toolbar state instantly,
+// unlike 100dvh which can be measured against a stale/optimistic viewport
+// right when the modal opens, stranding the pinned footer off-screen.
+function setAppHeight() {
+  const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight) * 0.01;
+  document.documentElement.style.setProperty("--app-vh", vh + "px");
+}
+setAppHeight();
+window.addEventListener("resize", setAppHeight);
+window.addEventListener("orientationchange", setAppHeight);
+if (window.visualViewport) window.visualViewport.addEventListener("resize", setAppHeight);
+
 const API_URL = "https://script.google.com/macros/s/AKfycbz9ngvixIyBdUhi5caTheX74ppJyQtjFB_rvBbIfs4OS3nLJ-sY8vRLUDmSEZYbaEp2/exec";
 let allMovies = [];
 let currentFilter = "all";
@@ -1842,6 +1862,7 @@ function openMovieByTitle(title) {
 function openMovie(index) {
   const m=(window._currentMovies||allMovies)[index];
   if(!m) return;
+  setAppHeight();
   const relRawTop = m.ReleaseDate || "";
   const relTimeTop = new Date(relRawTop).getTime();
   const formattedReleaseDate = !isNaN(relTimeTop)
