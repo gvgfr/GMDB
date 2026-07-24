@@ -1948,11 +1948,42 @@ function openMovie(index) {
 
 function closeModalOverlay(e,id){if(e.target===document.getElementById(id)){if(id==="detailModal"){closeDetail();}else{document.getElementById(id).classList.remove("open");}}}
 
-// Share a movie using the public GitHub Pages URL only.
-// No poster file is attached, so iMessage has only one share item to render.
-async function shareMovie(title, year) {
+// Kept in sync by hand with slugify() in scripts/generate-movie-pages.js —
+// both must produce the same slug for the same title/year, or share links 404.
+function slugifyMovie(title, year) {
+  let base = String(title || "")
+    .toLowerCase()
+    .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (year) base += "-" + String(year).trim();
+  return base || "movie";
+}
+
+// Static pages under /m/ carry that movie's real poster as their og:image,
+// so a shared link previews the actual film instead of the generic site
+// card. They're regenerated periodically by a GitHub Action, so a just-added
+// movie may not have one yet — probe for it and fall back to the plain app
+// URL (single share item, no poster) if it 404s, so a share link never breaks.
+async function resolveShareUrl(title, year) {
   const siteUrl = "https://gvgfr.github.io/GMDB/";
-  const url = siteUrl + "?movie=" + encodeURIComponent(title);
+  const fallback = siteUrl + "?movie=" + encodeURIComponent(title);
+  const candidate = siteUrl + "m/" + slugifyMovie(title, year) + ".html";
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch(candidate, { method: "HEAD", signal: controller.signal });
+    clearTimeout(timeout);
+    return res.ok ? candidate : fallback;
+  } catch (err) {
+    return fallback;
+  }
+}
+
+// Share a movie using the public GitHub Pages URL — the movie's static
+// preview page if one exists yet, otherwise the plain app URL.
+async function shareMovie(title, year) {
+  const url = await resolveShareUrl(title, year);
   const movieLabel = `"${title}"${year ? ` (${year})` : ""}`;
   const text = `${movieLabel} — read the review on Masala Meter:`;
 
