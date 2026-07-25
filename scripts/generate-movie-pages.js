@@ -76,10 +76,31 @@ function pageHtml(movie) {
 `;
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// The Apps Script endpoint occasionally 404s/errors on a cold start;
+// retry a few times before giving up so a scheduled run doesn't fail
+// on a transient blip.
+async function fetchMovies() {
+  const attempts = 4;
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(API_URL + "?action=movies");
+      if (res.ok) return res.json();
+      lastErr = new Error(`Failed to fetch movies: ${res.status}`);
+    } catch (err) {
+      lastErr = err;
+    }
+    if (i < attempts - 1) await sleep(2 ** i * 1000);
+  }
+  throw lastErr;
+}
+
 async function main() {
-  const res = await fetch(API_URL + "?action=movies");
-  if (!res.ok) throw new Error(`Failed to fetch movies: ${res.status}`);
-  const data = await res.json();
+  const data = await fetchMovies();
   const movies = data.filter(m => m.Title && m.GauthamScore !== "" && m.GauthamScore != null);
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
