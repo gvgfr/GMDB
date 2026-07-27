@@ -26,6 +26,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="preconnect" href="https://script.google.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -929,18 +930,25 @@ function buildScoreBreakdown(m) {
 }
 
 let cameFromSharedLink = false;
-async function loadMovies() {
-  try {
-    const res = await fetch(API_URL + "?action=movies");
-    const data = await res.json();
-    // Only show fully-processed movies — skip rows that have a title but no
-    // score yet (incomplete/stuck entries that would render as blank cards).
-    allMovies = data.filter(m => m.Title && m.GauthamScore !== "" && m.GauthamScore != null);
-    updateStats();
-    updateNewStreamingBadge();
-    populateYears();
-    renderStreamingCarousel();
+const MOVIES_CACHE_KEY = "gmdb_movies_cache_v1";
 
+// Landing default (currentFilter/currentSort) and the shared-link auto-open
+// should each only fire once per page load — guard flags so the background
+// refresh (below) doesn't redo them once the user's already looking at the page.
+let landingDefaultApplied = false;
+let sharedLinkHandled = false;
+
+function applyMoviesData(data) {
+  // Only show fully-processed movies — skip rows that have a title but no
+  // score yet (incomplete/stuck entries that would render as blank cards).
+  allMovies = data.filter(m => m.Title && m.GauthamScore !== "" && m.GauthamScore != null);
+  updateStats();
+  updateNewStreamingBadge();
+  populateYears();
+  renderStreamingCarousel();
+
+  if (!landingDefaultApplied) {
+    landingDefaultApplied = true;
     // Landing page defaults to "New on Streaming" — but never show a new
     // visitor an empty grid. If nothing currently qualifies, fall back to
     // the normal full catalog view instead.
@@ -957,8 +965,11 @@ async function loadMovies() {
       currentSort = "year-new";
       if (sortSelect) sortSelect.value = "year-new";
     }
+  }
 
-    filterMovies();
+  filterMovies();
+
+  if (!sharedLinkHandled) {
     // If opened via a shared link (?movie=Title), open that movie's review.
     // Match against allMovies, then open by setting the current array so the
     // index lines up (openMovie reads from _currentMovies).
@@ -969,6 +980,7 @@ async function loadMovies() {
       let target = allMovies.find(m => String(m.Title||"").trim().toLowerCase() === want);
       if (!target) target = allMovies.find(m => String(m.Title||"").trim().toLowerCase().includes(want));
       if (target) {
+        sharedLinkHandled = true;
         cameFromSharedLink = true;
         const allIdx = allMovies.indexOf(target);
         setTimeout(() => {
@@ -980,8 +992,31 @@ async function loadMovies() {
         }, 400);
       }
     }
+  }
+}
+
+async function loadMovies() {
+  let renderedFromCache = false;
+  // Render last session's data immediately so the carousel/grid don't sit
+  // blank for the few seconds the Apps Script backend takes to respond,
+  // then let the network fetch below refresh it in place.
+  try {
+    const cached = JSON.parse(localStorage.getItem(MOVIES_CACHE_KEY));
+    if (Array.isArray(cached) && cached.length) {
+      applyMoviesData(cached);
+      renderedFromCache = true;
+    }
+  } catch(err) { /* corrupt/missing cache — fall through to network */ }
+
+  try {
+    const res = await fetch(API_URL + "?action=movies");
+    const data = await res.json();
+    applyMoviesData(data);
+    try { localStorage.setItem(MOVIES_CACHE_KEY, JSON.stringify(data)); } catch(err) { /* storage unavailable/full — non-fatal */ }
   } catch(err) {
-    document.getElementById("moviesGrid").innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">⚠️</div><div class="empty-title">Couldn't load movies</div><p>Check your connection and try refreshing.</p></div>`;
+    if (!renderedFromCache) {
+      document.getElementById("moviesGrid").innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">⚠️</div><div class="empty-title">Couldn't load movies</div><p>Check your connection and try refreshing.</p></div>`;
+    }
   }
 }
 
