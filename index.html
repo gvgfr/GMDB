@@ -128,20 +128,24 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .select-icon{position:absolute;left:14px;font-size:15px;pointer-events:none;z-index:1;}
 .sort-by-label{font-size:11px;font-weight:800;letter-spacing:0.5px;color:var(--accent);white-space:nowrap;}
 .select-wrap-sort{--accent:#F2C94C;}
-/* Language and Year now match Sort's pattern — value hidden entirely,
-   just the label + chevron shown, whole pill clickable for a comfortable
-   tap target. Clicking still opens the real dropdown with all options. */
+/* Language, Year and Region now match Sort's pattern — value hidden
+   entirely, just the label + chevron shown, whole pill clickable for a
+   comfortable tap target. Clicking still opens the real dropdown with all
+   options. */
 .select-wrap-lang,
-.select-wrap-year{
+.select-wrap-year,
+.select-wrap-region{
   border:2px solid var(--accent);
   border-radius:20px;
   padding:9px 34px 9px 16px;
   background:var(--bg2);
 }
 .select-wrap-lang .select-icon,
-.select-wrap-year .select-icon{position:static;pointer-events:none;}
+.select-wrap-year .select-icon,
+.select-wrap-region .select-icon{position:static;pointer-events:none;}
 .select-wrap-lang .sort-select,
-.select-wrap-year .sort-select{
+.select-wrap-year .sort-select,
+.select-wrap-region .sort-select{
   position:absolute;
   inset:0;
   border:none !important;
@@ -154,6 +158,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 }
 .select-wrap-lang{--accent:#1DB954;}
 .select-wrap-year{--accent:#E8862E;}
+.select-wrap-region{--accent:#4A90E2;}
 
 /* Sort is simpler still — the value text itself is hidden (color:
    transparent), so the closed button never needs to show the current
@@ -189,6 +194,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .select-wrap-sort .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23F2C94C' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
 .select-wrap-lang .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%231DB954' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
 .select-wrap-year .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23E8862E' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
+.select-wrap-region .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%234A90E2' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
 
 .grid-wrap{padding:1.5rem;}
 .grid-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1rem;}
@@ -567,6 +573,13 @@ footer span{color:var(--red);}
       <option value="all">All</option>
     </select>
   </div>
+  <div class="select-wrap select-wrap-region">
+    <span class="select-icon sort-by-label">Region</span>
+    <select id="regionSelect" class="sort-select sort-select-labeled" onchange="onRegionChange()">
+      <option value="US" selected>US</option>
+      <option value="UK">UK</option>
+    </select>
+  </div>
   <button id="allMoviesBtn" class="ctrl-btn" onclick="showAllMoviesNewest()">🎞️ All Movies</button>
   <button id="newStreamBtn" class="ctrl-btn" onclick="toggleNewStreaming(this)">📺 New on Streaming<span id="newStreamCount"></span></button>
   <button id="highRatedBtn" class="ctrl-btn" onclick="sortByHighestRated(this)">⭐ Highest Rated</button>
@@ -735,8 +748,17 @@ function getBarColor(score) {
   return "#FF5C7A";
 }
 
+// Region dropdown drives which streaming column (US or UK) is read
+// everywhere streaming availability is shown or checked.
+function getSelectedRegion() {
+  return document.getElementById("regionSelect")?.value === "UK" ? "UK" : "US";
+}
+
 function buildStreamingButtons(m) {
-  let ott = m.OTTInfo || m.OTTinfo || m.Streaming || "";
+  const region = getSelectedRegion();
+  let ott = region === "UK"
+    ? (m.StreamingUK || m.Streaminguk || "")
+    : (m.OTTInfo || m.OTTinfo || m.Streaming || "");
   // TMDB/JustWatch often lists an ad-supported tier as a SEPARATE entry
   // alongside the base platform (e.g. "Netflix, Netflix Standard with Ads")
   // — redundant for display purposes, so drop the "with ads" variants and
@@ -752,7 +774,7 @@ function buildStreamingButtons(m) {
     if (cleaned) ott = cleaned;
   }
   const title = m.Title || "";
-  const jwLink = `https://www.justwatch.com/us/search?q=${encodeURIComponent(title)}`;
+  const jwLink = `https://www.justwatch.com/${region === "UK" ? "gb" : "us"}/search?q=${encodeURIComponent(title)}`;
   const reelgoodLink = `https://reelgood.com/search?q=${encodeURIComponent(title)}`;
 
   // Guard: if the film hasn't been released yet, never show streaming/theaters —
@@ -780,7 +802,7 @@ function buildStreamingButtons(m) {
 
     // Older film with no streaming data — show a JustWatch lookup link
     return `<div class="modal-section"><div class="modal-section-label">Where to Watch</div>
-      <div class="ott-note">No US streaming data found. <a href="${jwLink}" target="_blank" style="color:#FFB020;">Check JustWatch →</a></div></div>`;
+      <div class="ott-note">No ${region} streaming data found. <a href="${jwLink}" target="_blank" style="color:#FFB020;">Check JustWatch →</a></div></div>`;
   }
 
   // Known platforms: name, brand color, search URL builder
@@ -795,6 +817,10 @@ function buildStreamingButtons(m) {
     { keys:["jiocinema","jio"], label:"JioCinema", color:"#A020F0", url:t=>`https://www.jiocinema.com/search/${encodeURIComponent(t)}` },
     { keys:["hulu"], label:"Hulu", color:"#1CE783", url:t=>`https://www.hulu.com/search?q=${encodeURIComponent(t)}` },
     { keys:["youtube"], label:"YouTube", color:"#FF0000", url:t=>`https://www.youtube.com/results?search_query=${encodeURIComponent(t+" full movie")}` },
+    { keys:["bbc iplayer","iplayer"], label:"BBC iPlayer", color:"#000000", url:t=>`https://www.bbc.co.uk/iplayer/search?q=${encodeURIComponent(t)}` },
+    { keys:["itvx"], label:"ITVX", color:"#FF0055", url:t=>`https://www.itv.com/watch?q=${encodeURIComponent(t)}` },
+    { keys:["channel 4","channel4","my4"], label:"Channel 4", color:"#00C8B4", url:t=>`https://www.channel4.com/search?q=${encodeURIComponent(t)}` },
+    { keys:["sky","nowtv","now tv"], label:"Sky / NOW", color:"#0072C9", url:t=>`https://www.nowtv.com/search?q=${encodeURIComponent(t)}` },
   ];
 
   const ottLower = ott.toLowerCase();
@@ -827,11 +853,12 @@ function buildStreamingButtons(m) {
   }
 
   // Date it actually first became available on streaming (separate from
-  // theatrical release date above it in the modal).
+  // theatrical release date above it in the modal). Only tracked for US
+  // (no dedicated UK "since" stamp exists), so only shown for that region.
   let sinceBadge = "";
   const sinceRaw = m.StreamingSince || m.Streamingsince || "";
   const sinceTime = new Date(sinceRaw).getTime();
-  if (ott && !isNaN(sinceTime)) {
+  if (region === "US" && ott && !isNaN(sinceTime)) {
     const sinceStr = new Date(sinceTime).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
     sinceBadge = `<div style="margin-top:6px;color:var(--text2);font-size:12px;">Available to stream since ${sinceStr}</div>`;
   }
@@ -1058,24 +1085,34 @@ function getTierFromScore(score) {
 
 // Shared definition used by both the "New on Streaming" filter toggle and
 // the small ribbon badge on movie cards, so they always agree with each
-// other: on US streaming right now, AND actually LANDED on streaming within
-// the last 5 months (StreamingSince) — not when it was theatrically
-// released. A film can release in theaters, then hit streaming many months
-// later; it should still count as "new" the moment it actually arrives.
+// other: on streaming (in the SELECTED region) right now, AND actually
+// LANDED on streaming within the last 5 months — not when it was
+// theatrically released. A film can release in theaters, then hit
+// streaming many months later; it should still count as "new" the moment
+// it actually arrives. Reads whichever region's streaming column is
+// currently selected in the Region dropdown (US or UK).
 function isNewOnStreaming(m) {
-  const ott = m.OTTInfo || m.OTTinfo || m.Streaming || "";
+  const region = getSelectedRegion();
+  const ott = region === "UK"
+    ? (m.StreamingUK || m.Streaminguk || "")
+    : (m.OTTInfo || m.OTTinfo || m.Streaming || "");
   if (!ott) return false;
   const cutoff = Date.now() - 5 * 30 * 24 * 60 * 60 * 1000;
 
-  const sinceRaw = m.StreamingSince || m.Streamingsince || "";
-  const since = new Date(sinceRaw).getTime();
-  if (!isNaN(since)) {
-    if (since > Date.now()) return false;
-    return since >= cutoff;
+  // StreamingSince is only stamped for US availability — there's no
+  // dedicated UK "since" column, so UK always falls through to the
+  // release-date approximation below.
+  if (region === "US") {
+    const sinceRaw = m.StreamingSince || m.Streamingsince || "";
+    const since = new Date(sinceRaw).getTime();
+    if (!isNaN(since)) {
+      if (since > Date.now()) return false;
+      return since >= cutoff;
+    }
   }
 
-  // Fallback for older rows that don't have a StreamingSince stamp yet —
-  // use release date as a rough approximation until they're re-scored.
+  // Fallback (older US rows without a StreamingSince stamp yet, or any UK
+  // row) — use release date as a rough approximation.
   const relRaw = m.ReleaseDate || m.Year || "";
   const released = new Date(relRaw).getTime();
   if (isNaN(released)) return false;
@@ -1611,6 +1648,17 @@ function onFilterSelect() {
   if (grid) {
     setTimeout(() => grid.scrollIntoView({behavior:"smooth", block:"start"}), 50);
   }
+}
+
+// Region doesn't filter WHICH movies show (unlike Language/Year) — it
+// changes which streaming column (US or UK) they're evaluated against.
+// Re-render everything that depends on streaming availability: the grid
+// (card ribbons + "New on Streaming" filter if active), the New on
+// Streaming badge count, and the streaming carousel.
+function onRegionChange() {
+  filterMovies();
+  updateNewStreamingBadge();
+  renderStreamingCarousel();
 }
 
 function setFilter(filter,btn) {
