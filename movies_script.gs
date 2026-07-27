@@ -2857,12 +2857,20 @@ function refreshStreamingStatus() {
       if (streaming && !prevSince && isRecent) {
         sinceCell.setValue(new Date());
         newlyAdded++;
-      } else if (!streaming && prevStreaming) {
-        // Only clear the stamp if we previously HAD streaming data recorded
-        // (col 15) and this check found none — a real confirmed change,
-        // not just "found nothing" on a row that already had no data anyway.
-        if (prevSince) sinceCell.setValue("");
       }
+      // NOTE: deliberately no "clear the stamp if !streaming" branch here
+      // anymore. It used to clear col 32 whenever THIS run alone failed to
+      // reconfirm streaming (!streaming && prevStreaming) — but that's the
+      // exact same momentary TMDB/Gemini miss that col 15 right above
+      // correctly shrugs off without touching the data (streaming || !prevStreaming
+      // never overwrites a real value with empty). Treating one run's gap as
+      // "confirmed removal" for the stamp while NOT treating it that way for
+      // the streaming text itself was inconsistent, and wiped real
+      // StreamingSince dates for movies that never actually left streaming
+      // (e.g. Thaai Kizhavi: Apple TV/Hulu never left col 15, but this
+      // branch cleared col 32 anyway on a single miss). A real removal
+      // still isn't lost forever — re-running this refresh, or a manual
+      // re-score, will simply never re-set a stamp that's already blank.
       checked++;
     } catch (err) {
       Logger.log("Refresh failed for '" + title + "' row " + row + ": " + err);
