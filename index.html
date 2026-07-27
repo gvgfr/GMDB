@@ -1121,8 +1121,7 @@ function renderStreamingCarousel() {
   if (!container) return;
   const streaming = allMovies
     .filter(isNewOnStreaming)
-    .sort((a,b) => streamingSinceKey(b) - streamingSinceKey(a))
-    .slice(0, 20);
+    .sort((a,b) => streamingSinceKey(b) - streamingSinceKey(a));
 
   if (!streaming.length) {
     container.innerHTML = `<div class="carousel-empty">Nothing new on streaming right now — check back soon.</div>`;
