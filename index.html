@@ -388,13 +388,6 @@ footer span{color:var(--red);}
   color:white;letter-spacing:0.5px;
 }
 .gmdb-badge-label{font-size:10px;font-weight:600;letter-spacing:1px;opacity:0.85;}
-.imdb-badge{
-  display:inline-flex;align-items:center;gap:6px;
-  background:#f5c518;border-radius:6px;
-  padding:4px 10px;font-size:13px;font-weight:700;
-  color:#000;letter-spacing:0.5px;
-}
-.imdb-badge-label{font-size:10px;font-weight:700;letter-spacing:1px;}
 .badges-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem;}
 
 /* SCORE BREAKDOWN */
@@ -718,7 +711,6 @@ footer span{color:var(--red);}
     <div class="about-section">
       <p class="about-section-label">Data & Attribution</p>
       <div class="about-note" style="border-left-color:#01b4e4;">This product uses the TMDB API but is not endorsed or certified by TMDB. Movie data, posters, and images are provided by <a href="https://www.themoviedb.org/" target="_blank" style="color:#01b4e4;">The Movie Database (TMDB)</a>.</div>
-      <div class="about-note">IMDb ratings are shown for reference only, sourced via the OMDB API. This site is not affiliated with, endorsed by, or connected to IMDb or Amazon.</div>
       <div class="about-note">Streaming platform names (Netflix, Amazon Prime Video, Disney+ Hotstar, ZEE5, and others) and Spotify are used only to identify where a film or song may be found, with links to those services' own public pages. This site is not affiliated with, endorsed by, or sponsored by Netflix, Amazon, Spotify, or any other streaming or music platform referenced.</div>
       <div class="about-note">This is a personal, non-commercial project made for friends. No ads, no payments, no data selling. Movie posters remain the property of their respective studios and are shown for identification purposes.</div>
     </div>
@@ -1860,7 +1852,6 @@ function openMovie(index) {
       <p class="modal-meta">${[formattedReleaseDate,m.Language?`<span class="meta-language">${m.Language}</span>`:"",m.Director,m.Genre?`<span class="meta-genre">${m.Genre}</span>`:""].filter(Boolean).join(" · ")}</p>
       <div class="badges-row">
         ${m.GauthamScore?`<div class="gmdb-badge" onclick="openAbout()" style="cursor:pointer;" title="Tap to see what this score means"><span class="gmdb-badge-label">MASALA METER</span>${m.GauthamScore}</div>`:""}
-        ${m.IMDbRating&&m.IMDbRating!=="N/A"?`<div class="imdb-badge"><span class="imdb-badge-label">IMDb</span>★ ${m.IMDbRating}</div>`:""}
         ${(m.ConsensusTier||m.GauthamScore)?`<span class="modal-badge ${getTierClass(m.ConsensusTier, m.GauthamScore)}" onclick="openAbout()" style="cursor:pointer;" title="Tap to see what this tier means">${getTierEmoji(m.ConsensusTier, m.GauthamScore)} ${getTierLabel(m.ConsensusTier, m.GauthamScore)}</span>`:""}
       </div>
       ${isTheaterWorthy(m)?`<p style="font-size:14px;color:#ff9e9e;margin-bottom:1rem;"><b style="color:#ff6b6b;">🎬 Theater Worthy:</b> ${m.TheaterWorthyReason?`<span style="font-style:italic;">${m.TheaterWorthyReason}</span>`:""}</p>`:""}
