@@ -736,7 +736,7 @@ footer span{color:var(--red);}
 
     <div class="about-section">
       <p class="about-section-label">🎬 Now in Theaters</p>
-      <p style="font-size:15px;color:var(--text);line-height:1.7;">Any film released in the last month — a simple, up-to-date view of what's actually screening right now, independent of its Masala Meter score.</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">Any film released in the last month with a <b>confirmed US theatrical release</b> — checked directly against real ticketing sites and distributors, not just a recent release date. A film that only released in India (or elsewhere) won't show up here until it's actually confirmed playing in US theaters.</p>
     </div>
 
     <div class="about-section">
@@ -1267,6 +1267,11 @@ function isNewOnStreaming(m) {
 // requires a Masala Meter score above 50 — a bare "released recently"
 // filter surfaced a lot of skip-tier films; this keeps it to films
 // actually worth a theater trip.
+// ALSO requires a confirmed US theatrical release (m.USTheatrical, set by
+// the backend's checkUSTheatricalRelease_ live search). ReleaseDate alone
+// is usually just wherever a film released FIRST — for Indian films that's
+// almost always India — so without this check the badge would falsely
+// claim a US theatrical run for a film that never got one.
 function isNowInTheaters(m) {
   const relRaw = m.ReleaseDate || m.Year || "";
   const released = new Date(relRaw).getTime();
@@ -1275,7 +1280,8 @@ function isNowInTheaters(m) {
   if (released < cutoff || released > Date.now()) return false;
   if (!(Number(m.GauthamScore) > 50)) return false; // also excludes NaN/blank (not yet reviewed)
   const streamingAnywhere = m.OTTInfo || m.OTTinfo || m.Streaming || m.StreamingUK || m.Streaminguk || "";
-  return !streamingAnywhere;
+  if (streamingAnywhere) return false;
+  return !!(m.USTheatrical || m.UsTheatrical);
 }
 
 // "Coming Soon" — a confirmed future release date. These rows have no
@@ -1508,10 +1514,15 @@ function renderMovies(movies) {
   }).join("");
 }
 
-// Shared "in theaters" check: recent release (<=45 days) with no streaming data
+// Shared "in theaters" check: recent release (<=60 days), no streaming data,
+// AND a confirmed US theatrical release (see isNowInTheaters above for why
+// ReleaseDate alone isn't enough) — otherwise this drives a "Find Showtimes
+// Near You" link that would be misleading for a film never released in US
+// theaters at all.
 function isInTheaters(m) {
   const ott = m.OTTInfo || m.OTTinfo || m.Streaming || "";
   if (ott) return false;
+  if (!(m.USTheatrical || m.UsTheatrical)) return false;
   const relRaw = m.ReleaseDate || m.Year || "";
   const relTime = new Date(relRaw).getTime();
   if (isNaN(relTime)) return false;
