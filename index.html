@@ -1055,6 +1055,13 @@ function buildScoreBreakdown(m) {
 
 let cameFromSharedLink = false;
 const MOVIES_CACHE_KEY = "gmdb_movies_cache_v1";
+// Tracks the last data actually rendered, so a background/periodic
+// loadMovies() call that finds NOTHING has changed can skip re-rendering
+// entirely — applyMoviesData() restarts the stats-bar count-up animation,
+// rebuilds both carousels (resetting their scroll position), and rebuilds
+// the whole grid, all of which would otherwise visibly flicker/reset every
+// few minutes even when nothing actually changed.
+let lastRenderedMoviesRaw = null;
 
 // Landing default (currentFilter/currentSort) and the shared-link auto-open
 // should each only fire once per page load — guard flags so the background
@@ -1134,7 +1141,11 @@ async function loadMovies() {
   try {
     const cached = JSON.parse(localStorage.getItem(MOVIES_CACHE_KEY));
     if (Array.isArray(cached) && cached.length) {
-      applyMoviesData(cached);
+      const cachedRaw = JSON.stringify(cached);
+      if (cachedRaw !== lastRenderedMoviesRaw) {
+        applyMoviesData(cached);
+        lastRenderedMoviesRaw = cachedRaw;
+      }
       renderedFromCache = true;
     }
   } catch(err) { /* corrupt/missing cache — fall through to network */ }
@@ -1142,7 +1153,11 @@ async function loadMovies() {
   try {
     const res = await fetch(API_URL + "?action=movies");
     const data = await res.json();
-    applyMoviesData(data);
+    const dataRaw = JSON.stringify(data);
+    if (dataRaw !== lastRenderedMoviesRaw) {
+      applyMoviesData(data);
+      lastRenderedMoviesRaw = dataRaw;
+    }
     try { localStorage.setItem(MOVIES_CACHE_KEY, JSON.stringify(data)); } catch(err) { /* storage unavailable/full — non-fatal */ }
   } catch(err) {
     if (!renderedFromCache) {
