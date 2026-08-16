@@ -725,6 +725,11 @@ footer span{color:var(--red);}
     </div>
 
     <div class="about-section">
+      <p class="about-section-label">♪ Hit Songs</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">A separate score from the film's own Masala Meter — this one's just about the song. Each Masala Meter Song Score out of 10 is a weighted blend of <b>melody (40%)</b>, <b>vocals (25%)</b>, <b>lyrics (20%)</b>, and <b>replay value (15%)</b>, alongside a one-line note on what specifically makes it work.</p>
+    </div>
+
+    <div class="about-section">
       <p class="about-section-label">Important Notes</p>
       <div class="about-note">Taste is personal: even a rigorous score can't predict what <em>you</em> will love. If a pick doesn't land for you, that's the gap between aggregate quality and individual taste — not a flaw in either.</div>
       <div class="about-note">When multiple films share the same title, this database always prefers the Indian release.</div>
@@ -939,16 +944,35 @@ function buildHitSongs(m) {
   try {
     if (m.HitSongsDetails) songDetails = JSON.parse(m.HitSongsDetails);
   } catch (e) { songDetails = []; }
-  const findDetail = (title) => {
-    const wanted = title.trim().toLowerCase();
-    return songDetails.find(d => String(d.title || "").trim().toLowerCase() === wanted);
-  };
 
-  const songCards = songs.split(",").map(s => {
-    const song = s.trim();
-    if (!song) return "";
+  const songList = songs.split(",").map(s => s.trim()).filter(Boolean);
+
+  // HitSongs and HitSongsDetails come out of Gemini as two SEPARATE string
+  // fields in the same response, so a title can occasionally be spelled
+  // slightly differently between the two (e.g. "Sambo Siva Sambo" vs
+  // "Sambo Siva Sambho") even though it's the same song — an exact-string
+  // match would silently show nothing for that song. Normalize away
+  // punctuation/spacing/case first, then fall back to a loose
+  // substring match, then finally to same-index position (the prompt asks
+  // for "same titles, same order," so position is a reasonable last resort
+  // when the two lists are the same length).
+  const norm = (s) => String(s || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+  function findDetail(title, index) {
+    const wanted = norm(title);
+    let hit = songDetails.find(d => norm(d.title) === wanted);
+    if (hit) return hit;
+    hit = songDetails.find(d => {
+      const dn = norm(d.title);
+      return dn && wanted && (dn.includes(wanted) || wanted.includes(dn));
+    });
+    if (hit) return hit;
+    if (songList.length === songDetails.length) return songDetails[index];
+    return null;
+  }
+
+  const songCards = songList.map((song, i) => {
     const query = encodeURIComponent(song + " " + movieName);
-    const detail = findDetail(song);
+    const detail = findDetail(song, i);
     const why = detail && detail.whyHit
       ? `<div class="song-why"><b>Why it's a hit:</b> ${detail.whyHit}</div>` : "";
     const scoreNum = detail ? Number(detail.score) : 0;
@@ -958,7 +982,7 @@ function buildHitSongs(m) {
       <a href="https://open.spotify.com/search/${query}/tracks" target="_blank" class="song-link">♪ ${song}</a>
       ${why}${score}
     </div>`;
-  }).filter(Boolean).join("");
+  }).join("");
   return `<div class="modal-section"><div class="modal-section-label">Hit Songs</div><div class="songs-wrap">${songCards}</div></div>`;
 }
 
