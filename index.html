@@ -378,6 +378,22 @@ footer span{color:var(--red);}
 @keyframes toastspin{to{transform:rotate(360deg);}}
 .toast-btn{background:var(--red);color:white;border:none;padding:5px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;margin-left:6px;}
 .toast-btn:hover{background:var(--red2);}
+/* "Ready" state — bigger, shows the actual poster, and (unlike the plain
+   .add-toast text state above) never auto-hides on its own. Both the close
+   button and View Review need to stay crisp and fully clickable regardless
+   of what's behind them (an open review modal has its own blurred backdrop
+   at z-index:200), so this sits well above that at z-index:9999 with no
+   opacity/blur of its own applied to the card, text, or buttons. */
+.add-toast.ready{max-width:380px;padding:14px;gap:14px;}
+.add-toast-poster{width:56px;height:80px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--bg3);}
+.add-toast-poster-placeholder{width:56px;height:80px;border-radius:6px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;color:var(--text3);}
+.add-toast-body{flex:1;min-width:0;padding-right:18px;}
+.add-toast-eyebrow{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#1DD3B0;margin-bottom:3px;}
+.add-toast-title{font-weight:700;font-size:15px;color:var(--text);line-height:1.3;margin-bottom:10px;overflow-wrap:break-word;}
+.add-toast-view-btn{background:var(--red);color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.add-toast-view-btn:hover{background:var(--red2);}
+.add-toast-close{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:var(--text2);font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.add-toast-close:hover{background:rgba(255,255,255,0.22);color:var(--text);}
 .similar-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .similar-card{cursor:pointer;transition:transform 0.2s;}
 .similar-card:hover{transform:translateY(-3px);}
@@ -2435,36 +2451,34 @@ async function submitMovie(){
   }, 38000);
 }
 
+// Guards the single shared toast slot against a delayed retry from an
+// OLDER Add clobbering a NEWER one's card if someone adds a second movie
+// before the first has finished/been dismissed — every check/retry below
+// bails out if a newer Add has taken over the toast since it was scheduled.
+let activeAddTitle = null;
+
 function showAddToast(title) {
+  activeAddTitle = title;
   let toast = document.getElementById("addToast");
   if(!toast) {
     toast = document.createElement("div");
     toast.id = "addToast";
-    toast.className = "add-toast";
     document.body.appendChild(toast);
   }
+  toast.className = "add-toast"; // reset in case a previous "ready" card left the .ready modifier on
   toast.innerHTML = `<span class="toast-spinner"></span> Adding <b>${title}</b>… ready in ~35s. Keep browsing!`;
   toast.classList.add("show");
 }
 
-function updateAddToast(title) {
-  const toast = document.getElementById("addToast");
-  if(!toast) return;
-  toast.innerHTML = `✅ <b>${title}</b> added! <button class="toast-btn" onclick="jumpToMovie('${jsAttrEscape(title)}')">View it</button>`;
-  setTimeout(()=>{ toast.classList.remove("show"); }, 8000);
-}
-
-function jumpToMovie(title) {
-  // Search the FULL catalog (allMovies), not window._currentMovies — that's
-  // the currently filtered grid (e.g. "New on Streaming," now the landing
-  // page default), and a freshly-added movie almost never qualifies for
-  // that filter yet, so it would never be found there.
-  //
-  // Also strip any trailing year/language hint (e.g. "Dilwale 2015" or
-  // "Gilli Tamil") before matching — those disambiguation hints are used
-  // for the search box, but the movie ends up stored under its clean
-  // official title once processed, so searching for the raw input would
-  // never match.
+// Shared by the "View it" toast button and jumpToMovie — finds the movie a
+// just-submitted title actually landed as in allMovies (the FULL catalog,
+// not window._currentMovies, since a freshly-added movie almost never
+// qualifies for whatever filter is currently showing, e.g. "New on
+// Streaming"). Strips any trailing year/language hint (e.g. "Dilwale 2015"
+// or "Gilli Tamil") before matching — those are search-box disambiguation
+// hints, but the movie ends up stored under its clean official title once
+// processed, so matching the raw input verbatim would never work.
+function findRecentlyAddedMovie(title) {
   const languageWords = "tamil|hindi|telugu|malayalam|kannada|bengali|marathi";
   let cleanWant = title.trim()
     .replace(/\s+(19|20)\d{2}$/i, "")
@@ -2476,7 +2490,65 @@ function jumpToMovie(title) {
   let target = allMovies.find(m => String(m.Title||"").trim().toLowerCase() === cleanWant);
   if (!target) target = allMovies.find(m => String(m.Title||"").trim().toLowerCase().includes(cleanWant));
   if (!target) target = allMovies.find(m => cleanWant.includes(String(m.Title||"").trim().toLowerCase()) && m.Title);
+  return target || null;
+}
 
+// Replaces the "Adding…" toast with a bigger, persistent "ready" card once
+// the row is fully processed — poster, title, a clear View Review button,
+// and an explicit close (✕). Deliberately does NOT auto-hide: the old
+// 8-second auto-dismiss was the actual problem being fixed here (people
+// missed it and had no other way to find the movie they'd just added), so
+// this stays up until the person consciously clicks or dismisses it.
+//
+// If the movie isn't showing up yet, that's usually just normal — Gemini
+// occasionally runs past the usual ~35s. Quietly re-check a few times
+// before giving up, instead of immediately telling someone to go search
+// for a movie that's about to appear on its own in a few more seconds.
+async function updateAddToast(title, attempt) {
+  attempt = attempt || 1;
+  if (title !== activeAddTitle) return; // a newer Add has taken over the toast
+  const toast = document.getElementById("addToast");
+  if(!toast) return;
+  const target = findRecentlyAddedMovie(title);
+
+  const MAX_ATTEMPTS = 4; // initial 38s check + up to 3 retries (~45s more)
+  if (!target && attempt < MAX_ATTEMPTS) {
+    toast.className = "add-toast show";
+    toast.innerHTML = `<span class="toast-spinner"></span> Still working on <b>${title}</b>… almost there.`;
+    setTimeout(async () => {
+      if (title !== activeAddTitle) return;
+      await loadMovies();
+      updateAddToast(title, attempt + 1);
+    }, 15000);
+    return;
+  }
+
+  toast.className = "add-toast show ready";
+  const displayTitle = jsAttrEscape(target ? target.Title : title);
+  const poster = target && target.PosterURL
+    ? `<img class="add-toast-poster" src="${target.PosterURL}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="add-toast-poster-placeholder" style="display:none">🎬</div>`
+    : `<div class="add-toast-poster-placeholder">🎬</div>`;
+  const eyebrow = target ? "✅ Added" : "⏳ Taking longer than usual";
+  const action = target
+    ? `<button class="add-toast-view-btn" onclick="jumpToMovie('${displayTitle}')">View Review →</button>`
+    : `<span style="font-size:12px;color:var(--text2);">It'll appear once ready — try searching for it in a bit.</span>`;
+  toast.innerHTML = `
+    <button class="add-toast-close" onclick="dismissAddToast()" aria-label="Dismiss">✕</button>
+    ${poster}
+    <div class="add-toast-body">
+      <div class="add-toast-eyebrow">${eyebrow}</div>
+      <div class="add-toast-title">${target ? target.Title : title}</div>
+      ${action}
+    </div>`;
+}
+
+function dismissAddToast() {
+  const toast = document.getElementById("addToast");
+  if (toast) toast.classList.remove("show");
+}
+
+function jumpToMovie(title) {
+  const target = findRecentlyAddedMovie(title);
   const toast = document.getElementById("addToast");
   if (toast) toast.classList.remove("show");
   if (!target) return;
