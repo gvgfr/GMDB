@@ -614,6 +614,7 @@ footer span{color:var(--red);}
   <button id="newStreamBtn" class="ctrl-btn" onclick="toggleNewStreaming(this)">📺 New on Streaming<span id="newStreamCount"></span></button>
   <button id="highRatedBtn" class="ctrl-btn" onclick="sortByHighestRated(this)">⭐ Highest Rated</button>
   <button id="comingSoonBtn" class="ctrl-btn" onclick="toggleComingSoon(this)">🗓️ Coming Soon<span id="comingSoonCount"></span></button>
+  <button id="newReleasesBtn" class="ctrl-btn" onclick="toggleNewReleases(this)">🆕 New Releases<span id="newReleasesCount"></span></button>
   <button id="nowInTheatersBtn" class="ctrl-btn" onclick="toggleNowInTheaters(this)">🎬 Now in Theaters</button>
   </div>
   <div class="view-toggle">
@@ -735,13 +736,18 @@ footer span{color:var(--red);}
     </div>
 
     <div class="about-section">
-      <p class="about-section-label">🎬 Now in Theaters</p>
-      <p style="font-size:15px;color:var(--text);line-height:1.7;">Any film released in the last month with a <b>confirmed US theatrical release</b> — checked directly against real ticketing sites and distributors, not just a recent release date. A film that only released in India (or elsewhere) won't show up here until it's actually confirmed playing in US theaters.</p>
+      <p class="about-section-label">🗓️ Coming Soon</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">Films with a confirmed release date that hasn't arrived yet. There's no score shown here — nothing to review until the film actually releases — just the poster, basic details, and expected date. Once it releases and gets reviewed, it moves into New Releases (and Now in Theaters too, if it gets a confirmed US theatrical run).</p>
     </div>
 
     <div class="about-section">
-      <p class="about-section-label">🗓️ Coming Soon</p>
-      <p style="font-size:15px;color:var(--text);line-height:1.7;">Films with a confirmed release date that hasn't arrived yet. There's no score shown here — nothing to review until the film actually releases — just the poster, basic details, and expected date. Once it releases and gets reviewed, it moves out of Coming Soon and into Now in Theaters.</p>
+      <p class="about-section-label">🆕 New Releases</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">Any reviewed film released in the last month, regardless of where it's playing — the broad "just came out" view. Use this to catch a fresh release that hasn't (or won't) get a US theatrical run.</p>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">🎬 Now in Theaters</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">The narrower subset of New Releases with a <b>confirmed US theatrical release</b> — checked directly against real ticketing sites and distributors, not just a recent release date. A film that only released in India (or elsewhere) stays under New Releases until it's actually confirmed playing in US theaters.</p>
     </div>
 
     <div class="about-section">
@@ -1085,6 +1091,7 @@ function applyMoviesData(data) {
   updateStats();
   updateNewStreamingBadge();
   updateComingSoonBadge();
+  updateNewReleasesBadge();
   populateYears();
   renderStreamingCarousel();
   renderNowInTheatersCarousel();
@@ -1282,6 +1289,23 @@ function isNowInTheaters(m) {
   const streamingAnywhere = m.OTTInfo || m.OTTinfo || m.Streaming || m.StreamingUK || m.Streaminguk || "";
   if (streamingAnywhere) return false;
   return !!(m.USTheatrical || m.UsTheatrical);
+}
+
+// "New Releases" — the broad "just came out" bucket, deliberately looser
+// than "Now in Theaters": any film released within the last month with a
+// score above 50, regardless of confirmed US theatrical status or streaming
+// availability. This exists so a film that released recently (e.g. only in
+// India, with no confirmed US theatrical run) is still visible SOMEWHERE on
+// the site — "Now in Theaters" alone would otherwise make it disappear
+// entirely for up to 5 months, until it either gets a US release or lands
+// on streaming and qualifies for "New on Streaming".
+function isNewRelease(m) {
+  const relRaw = m.ReleaseDate || m.Year || "";
+  const released = new Date(relRaw).getTime();
+  if (isNaN(released)) return false;
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000; // last 1 month
+  if (released < cutoff || released > Date.now()) return false;
+  return Number(m.GauthamScore) > 50; // also excludes NaN/blank (not yet reviewed)
 }
 
 // "Coming Soon" — a confirmed future release date. These rows have no
@@ -1693,6 +1717,8 @@ function filterMovies() {
         filtered = filtered.filter(isNewOnStreaming);
       } else if (currentFilter === "now-in-theaters") {
         filtered = filtered.filter(isNowInTheaters);
+      } else if (currentFilter === "new-releases") {
+        filtered = filtered.filter(isNewRelease);
       } else if (currentFilter !== "all") {
         filtered = filtered.filter(m => getTierFromScore(m.GauthamScore) === currentFilter);
       }
@@ -1778,7 +1804,7 @@ function applySorting() {
 // while on New on Streaming shows the highest-rated NEW-ON-STREAMING
 // movies, not a reset to the whole catalog.
 function clearOtherToggleButtons(exceptId) {
-  ["newStreamBtn", "nowInTheatersBtn", "comingSoonBtn"].forEach(id => {
+  ["newStreamBtn", "nowInTheatersBtn", "comingSoonBtn", "newReleasesBtn"].forEach(id => {
     if (id === exceptId) return;
     const btn = document.getElementById(id);
     if (btn) btn.classList.remove("active");
@@ -1918,6 +1944,14 @@ function updateComingSoonBadge() {
   countEl.innerHTML = count > 0 ? `<span class="new-stream-count">${count}</span>` : "";
 }
 
+// Same live-count treatment, for the New Releases toggle.
+function updateNewReleasesBadge() {
+  const countEl = document.getElementById("newReleasesCount");
+  if (!countEl) return;
+  const count = allMovies.filter(isNewRelease).length;
+  countEl.innerHTML = count > 0 ? `<span class="new-stream-count">${count}</span>` : "";
+}
+
 // Simple, standalone button: just re-sorts whatever's currently showing by
 // score, regardless of which filter (if any) is active — no coupling with
 // the New on Streaming toggle or dropdown, so it can't "mess up" like
@@ -2006,6 +2040,23 @@ function toggleNowInTheaters(btn) {
   currentFilter = isOn ? "now-in-theaters" : "all";
   if (isOn) {
     clearOtherToggleButtons("nowInTheatersBtn");
+    document.getElementById("highRatedBtn")?.classList.remove("active");
+    resetYearAndLanguage();
+    currentSort = "year-new";
+    if (sortSelect) sortSelect.value = "year-new";
+  }
+  filterMovies();
+}
+
+// Same standalone-toggle pattern as Now in Theaters, but for isNewRelease
+// (see that function for why this exists as a separate, broader filter).
+function toggleNewReleases(btn) {
+  const isOn = btn.classList.toggle("active");
+  const sortSelect = document.getElementById("sortSelect");
+  clearTierFilter();
+  currentFilter = isOn ? "new-releases" : "all";
+  if (isOn) {
+    clearOtherToggleButtons("newReleasesBtn");
     document.getElementById("highRatedBtn")?.classList.remove("active");
     resetYearAndLanguage();
     currentSort = "year-new";
