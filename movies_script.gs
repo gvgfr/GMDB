@@ -487,17 +487,19 @@ function fillMovieData(e) {
   if (newImdbRating || !existingImdbRating) sheet.getRange(lastRow, 7).setValue(newImdbRating);
   if (newImdbVotes || !existingImdbVotes) sheet.getRange(lastRow, 8).setValue(newImdbVotes);
   // --- Score-based tier override ---
+  // Kept in sync by hand with the MASALA_TIERS boundaries in index.html.
   function getTierFromScore(score) {
     const s = Number(score);
-    if (s >= 90) return "Must Watch";
-    if (s >= 75) return "Strong Recommend";
-    if (s >= 60) return "Worth Watching";
-    return "Skip";
+    if (s >= 85) return "Vera Level";
+    if (s >= 75) return "Semma";
+    if (s >= 65) return "Paakkalam";
+    if (s >= 50) return "Parava illa";
+    return "Mokkai";
   }
   const roundedScore = Math.round(Number(aiReview.gauthamScore)) || "";
-  // getTierFromScore() always returns SOME tier (falls through to "Skip"
+  // getTierFromScore() always returns SOME tier (falls through to "Mokkai"
   // for 0/NaN) — only meaningful when there's an actual score to back it;
-  // otherwise this would write "Skip" next to a blank score (e.g. the
+  // otherwise this would write "Mokkai" next to a blank score (e.g. the
   // Gemini-failure fallback above), which is misleading and unnecessary
   // since a blank score already keeps the row off the site regardless.
   const correctedTier = roundedScore ? getTierFromScore(roundedScore) : "";
@@ -995,11 +997,11 @@ CRITICAL — reviewSources field rules:
 
 CRITICAL — SCORE STABILITY:
 - Anchor every score to the calibration examples above
-- Before finalizing, ask: "Is this movie genuinely better than [Worth Watching anchor] but worse than [Strong Recommend anchor]?"
+- Before finalizing, ask: "Is this movie genuinely better than [Parava illa anchor] but worse than [Semma anchor]?"
 - A commercial masala film with mixed reviews should score 50-65, NOT 70+
 - If critics are divided or reviews are mediocre, lean LOWER not higher
 - Do not let a film's box office success alone inflate the score — commercial success ≠ quality
-- A star-vehicle mass film (Suriya/Vijay/Ajith) with an engaging first half but a weak/dragging second half and "mixed reviews" = 55-62 (Worth Watching, lower end)
+- A star-vehicle mass film (Suriya/Vijay/Ajith) with an engaging first half but a weak/dragging second half and "mixed reviews" = 55-62 (Parava illa, lower end)
 - Phrases in reviews like "flawed but watchable", "ambitious but uneven", "lost opportunity", "passable", "works in parts" = score 55-65
 - Phrases like "masterpiece", "best of the year", "must watch", "stunning" = score 85+
 - Karuppu (2026) is the reference for a mixed-review commercial film = 58
@@ -1036,10 +1038,11 @@ criticalConsensus x 0.10
 audienceReception x 0.05
 
 consensusTier is derived from gauthamScore:
-90-100 = Must Watch
-75-89 = Strong Recommend
-60-74 = Worth Watching
-Below 60 = Skip
+85-100 = Vera Level
+75-84 = Semma
+65-74 = Paakkalam
+50-64 = Parava illa
+Below 50 = Mokkai
 
 Return ONLY valid JSON. No markdown, no backticks, no explanation.
 
@@ -1080,7 +1083,10 @@ genuinely reflect which band it's in, not read like a recommendation regardless
 of score:
   85-100 (Vera Level) — genuinely enthusiastic, a real recommendation
   75-84  (Semma) — positive with real caveats acknowledged
-  50-74  (Parava illa) — MIXED/MEDIOCRE. This is NOT a recommendation. Write it
+  65-74  (Paakkalam) — cautiously positive at best; "worth a watch if you're in
+    the mood" rather than a genuine recommendation. Avoid glowing language —
+    this band is decent, not good.
+  50-64  (Parava illa) — MIXED/MEDIOCRE. This is NOT a recommendation. Write it
     so a reader understands "watchable but forgettable," "only for fans of X,"
     or "has some merit but doesn't add up to much" — not glowing language like
     "praised for," "compelling," "solid entertainer," or "effective blend."
@@ -1116,7 +1122,7 @@ storyline: Write a spoiler-free plot synopsis of 3-4 sentences (about 60-90 word
 
 trivia: Write 3-5 interesting, factual bullet-style facts about the film, separated by " | " (pipe). Draw from: notable awards/nominations, box-office milestones, the director's background or other work, lead actors' careers or breakthroughs, music/soundtrack facts, production or casting stories, records set, or cultural impact. Keep each fact to one short sentence. Only include facts you are reasonably confident are true — do NOT invent. If little is known, give fewer facts rather than making them up. Example: "Won the National Film Award for Best Tamil Film. | Marked the directorial debut of the filmmaker. | The lead actor learned Tamil specifically for this role. | The soundtrack topped charts for six weeks."
 reviewSources: list only sources actually found. Do not guess.
-scoreReasoning: one sentence explaining the overall score. Same calibration rule as reviewSummary above — the tone must match the score band (a 50-69 "Parava illa" score needs mixed/mediocre language, not praise).
+scoreReasoning: one sentence explaining the overall score. Same calibration rule as reviewSummary above — the tone must match the score band (a 50-64 "Parava illa" score needs mixed/mediocre language, not praise).
 confidence:
   High = multiple critics reviewed and broadly agree
   Medium = some coverage, mixed or limited consensus
