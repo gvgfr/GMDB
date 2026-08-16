@@ -64,6 +64,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .carousel-poster{width:100%;height:100%;object-fit:cover;display:block;}
 .carousel-poster-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--text3);}
 .carousel-title{font-size:12px;font-weight:600;color:var(--text);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.carousel-score{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:12px;font-weight:700;margin-top:4px;}
 .carousel-empty{color:var(--text2);font-size:13px;padding:0 1.5rem;}
 .hero::before{content:'';position:absolute;top:-50%;left:50%;transform:translateX(-50%);width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(229,32,32,0.08) 0%,transparent 70%);pointer-events:none;}
 .hero-eyebrow{font-size:13px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:0.65rem;}
@@ -1196,6 +1197,7 @@ function renderStreamingCarousel() {
           : `<div class="carousel-poster-placeholder">🎬</div>`}
       </div>
       <div class="carousel-title">${m.Title}</div>
+      <div class="carousel-score ${getTierClass(m.ConsensusTier, m.GauthamScore)}">${m.GauthamScore||"—"} ${getTierEmoji(m.ConsensusTier, m.GauthamScore)}</div>
     </div>`;
   }).join("");
 
