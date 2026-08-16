@@ -903,7 +903,6 @@ function buildStreamingButtons(m) {
 function buildMetaGrid(m) {
   const cast = m.Cast || "";
   const music = m.MusicDirector || "";
-  const songs = m.HitSongs || "";
   let castPhotos = [];
   try {
     if (m.CastPhotos) castPhotos = JSON.parse(m.CastPhotos);
@@ -926,35 +925,41 @@ function buildMetaGrid(m) {
   }
 
   if (music) html += `<div class="meta-grid"><div class="meta-block"><div class="meta-block-label">Music</div><div class="meta-block-value">${music}</div></div></div>`;
-  if (songs) {
-    const movieName = m.Title || "";
-    let songDetails = [];
-    try {
-      if (m.HitSongsDetails) songDetails = JSON.parse(m.HitSongsDetails);
-    } catch (e) { songDetails = []; }
-    const findDetail = (title) => {
-      const wanted = title.trim().toLowerCase();
-      return songDetails.find(d => String(d.title || "").trim().toLowerCase() === wanted);
-    };
-
-    const songCards = songs.split(",").map(s => {
-      const song = s.trim();
-      if (!song) return "";
-      const query = encodeURIComponent(song + " " + movieName);
-      const detail = findDetail(song);
-      const why = detail && detail.whyHit
-        ? `<div class="song-why"><b>Why it's a hit:</b> ${detail.whyHit}</div>` : "";
-      const scoreNum = detail ? Number(detail.score) : 0;
-      const score = scoreNum > 0
-        ? `<div class="song-score">Masala Meter Song Score: ${scoreNum.toFixed(1)}/10</div>` : "";
-      return `<div class="song-card">
-        <a href="https://open.spotify.com/search/${query}/tracks" target="_blank" class="song-link">♪ ${song}</a>
-        ${why}${score}
-      </div>`;
-    }).filter(Boolean).join("");
-    html += `<div class="modal-section"><div class="modal-section-label">Hit Songs</div><div class="songs-wrap">${songCards}</div></div>`;
-  }
   return html;
+}
+
+// Kept separate from buildMetaGrid so it can be positioned independently in
+// the modal (currently right above Trivia, grouping the two "quick extras"
+// sections together near the end, rather than up with Cast/Music).
+function buildHitSongs(m) {
+  const songs = m.HitSongs || "";
+  if (!songs) return "";
+  const movieName = m.Title || "";
+  let songDetails = [];
+  try {
+    if (m.HitSongsDetails) songDetails = JSON.parse(m.HitSongsDetails);
+  } catch (e) { songDetails = []; }
+  const findDetail = (title) => {
+    const wanted = title.trim().toLowerCase();
+    return songDetails.find(d => String(d.title || "").trim().toLowerCase() === wanted);
+  };
+
+  const songCards = songs.split(",").map(s => {
+    const song = s.trim();
+    if (!song) return "";
+    const query = encodeURIComponent(song + " " + movieName);
+    const detail = findDetail(song);
+    const why = detail && detail.whyHit
+      ? `<div class="song-why"><b>Why it's a hit:</b> ${detail.whyHit}</div>` : "";
+    const scoreNum = detail ? Number(detail.score) : 0;
+    const score = scoreNum > 0
+      ? `<div class="song-score">Masala Meter Song Score: ${scoreNum.toFixed(1)}/10</div>` : "";
+    return `<div class="song-card">
+      <a href="https://open.spotify.com/search/${query}/tracks" target="_blank" class="song-link">♪ ${song}</a>
+      ${why}${score}
+    </div>`;
+  }).filter(Boolean).join("");
+  return `<div class="modal-section"><div class="modal-section-label">Hit Songs</div><div class="songs-wrap">${songCards}</div></div>`;
 }
 
 function buildStoryline(text) {
@@ -2116,6 +2121,7 @@ function openMovie(index) {
       ${m.Storyline?`<div class="modal-section"><div class="modal-section-label">Storyline</div>${buildStoryline(m.Storyline)}</div>`:""}
       ${buildScoreBreakdown(m)}
       ${m.ScoreReasoning?`<div class="modal-section"><div class="modal-section-label">Score Reasoning</div><div class="modal-section-value">${m.ScoreReasoning}</div></div>`:""}
+      ${buildHitSongs(m)}
       ${buildTrivia(m)}
       ${m.Confidence?`<div class="modal-section"><div class="modal-section-label">Confidence</div><div class="modal-section-value">${m.Confidence}</div></div>`:""}
       ${m.ReviewSources?`<div class="modal-section"><div class="modal-section-label">Sources</div><div class="modal-section-value" style="font-size:12px;color:var(--text2)">${m.ReviewSources}</div></div>`:""}

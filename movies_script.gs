@@ -1057,7 +1057,8 @@ and still counts as a violation of this rule. The actual rule: any criticism of
 the writing, plot, or pacing must include a SPECIFIC, concrete detail in the
 same breath — not a vague catch-all noun phrase standing alone.
   NOT ALLOWED (vague, could apply to any film): "narrative imperfections,"
-    "narrative stumbles," "uneven pacing," "pacing issues," "predictable,"
+    "narrative stumbles," "narrative inconsistencies," "narrative inconsistency,"
+    "tonal inconsistency," "uneven pacing," "pacing issues," "predictable,"
     "conventional yet engaging," "elevated by earnest performances," "familiar
     but effective," "flawed screenplay," "loses steam," "drags in parts"
   REQUIRED INSTEAD: name the actual specific thing — which act or plot thread
@@ -1116,7 +1117,7 @@ above (same titles, same order), as a JSON array of objects:
 If hitSongs is empty (film has no notable songs), return an empty array
 ([]) here too.
 
-takeaway: A single memorable one-line critic verdict that captures the essence of the film. Keep it punchy and specific; avoid clichéd words like "poignant", "must-watch", or "tour de force".
+takeaway: A single memorable one-line critic verdict that captures the essence of the film. Keep it punchy and specific; avoid clichéd words like "poignant", "must-watch", or "tour de force". Also avoid reaching for vague "inconsistency" language — "narrative inconsistencies," "narrative inconsistency," "tonal inconsistency," and similar phrases have become an overused crutch here, showing up across too many different films' takeaways. If a film's actual flaw is a clashing tone or a story that doesn't hold together, name the SPECIFIC thing that clashes or falls apart, not this generic label.
 Write it in a SERIOUS critic tone but MATCH THE MOOD of the film.
 - For an emotional film, be evocative
 - For a thriller, be sharp
@@ -1125,7 +1126,7 @@ Keep it under 15 words. Make it quotable.
 Examples:
 - 96: "Love that lingers like an old song you cannot forget."
 - Jai Bhim: "A gut-punch reminder of justice denied to the voiceless."
-- Karuppu: "An ambitious premise undone by tonal inconsistency and a sagging second half."
+- Karuppu: "A strong first half squandered by a second that forgets its own momentum."
 - Vikram: "A masterclass in commercial filmmaking with genuine emotional weight."
 
 imdbRatingLive: Use Google Search to look up THIS SPECIFIC ${filmLanguage || "Indian"}
