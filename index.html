@@ -1055,6 +1055,13 @@ function buildScoreBreakdown(m) {
 
 let cameFromSharedLink = false;
 const MOVIES_CACHE_KEY = "gmdb_movies_cache_v1";
+// Tracks the last data actually rendered, so a background/periodic
+// loadMovies() call that finds NOTHING has changed can skip re-rendering
+// entirely — applyMoviesData() restarts the stats-bar count-up animation,
+// rebuilds both carousels (resetting their scroll position), and rebuilds
+// the whole grid, all of which would otherwise visibly flicker/reset every
+// few minutes even when nothing actually changed.
+let lastRenderedMoviesRaw = null;
 
 // Landing default (currentFilter/currentSort) and the shared-link auto-open
 // should each only fire once per page load — guard flags so the background
@@ -1134,7 +1141,11 @@ async function loadMovies() {
   try {
     const cached = JSON.parse(localStorage.getItem(MOVIES_CACHE_KEY));
     if (Array.isArray(cached) && cached.length) {
-      applyMoviesData(cached);
+      const cachedRaw = JSON.stringify(cached);
+      if (cachedRaw !== lastRenderedMoviesRaw) {
+        applyMoviesData(cached);
+        lastRenderedMoviesRaw = cachedRaw;
+      }
       renderedFromCache = true;
     }
   } catch(err) { /* corrupt/missing cache — fall through to network */ }
@@ -1142,7 +1153,11 @@ async function loadMovies() {
   try {
     const res = await fetch(API_URL + "?action=movies");
     const data = await res.json();
-    applyMoviesData(data);
+    const dataRaw = JSON.stringify(data);
+    if (dataRaw !== lastRenderedMoviesRaw) {
+      applyMoviesData(data);
+      lastRenderedMoviesRaw = dataRaw;
+    }
     try { localStorage.setItem(MOVIES_CACHE_KEY, JSON.stringify(data)); } catch(err) { /* storage unavailable/full — non-fatal */ }
   } catch(err) {
     if (!renderedFromCache) {
@@ -2582,6 +2597,23 @@ window.addEventListener("popstate", () => {
 });
 
 loadMovies();
+
+// Keep an already-open tab from showing stale data indefinitely if a movie
+// gets re-scored (or added) directly in the sheet while someone's already
+// browsing the site — nothing pings an open tab when that happens, so
+// without this it would only ever see the update after a manual reload.
+// Silently re-fetches periodically, but only while the tab is actually
+// visible (no point polling one that's in the background), plus once
+// immediately whenever the tab regains focus after being away — that
+// covers "left it open, came back later" without needing to poll the
+// whole time nobody was looking at it.
+const BACKGROUND_REFRESH_MS = 3 * 60 * 1000; // 3 minutes
+setInterval(() => {
+  if (document.visibilityState === "visible") loadMovies();
+}, BACKGROUND_REFRESH_MS);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") loadMovies();
+});
 </script>
 </body>
 </html>
