@@ -2582,6 +2582,23 @@ window.addEventListener("popstate", () => {
 });
 
 loadMovies();
+
+// Keep an already-open tab from showing stale data indefinitely if a movie
+// gets re-scored (or added) directly in the sheet while someone's already
+// browsing the site — nothing pings an open tab when that happens, so
+// without this it would only ever see the update after a manual reload.
+// Silently re-fetches periodically, but only while the tab is actually
+// visible (no point polling one that's in the background), plus once
+// immediately whenever the tab regains focus after being away — that
+// covers "left it open, came back later" without needing to poll the
+// whole time nobody was looking at it.
+const BACKGROUND_REFRESH_MS = 3 * 60 * 1000; // 3 minutes
+setInterval(() => {
+  if (document.visibilityState === "visible") loadMovies();
+}, BACKGROUND_REFRESH_MS);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") loadMovies();
+});
 </script>
 </body>
 </html>
