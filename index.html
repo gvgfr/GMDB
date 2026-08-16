@@ -979,7 +979,7 @@ function buildHitSongs(m) {
     const score = scoreNum > 0
       ? `<div class="song-score">Masala Meter Song Score: ${scoreNum.toFixed(1)}/10</div>` : "";
     return `<div class="song-card">
-      <a href="https://open.spotify.com/search/${query}/tracks" target="_blank" class="song-link">♪ ${song}</a>
+      <a href="https://open.spotify.com/search/${query}" target="_blank" class="song-link">♪ ${song}</a>
       ${why}${score}
     </div>`;
   }).join("");
