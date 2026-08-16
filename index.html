@@ -231,6 +231,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .card-poster{width:100%;aspect-ratio:2/3;object-fit:cover;object-position:top center;display:block;background:var(--bg3);}
 .card-poster-wrap{position:relative;overflow:hidden;}
 .card-new-ribbon{position:absolute;top:18px;left:-46px;width:180px;text-align:center;background:#1DD3B0;color:#04241d;font-size:11px;font-weight:800;letter-spacing:0.2px;padding:5px 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,0.35);z-index:2;pointer-events:none;white-space:nowrap;}
+.card-coming-ribbon{background:#FFB020;color:#3d2a06;}
 .card-theater-badge{position:absolute;bottom:8px;right:8px;background:rgba(229,32,32,0.92);color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,0.35);white-space:nowrap;}
 
 #newStreamBtn{position:relative;}
@@ -583,7 +584,8 @@ footer span{color:var(--red);}
   <button id="allMoviesBtn" class="ctrl-btn" onclick="showAllMoviesNewest()">🎞️ All Movies</button>
   <button id="newStreamBtn" class="ctrl-btn" onclick="toggleNewStreaming(this)">📺 New on Streaming<span id="newStreamCount"></span></button>
   <button id="highRatedBtn" class="ctrl-btn" onclick="sortByHighestRated(this)">⭐ Highest Rated</button>
-  <button id="theaterWorthyBtn" class="ctrl-btn" onclick="toggleTheaterWorthy(this)">🎬 Theater Worthy</button>
+  <button id="comingSoonBtn" class="ctrl-btn" onclick="toggleComingSoon(this)">🗓️ Coming Soon<span id="comingSoonCount"></span></button>
+  <button id="nowInTheatersBtn" class="ctrl-btn" onclick="toggleNowInTheaters(this)">🎬 Now in Theaters</button>
   </div>
   <div class="view-toggle">
     <button id="viewGrid" class="view-btn active" onclick="setView('grid')" title="Grid view" aria-label="Grid view">
@@ -702,8 +704,13 @@ footer span{color:var(--red);}
     </div>
 
     <div class="about-section">
-      <p class="about-section-label">🎬 Theater Worthy</p>
-      <p style="font-size:15px;color:var(--text);line-height:1.7;">A separate question from the Masala Meter score above — does this film's <b>scale, visual effects, sound design, or communal mass-audience energy</b> make the theatrical experience meaningfully better than watching at home? A great small drama can score high without earning this badge (nothing's lost on a couch); a spectacle film can earn it even with a middling score. This badge only appears for films released in roughly the last 3 months — old catalog titles are long out of theaters, so the flag isn't shown for them even if it applies.</p>
+      <p class="about-section-label">🎬 Now in Theaters</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">Any film released in the last month — a simple, up-to-date view of what's actually screening right now, independent of its Masala Meter score.</p>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">🗓️ Coming Soon</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">Films with a confirmed release date that hasn't arrived yet. There's no score shown here — nothing to review until the film actually releases — just the poster, basic details, and expected date. Once it releases and gets reviewed, it moves out of Coming Soon and into Now in Theaters.</p>
     </div>
 
     <div class="about-section">
@@ -968,9 +975,15 @@ let sharedLinkHandled = false;
 function applyMoviesData(data) {
   // Only show fully-processed movies — skip rows that have a title but no
   // score yet (incomplete/stuck entries that would render as blank cards).
-  allMovies = data.filter(m => m.Title && m.GauthamScore !== "" && m.GauthamScore != null);
+  // Coming Soon rows are the one deliberate exception: they never HAVE a
+  // score yet (nothing to review before a film releases), so let those
+  // through based on having a future ReleaseDate instead.
+  allMovies = data.filter(m => m.Title && (
+    (m.GauthamScore !== "" && m.GauthamScore != null) || isComingSoon(m)
+  ));
   updateStats();
   updateNewStreamingBadge();
+  updateComingSoonBadge();
   populateYears();
   renderStreamingCarousel();
 
@@ -1048,7 +1061,9 @@ async function loadMovies() {
 }
 
 function updateStats() {
-  const total = allMovies.length;
+  // Coming Soon rows have no score yet — don't count them as reviewed
+  // movies in the headline stat.
+  const total = allMovies.filter(m => !isComingSoon(m)).length;
   const vera = allMovies.filter(m => getTierFromScore(m.GauthamScore) === "Vera Level").length;
   const scores = allMovies.map(m => Number(m.GauthamScore)).filter(s => s > 0);
   const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
@@ -1120,19 +1135,26 @@ function isNewOnStreaming(m) {
   return released >= cutoff;
 }
 
-// "Worth watching in theaters" is a genuinely different question from the
-// film's overall quality score — Gemini's TheaterWorthy field answers "does
-// this film's scale/spectacle/sound genuinely benefit from a theater" for
-// EVERY movie, but the badge only makes sense to SHOW for genuinely recent
-// releases (an old catalog film flagged this way is moot — it's long out
-// of theaters). ~90 days is a reasonable theatrical-window length.
-function isTheaterWorthy(m) {
-  if (m.TheaterWorthy !== "Yes") return false;
+// "Now in Theaters" — purely release-date based: any film released within
+// the last month. No quality judgment involved (that's what the Masala
+// Meter score is for) — this just answers "is this actually screening
+// right now."
+function isNowInTheaters(m) {
   const relRaw = m.ReleaseDate || m.Year || "";
   const released = new Date(relRaw).getTime();
   if (isNaN(released)) return false;
-  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
-  return released >= cutoff && released <= Date.now() + 14 * 24 * 60 * 60 * 1000; // small forward buffer for imminent releases
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000; // last 1 month
+  return released >= cutoff && released <= Date.now();
+}
+
+// "Coming Soon" — a confirmed future release date. These rows have no
+// score yet (nothing to review before a film is out), so they're excluded
+// from every other filter/sort and only shown under their own toggle.
+function isComingSoon(m) {
+  const relRaw = m.ReleaseDate || m.Year || "";
+  const released = new Date(relRaw).getTime();
+  if (isNaN(released)) return false;
+  return released > Date.now();
 }
 
 // Builds the Year dropdown's options from whatever years actually exist in
@@ -1287,9 +1309,15 @@ function renderMovies(movies) {
     return;
   }
   grid.innerHTML = movies.map((m,i)=>{
-    const isNew = isNewOnStreaming(m);
-    const newRibbon = isNew ? `<div class="card-new-ribbon">New to Stream</div>` : "";
-    const theaterBadge = isTheaterWorthy(m) ? `<div class="card-theater-badge">🎬 Theater Worthy</div>` : "";
+    const upcoming = isComingSoon(m);
+    const isNew = !upcoming && isNewOnStreaming(m);
+    const newRibbon = isNew
+      ? `<div class="card-new-ribbon">New to Stream</div>`
+      : (upcoming ? `<div class="card-new-ribbon card-coming-ribbon">Coming Soon</div>` : "");
+    const theaterBadge = !upcoming && isNowInTheaters(m) ? `<div class="card-theater-badge">🎬 Now in Theaters</div>` : "";
+    const scoreBadge = upcoming
+      ? `<span class="card-score" style="background:rgba(255,176,32,0.22);color:#FFB020;">🗓️ Coming Soon</span>`
+      : `<span class="card-score ${getTierClass(m.ConsensusTier, m.GauthamScore)}">${m.GauthamScore||"—"} ${getTierEmoji(m.ConsensusTier, m.GauthamScore)}</span>`;
     return `
     <div class="card" onclick="openMovie(${i})" style="animation-delay:${Math.min(i,12)*0.04}s">
       <div class="card-poster-wrap">
@@ -1304,7 +1332,7 @@ function renderMovies(movies) {
           <div class="card-title">${m.Title}</div>
           <div class="card-meta">${m.Year||""} ${m.Director?"· "+m.Director:""}</div>
         </div>
-        <span class="card-score ${getTierClass(m.ConsensusTier, m.GauthamScore)}">${m.GauthamScore||"—"} ${getTierEmoji(m.ConsensusTier, m.GauthamScore)}</span>
+        ${scoreBadge}
       </div>
     </div>`;
   }).join("");
@@ -1467,16 +1495,26 @@ function filterMovies() {
       .sort((a, b) => b.score - a.score)
       .map(x => x.m);
   } else {
-    if (currentFilter === "new-streaming") {
-      // "New on Streaming" = films that are actually on US streaming now AND
-      // were released within the last 5 months. Simple and reliable — a film
-      // shows here from when it lands on streaming until ~5 months post-release,
-      // then rolls off into the regular catalog automatically.
-      filtered = filtered.filter(isNewOnStreaming);
-    } else if (currentFilter === "theater-worthy") {
-      filtered = filtered.filter(isTheaterWorthy);
-    } else if (currentFilter !== "all") {
-      filtered = filtered.filter(m => getTierFromScore(m.GauthamScore) === currentFilter);
+    if (currentFilter === "coming-soon") {
+      // Unreleased films only — the one place they're allowed to show up.
+      filtered = filtered.filter(isComingSoon);
+    } else {
+      // Every other view is for released, scored movies. Coming Soon rows
+      // have no score yet, so they'd otherwise show up as broken-looking
+      // cards in "All Movies," tier filters, etc. — keep them out unless
+      // their own filter is active.
+      filtered = filtered.filter(m => !isComingSoon(m));
+      if (currentFilter === "new-streaming") {
+        // "New on Streaming" = films that are actually on US streaming now AND
+        // were released within the last 5 months. Simple and reliable — a film
+        // shows here from when it lands on streaming until ~5 months post-release,
+        // then rolls off into the regular catalog automatically.
+        filtered = filtered.filter(isNewOnStreaming);
+      } else if (currentFilter === "now-in-theaters") {
+        filtered = filtered.filter(isNowInTheaters);
+      } else if (currentFilter !== "all") {
+        filtered = filtered.filter(m => getTierFromScore(m.GauthamScore) === currentFilter);
+      }
     }
 
     // Tier filter (fire-legend clicks) is SEPARATE from currentFilter above —
@@ -1484,7 +1522,8 @@ function filterMovies() {
     // than replacing it. currentFilter itself can still directly BE a tier
     // (from the stats-bar Vera Level click, or a genre-select-style tier
     // pick elsewhere), so avoid double-filtering by the same tier twice.
-    if (currentTierFilter !== "all" && currentFilter !== currentTierFilter) {
+    // Doesn't apply to Coming Soon — those rows have no tier to refine by.
+    if (currentFilter !== "coming-soon" && currentTierFilter !== "all" && currentFilter !== currentTierFilter) {
       filtered = filtered.filter(m => getTierFromScore(m.GauthamScore) === currentTierFilter);
     }
 
@@ -1549,17 +1588,16 @@ function applySorting() {
   filterMovies();
 }
 
-// Shared by all three standalone toggle filters (New on Streaming, Highest
-// Rated, Theater Worthy) — they're mutually exclusive (currentFilter/
-// New on Streaming and Theater Worthy are CONTENT filters — mutually
-// exclusive with each other (a movie is either being filtered by one or
-// the other, not both). Highest Rated is deliberately NOT in this group
-// anymore — it's a pure SORT overlay that can apply on top of whichever
-// content filter (if any) is active, so "Highest Rated" while on New on
-// Streaming shows the highest-rated NEW-ON-STREAMING movies, not a reset
-// to the whole catalog.
+// Shared by the standalone toggle filters (New on Streaming, Now in
+// Theaters, Coming Soon) — New on Streaming/Now in Theaters/Coming Soon are
+// CONTENT filters, mutually exclusive with each other (a movie is either
+// being filtered by one or the other, not both). Highest Rated is
+// deliberately NOT in this group — it's a pure SORT overlay that can apply
+// on top of whichever content filter (if any) is active, so "Highest Rated"
+// while on New on Streaming shows the highest-rated NEW-ON-STREAMING
+// movies, not a reset to the whole catalog.
 function clearOtherToggleButtons(exceptId) {
-  ["newStreamBtn", "theaterWorthyBtn"].forEach(id => {
+  ["newStreamBtn", "nowInTheatersBtn", "comingSoonBtn"].forEach(id => {
     if (id === exceptId) return;
     const btn = document.getElementById(id);
     if (btn) btn.classList.remove("active");
@@ -1689,6 +1727,16 @@ function updateNewStreamingBadge() {
   }
 }
 
+// Same live-count treatment as New on Streaming, minus the attention pulse
+// (that's reserved for New on Streaming so it doesn't get diluted by every
+// button doing it).
+function updateComingSoonBadge() {
+  const countEl = document.getElementById("comingSoonCount");
+  if (!countEl) return;
+  const count = allMovies.filter(isComingSoon).length;
+  countEl.innerHTML = count > 0 ? `<span class="new-stream-count">${count}</span>` : "";
+}
+
 // Simple, standalone button: just re-sorts whatever's currently showing by
 // score, regardless of which filter (if any) is active — no coupling with
 // the New on Streaming toggle or dropdown, so it can't "mess up" like
@@ -1760,9 +1808,8 @@ function sortByHighestRated(btn) {
   filterMovies();
 }
 
-// Standalone filter, like New on Streaming — shows only recent releases
-// (see isTheaterWorthy's ~90-day window) that Gemini flagged as genuinely
-// benefiting from the big screen. Always resets to its own natural
+// Standalone filter, like New on Streaming — shows only films released in
+// the last month (see isNowInTheaters). Always resets to its own natural
 // default (year-new) and clears Highest Rated, rather than trying to
 // preserve a previous sort — that "preserve across filters" behavior
 // caused more confusion than it solved (e.g. narrowing to a year, sorting
@@ -1771,15 +1818,38 @@ function sortByHighestRated(btn) {
 // Also clears any fire-tier legend refinement — clicking one of these
 // standalone buttons is a fresh navigation, not a continuation of
 // whatever tier you'd narrowed to before.
-function toggleTheaterWorthy(btn) {
+function toggleNowInTheaters(btn) {
   const isOn = btn.classList.toggle("active");
   const sortSelect = document.getElementById("sortSelect");
   clearTierFilter();
-  currentFilter = isOn ? "theater-worthy" : "all";
+  currentFilter = isOn ? "now-in-theaters" : "all";
   if (isOn) {
-    clearOtherToggleButtons("theaterWorthyBtn");
+    clearOtherToggleButtons("nowInTheatersBtn");
     document.getElementById("highRatedBtn")?.classList.remove("active");
     resetYearAndLanguage();
+    currentSort = "year-new";
+    if (sortSelect) sortSelect.value = "year-new";
+  }
+  filterMovies();
+}
+
+// Same standalone-toggle pattern, for unreleased films with a confirmed
+// future ReleaseDate. Sorts soonest-releasing first (ascending release
+// date — "year-old"'s ordering, reused here because it's exactly what
+// "coming up next" needs), since Highest Rated/score sorts are meaningless
+// for rows that have no score yet.
+function toggleComingSoon(btn) {
+  const isOn = btn.classList.toggle("active");
+  const sortSelect = document.getElementById("sortSelect");
+  clearTierFilter();
+  currentFilter = isOn ? "coming-soon" : "all";
+  if (isOn) {
+    clearOtherToggleButtons("comingSoonBtn");
+    document.getElementById("highRatedBtn")?.classList.remove("active");
+    resetYearAndLanguage();
+    currentSort = "year-old";
+    if (sortSelect) sortSelect.value = "year-old";
+  } else {
     currentSort = "year-new";
     if (sortSelect) sortSelect.value = "year-new";
   }
@@ -1921,6 +1991,7 @@ function openMovie(index) {
   const formattedReleaseDate = !isNaN(relTimeTop)
     ? new Date(relTimeTop).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})
     : (m.Year || "");
+  const upcoming = isComingSoon(m);
   document.getElementById("modalContent").innerHTML=`
     <div class="modal-scroll-region">
     ${cameFromSharedLink ? `<div class="shared-link-banner" onclick="closeDetail(); document.getElementById('moviesGrid').scrollIntoView({behavior:'smooth'});">
@@ -1936,7 +2007,8 @@ function openMovie(index) {
         ${m.GauthamScore?`<div class="gmdb-badge" onclick="openAbout()" style="cursor:pointer;" title="Tap to see what this score means"><span class="gmdb-badge-label">MASALA METER</span>${m.GauthamScore}</div>`:""}
         ${(m.ConsensusTier||m.GauthamScore)?`<span class="modal-badge ${getTierClass(m.ConsensusTier, m.GauthamScore)}" onclick="openAbout()" style="cursor:pointer;" title="Tap to see what this tier means">${getTierEmoji(m.ConsensusTier, m.GauthamScore)} ${getTierLabel(m.ConsensusTier, m.GauthamScore)}</span>`:""}
       </div>
-      ${isTheaterWorthy(m)?`<p style="font-size:14px;color:#ff9e9e;margin-bottom:1rem;"><b style="color:#ff6b6b;">🎬 Theater Worthy:</b> ${m.TheaterWorthyReason?`<span style="font-style:italic;">${m.TheaterWorthyReason}</span>`:""}</p>`:""}
+      ${isNowInTheaters(m)?`<p style="font-size:14px;color:#ff9e9e;margin-bottom:1rem;"><b style="color:#ff6b6b;">🎬 Now in Theaters</b></p>`:""}
+      ${upcoming?`<p style="font-size:14px;color:#FFD27A;margin-bottom:1rem;"><b style="color:#FFB020;">🗓️ Coming Soon</b> — expected ${formattedReleaseDate}</p>`:""}
       ${buildStreamingButtons(m)}
       ${m.Takeaway?`<div class="takeaway">${m.Takeaway}</div>`:""}
       ${buildMetaGrid(m)}
@@ -1948,7 +2020,7 @@ function openMovie(index) {
       ${m.Confidence?`<div class="modal-section"><div class="modal-section-label">Confidence</div><div class="modal-section-value">${m.Confidence}</div></div>`:""}
       ${m.ReviewSources?`<div class="modal-section"><div class="modal-section-label">Sources</div><div class="modal-section-value" style="font-size:12px;color:var(--text2)">${m.ReviewSources}</div></div>`:""}
       ${m.Trailer?`<div class="modal-section"><a class="modal-btn modal-btn-primary" href="${m.Trailer}" target="_blank" style="display:flex;">▶ Watch Trailer</a></div>`:""}
-      ${buildSimilarMovies(m)}
+      ${upcoming?"":buildSimilarMovies(m)}
       </div>
     </div>
       <div class="modal-actions">
