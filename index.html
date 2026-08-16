@@ -2451,7 +2451,14 @@ async function submitMovie(){
   }, 38000);
 }
 
+// Guards the single shared toast slot against a delayed retry from an
+// OLDER Add clobbering a NEWER one's card if someone adds a second movie
+// before the first has finished/been dismissed — every check/retry below
+// bails out if a newer Add has taken over the toast since it was scheduled.
+let activeAddTitle = null;
+
 function showAddToast(title) {
+  activeAddTitle = title;
   let toast = document.getElementById("addToast");
   if(!toast) {
     toast = document.createElement("div");
@@ -2492,23 +2499,44 @@ function findRecentlyAddedMovie(title) {
 // 8-second auto-dismiss was the actual problem being fixed here (people
 // missed it and had no other way to find the movie they'd just added), so
 // this stays up until the person consciously clicks or dismisses it.
-function updateAddToast(title) {
+//
+// If the movie isn't showing up yet, that's usually just normal — Gemini
+// occasionally runs past the usual ~35s. Quietly re-check a few times
+// before giving up, instead of immediately telling someone to go search
+// for a movie that's about to appear on its own in a few more seconds.
+async function updateAddToast(title, attempt) {
+  attempt = attempt || 1;
+  if (title !== activeAddTitle) return; // a newer Add has taken over the toast
   const toast = document.getElementById("addToast");
   if(!toast) return;
   const target = findRecentlyAddedMovie(title);
+
+  const MAX_ATTEMPTS = 4; // initial 38s check + up to 3 retries (~45s more)
+  if (!target && attempt < MAX_ATTEMPTS) {
+    toast.className = "add-toast show";
+    toast.innerHTML = `<span class="toast-spinner"></span> Still working on <b>${title}</b>… almost there.`;
+    setTimeout(async () => {
+      if (title !== activeAddTitle) return;
+      await loadMovies();
+      updateAddToast(title, attempt + 1);
+    }, 15000);
+    return;
+  }
+
   toast.className = "add-toast show ready";
   const displayTitle = jsAttrEscape(target ? target.Title : title);
   const poster = target && target.PosterURL
     ? `<img class="add-toast-poster" src="${target.PosterURL}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="add-toast-poster-placeholder" style="display:none">🎬</div>`
     : `<div class="add-toast-poster-placeholder">🎬</div>`;
+  const eyebrow = target ? "✅ Added" : "⏳ Taking longer than usual";
   const action = target
     ? `<button class="add-toast-view-btn" onclick="jumpToMovie('${displayTitle}')">View Review →</button>`
-    : `<span style="font-size:12px;color:var(--text2);">Search for it above to view.</span>`;
+    : `<span style="font-size:12px;color:var(--text2);">It'll appear once ready — try searching for it in a bit.</span>`;
   toast.innerHTML = `
     <button class="add-toast-close" onclick="dismissAddToast()" aria-label="Dismiss">✕</button>
     ${poster}
     <div class="add-toast-body">
-      <div class="add-toast-eyebrow">✅ Added</div>
+      <div class="add-toast-eyebrow">${eyebrow}</div>
       <div class="add-toast-title">${target ? target.Title : title}</div>
       ${action}
     </div>`;

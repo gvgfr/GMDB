@@ -394,7 +394,42 @@ function fillMovieData(e) {
   const filmLanguage = langMapEarly[movie.original_language] || movie.original_language || "";
 
   // --- Gemini AI Review (use cleanTitle + safe release year for accuracy) ---
-  const aiReview = getGeminiMovieReview(cleanTitle, releaseYear, filmLanguage);
+  // If Gemini fails (quota, safety filter, invalid response after its own
+  // retries), don't let that wipe out a row that otherwise has perfectly
+  // good TMDB data already fetched above (director, genre, poster, rating,
+  // streaming). This matters most for the website's "+ Add Movie" flow
+  // (doPost), which is a fire-and-forget no-cors POST — there's no other
+  // way for anyone to ever find out this failed, so the row would
+  // otherwise sit as a bare, invisible stub (just the typed title) forever.
+  //
+  // Re-check the CURRENT director cell (not the earlier existingDirector
+  // var, which can be stale — e.g. isUserTitleEdit already cleared columns
+  // 2-35 above, so existingDirector's in-memory value no longer matches
+  // what's actually in the sheet). If there's real existing data right
+  // now, re-throw and abort exactly like before this fix — safest to leave
+  // a good row completely untouched rather than risk overwriting it with
+  // blanks below. Only fall back to a safe empty review when there's
+  // genuinely nothing to lose.
+  let aiReview;
+  try {
+    aiReview = getGeminiMovieReview(cleanTitle, releaseYear, filmLanguage);
+  } catch (geminiErr) {
+    const currentDirector = sheet.getRange(lastRow, 3).getValue();
+    if (currentDirector) {
+      throw geminiErr;
+    }
+    Logger.log("Gemini review failed for '" + cleanTitle + "' (row " + lastRow + "): " + geminiErr +
+      " — saving TMDB data only; row needs a re-score (Fill next blank movie will pick it up).");
+    aiReview = {
+      consensusTier: "", gauthamScore: "", writingQuality: "", emotionalImpact: "",
+      engagementPacing: "", performances: "", rewatchability: "", criticalConsensus: "",
+      audienceReception: "", reviewSummary: "", storyline: "", trivia: "",
+      reviewSources: "", scoreReasoning: "", confidence: "", ottInfo: "",
+      cast: "", musicDirector: "", hitSongs: "", hitSongsDetails: [], takeaway: "",
+      imdbRatingLive: "", imdbVotesLive: "", streamingLive: "", streamingLiveUK: "",
+      letterboxdRatingLive: ""
+    };
+  }
 
   // --- Write all data to sheet ---
   // Use official TMDB title instead of what user typed
@@ -460,7 +495,12 @@ function fillMovieData(e) {
     return "Skip";
   }
   const roundedScore = Math.round(Number(aiReview.gauthamScore)) || "";
-  const correctedTier = getTierFromScore(roundedScore);
+  // getTierFromScore() always returns SOME tier (falls through to "Skip"
+  // for 0/NaN) — only meaningful when there's an actual score to back it;
+  // otherwise this would write "Skip" next to a blank score (e.g. the
+  // Gemini-failure fallback above), which is misleading and unnecessary
+  // since a blank score already keeps the row off the site regardless.
+  const correctedTier = roundedScore ? getTierFromScore(roundedScore) : "";
 
   sheet.getRange(lastRow, 9).setValue(correctedTier);
   sheet.getRange(lastRow, 10).setValue(roundedScore);
