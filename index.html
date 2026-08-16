@@ -528,6 +528,11 @@ footer span{color:var(--red);}
   <div class="streaming-carousel" id="streamingCarousel"></div>
 </div>
 
+<div class="streaming-carousel-section">
+  <p class="streaming-carousel-label"><span class="streaming-carousel-tv-icon">🎬</span> Now in Theaters</p>
+  <div class="streaming-carousel" id="nowInTheatersCarousel"></div>
+</div>
+
 <div class="hero">
   <h1 class="hero-title">Find your next<br/><span>great Indian film</span></h1>
   <p class="hero-desc">Find your next great Indian film — scored using critic reviews and audience data through the <span class="inline-about-link" onclick="openAbout()">Masala Meter</span>'s weighted formula, anchored against benchmark films at every tier. Find where to stream, and get similar-film suggestions — so you always know what's worth watching.</p>
@@ -987,6 +992,7 @@ function applyMoviesData(data) {
   updateComingSoonBadge();
   populateYears();
   renderStreamingCarousel();
+  renderNowInTheatersCarousel();
 
   if (!landingDefaultApplied) {
     landingDefaultApplied = true;
@@ -1136,16 +1142,20 @@ function isNewOnStreaming(m) {
   return released >= cutoff;
 }
 
-// "Now in Theaters" — purely release-date based: any film released within
-// the last month. No quality judgment involved (that's what the Masala
-// Meter score is for) — this just answers "is this actually screening
-// right now."
+// "Now in Theaters" — release-date based: any film released within the
+// last month that ISN'T already available to stream anywhere (US or UK —
+// this isn't tied to the Region toggle). Once a film hits streaming it's
+// no longer meaningfully "in theaters" for this badge's purpose, even if
+// it happens to still be within its first month theatrically. No quality
+// judgment involved (that's what the Masala Meter score is for).
 function isNowInTheaters(m) {
   const relRaw = m.ReleaseDate || m.Year || "";
   const released = new Date(relRaw).getTime();
   if (isNaN(released)) return false;
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000; // last 1 month
-  return released >= cutoff && released <= Date.now();
+  if (released < cutoff || released > Date.now()) return false;
+  const streamingAnywhere = m.OTTInfo || m.OTTinfo || m.Streaming || m.StreamingUK || m.Streaminguk || "";
+  return !streamingAnywhere;
 }
 
 // "Coming Soon" — a confirmed future release date. These rows have no
@@ -1204,13 +1214,58 @@ function renderStreamingCarousel() {
   setupCarouselAutoScroll(container);
 }
 
-// Advances the carousel by one card every 5 seconds, looping back to the
+// Same pattern as the New on Streaming carousel, just below it — recent
+// theatrical releases that AREN'T on streaming yet (see isNowInTheaters).
+// Sorted newest release first, since "how recently did this hit theaters"
+// is the relevant ordering here (there's no streaming-arrival date to sort
+// by, unlike the New on Streaming carousel).
+function renderNowInTheatersCarousel() {
+  const container = document.getElementById("nowInTheatersCarousel");
+  if (!container) return;
+  const inTheaters = allMovies
+    .filter(isNowInTheaters)
+    .sort((a,b) => releaseKey(b) - releaseKey(a));
+
+  if (!inTheaters.length) {
+    container.innerHTML = `<div class="carousel-empty">Nothing new in theaters right now — check back soon.</div>`;
+    return;
+  }
+
+  container.innerHTML = inTheaters.map(m => {
+    const idx = allMovies.indexOf(m);
+    return `<div class="carousel-card" onclick="openMovieFromCarousel(${idx})">
+      <div class="carousel-poster-wrap">
+        ${m.PosterURL
+          ? `<img class="carousel-poster" src="${m.PosterURL}" alt="${m.Title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="carousel-poster-placeholder" style="display:none">🎬</div>`
+          : `<div class="carousel-poster-placeholder">🎬</div>`}
+      </div>
+      <div class="carousel-title">${m.Title}</div>
+      <div class="carousel-score ${getTierClass(m.ConsensusTier, m.GauthamScore)}">${m.GauthamScore||"—"} ${getTierEmoji(m.ConsensusTier, m.GauthamScore)}</div>
+    </div>`;
+  }).join("");
+
+  setupCarouselAutoScroll(container);
+}
+
+// Advances a carousel by one card every 5 seconds, looping back to the
 // start once it reaches the end. Pauses whenever the person is actually
 // touching/dragging it themselves, so auto-scroll never fights a manual
-// swipe — resumes a couple seconds after they let go.
-let carouselAutoScrollTimer = null;
+// swipe — resumes a couple seconds after they let go. State (timer +
+// listeners) is stored on the container element itself so multiple
+// carousels on the page each auto-scroll independently, and re-rendering
+// the same carousel replaces its own setup instead of stacking duplicates.
 function setupCarouselAutoScroll(container) {
-  if (carouselAutoScrollTimer) clearInterval(carouselAutoScrollTimer);
+  const prev = container._carouselAutoScroll;
+  if (prev) {
+    clearInterval(prev.timer);
+    clearTimeout(prev.resumeTimeout);
+    container.removeEventListener("touchstart", prev.pause);
+    container.removeEventListener("touchend", prev.resumeSoon);
+    container.removeEventListener("mousedown", prev.pause);
+    container.removeEventListener("mouseup", prev.resumeSoon);
+  }
+
+  const state = { timer: null, resumeTimeout: null };
 
   const tick = () => {
     const card = container.querySelector(".carousel-card");
@@ -1223,24 +1278,25 @@ function setupCarouselAutoScroll(container) {
     });
   };
 
-  carouselAutoScrollTimer = setInterval(tick, 5000);
+  state.timer = setInterval(tick, 5000);
 
-  let resumeTimeout = null;
-  const pause = () => {
-    clearInterval(carouselAutoScrollTimer);
-    clearTimeout(resumeTimeout);
+  state.pause = () => {
+    clearInterval(state.timer);
+    clearTimeout(state.resumeTimeout);
   };
-  const resumeSoon = () => {
-    clearTimeout(resumeTimeout);
-    resumeTimeout = setTimeout(() => {
-      carouselAutoScrollTimer = setInterval(tick, 5000);
+  state.resumeSoon = () => {
+    clearTimeout(state.resumeTimeout);
+    state.resumeTimeout = setTimeout(() => {
+      state.timer = setInterval(tick, 5000);
     }, 3000);
   };
 
-  container.addEventListener("touchstart", pause, { passive: true });
-  container.addEventListener("touchend", resumeSoon, { passive: true });
-  container.addEventListener("mousedown", pause);
-  container.addEventListener("mouseup", resumeSoon);
+  container.addEventListener("touchstart", state.pause, { passive: true });
+  container.addEventListener("touchend", state.resumeSoon, { passive: true });
+  container.addEventListener("mousedown", state.pause);
+  container.addEventListener("mouseup", state.resumeSoon);
+
+  container._carouselAutoScroll = state;
 }
 
 function populateYears() {
