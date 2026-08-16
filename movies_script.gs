@@ -563,6 +563,25 @@ function fillMovieData(e) {
     sheet.getRange(lastRow, 41).setValue(effectiveStreamingUK);
   }
 
+  // --- US theatrical status (col 43): gates the site's "Now in Theaters"
+  // badge and "Likely in Theaters" showtimes link — see checkUSTheatricalRelease_
+  // for why this needs a live search instead of trusting TMDB's release_date.
+  // Only worth checking for a genuinely recent release; skip it entirely for
+  // old catalog adds/re-scores where the badge could never show anyway (0-60
+  // days covers both frontend consumers' eligibility windows with buffer).
+  // Never overwrite an existing "Yes" — once confirmed, stays confirmed.
+  const daysSinceRelease = isNaN(relTimeForImdb) ? null : (Date.now() - relTimeForImdb) / (24 * 60 * 60 * 1000);
+  const existingUsTheatrical = sheet.getRange(lastRow, 43).getValue();
+  if (!existingUsTheatrical && daysSinceRelease !== null && daysSinceRelease >= -7 && daysSinceRelease <= 60) {
+    try {
+      if (checkUSTheatricalRelease_(officialTitle, releaseYear, filmLanguage)) {
+        sheet.getRange(lastRow, 43).setValue("Yes");
+      }
+    } catch (err) {
+      Logger.log("US theatrical check failed for '" + officialTitle + "': " + err);
+    }
+  }
+
   // --- StreamingSince (col 32): stamp the date a film first appears on streaming ---
   // Only for recent releases (last 5 months), so old catalog titles aren't flagged "new".
   try {
@@ -2735,6 +2754,59 @@ Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly
   }
 }
 
+// =============================================
+// GEMINI: US theatrical release confirmation
+// Gates the site's "Now in Theaters" badge / "Likely in Theaters" showtimes
+// link. TMDB's release_date is just wherever a film released FIRST — for
+// Indian films that's almost always India, not the US — and TMDB's
+// per-country release_dates data is too sparse for Tamil/Telugu/etc. films
+// to trust (niche US distributors like Ayngaran, Pen Marudhar, AGS Cinemas,
+// and Sathya Jyothi Films rarely report to TMDB at all). A plain
+// "released recently" check would therefore falsely claim a US theatrical
+// run for films that never got one. This does a live search instead.
+// =============================================
+function checkUSTheatricalRelease_(title, year, filmLanguage) {
+  const prompt = `Using Google Search, check whether the ${filmLanguage || "Indian"} film "${title}" (${year}) is CURRENTLY playing in US theaters right now (wide or limited release, including specialty Indian-cinema distributors).
+
+SEARCH STRATEGY — try several angles, not just one query:
+1. "${title}" ${year} US theaters release
+2. "${title}" Fandango OR AMC OR Cinemark OR Regal
+3. "${title}" Ayngaran OR "Pen Marudhar" OR "AGS Cinemas" OR "Sathya Jyothi Films" showtimes USA
+4. "${title}" USA theatrical release date
+
+IMPORTANT: only confirm YES if you find a real ticketing site (Fandango, AMC, Cinemark, Regal, Atom Tickets) or a specialty Indian-cinema US distributor explicitly listing THIS film with US showtimes right now. A film releasing in India, the UK, or elsewhere does NOT count on its own — it must be confirmed for US theaters specifically. If you can't confirm it, say NO rather than guessing.
+
+Return ONLY the single word "YES" or "NO" — nothing else, no explanation, no punctuation.`;
+
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    tools: [{ google_search: {} }],
+    generationConfig: { temperature: 0.1 }
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+    const code = response.getResponseCode();
+    const bodyText = response.getContentText();
+    if (code !== 200) return false; // any error — treat as "couldn't confirm"
+    const data = JSON.parse(bodyText);
+    if (!data.candidates || !data.candidates[0]) return false;
+    const cand = data.candidates[0];
+    if (!cand.content || !cand.content.parts || !cand.content.parts[0]) return false;
+    const text = stripCitationMarkers_(cand.content.parts[0].text || "").trim();
+    return /^yes$/i.test(text);
+  } catch (err) {
+    Logger.log("checkUSTheatricalRelease_ failed for " + title + ": " + err);
+    return false;
+  }
+}
+
 function getGeminiSimilarMovies(title, year, lang, director, genre) {
   const langNames = { ta: "Tamil", hi: "Hindi", te: "Telugu", ml: "Malayalam", kn: "Kannada", bn: "Bengali", mr: "Marathi", pa: "Punjabi" };
   const langName = langNames[lang] || lang || "";
@@ -3032,6 +3104,26 @@ function refreshStreamingStatus() {
       // branch cleared col 32 anyway on a single miss). A real removal
       // still isn't lost forever — re-running this refresh, or a manual
       // re-score, will simply never re-set a stamp that's already blank.
+
+      // --- US theatrical re-check (col 43) ---
+      // A film added right at release might not be listed on ticketing
+      // sites yet when fillMovieData first checked. Give it more chances
+      // on each later run of this sweep, but only while it's still a real
+      // "Now in Theaters" candidate — recent, not yet confirmed, and not
+      // yet streaming (once it's streaming the theatrical badge no longer
+      // applies regardless, and once it's aged past 60 days the badge
+      // could never show either way, so don't waste a Gemini call).
+      const existingUsTheatrical = sheet.getRange(row, 43).getValue();
+      const daysSinceRelease = isNaN(relTime) ? null : (Date.now() - relTime) / (24 * 60 * 60 * 1000);
+      if (!existingUsTheatrical && !streaming && daysSinceRelease !== null && daysSinceRelease >= 0 && daysSinceRelease <= 60) {
+        const yr2 = sheet.getRange(row, 2).getValue();
+        const lg2 = sheet.getRange(row, 30).getValue();
+        if (checkUSTheatricalRelease_(String(title), String(yr2), String(lg2))) {
+          sheet.getRange(row, 43).setValue("Yes");
+        }
+        Utilities.sleep(1000); // pace Gemini calls between rows in this loop
+      }
+
       checked++;
     } catch (err) {
       Logger.log("Refresh failed for '" + title + "' row " + row + ": " + err);
