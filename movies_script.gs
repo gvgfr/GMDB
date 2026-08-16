@@ -595,29 +595,6 @@ function fillMovieData(e) {
   if (castPhotos.length || !existingCastPhotos) {
     sheet.getRange(lastRow, 38).setValue(JSON.stringify(castPhotos));
   }
-  // TheaterWorthy (col 39): "Yes"/"No" from Gemini — is this film's scale/
-  // spectacle genuinely better on the big screen. Only meaningful for new
-  // releases; the website only shows the badge within a recent window,
-  // handled entirely on the frontend using ReleaseDate (no need to gate it
-  // here — storing the raw Yes/No is correct regardless of release age).
-  const THEATER_WORTHY_SCORE_FLOOR = 75;
-  let finalTheaterWorthy = aiReview.theaterWorthy;
-  if (finalTheaterWorthy === "Yes" && roundedScore < THEATER_WORTHY_SCORE_FLOOR) {
-    finalTheaterWorthy = "No";
-    Logger.log("TheaterWorthy overridden to No for '" + officialTitle + "' -- Gemini said Yes but score (" + roundedScore + ") is below the floor.");
-  }
-  if (finalTheaterWorthy === "Yes" || finalTheaterWorthy === "No") {
-    sheet.getRange(lastRow, 39).setValue(finalTheaterWorthy);
-  }
-  // TheaterWorthyReason (col 40): specific one-line reason, only meaningful
-  // when TheaterWorthy is "Yes". Same preserve-if-empty caution as other
-  // fields — don't blank out a previously-good reason on an odd response.
-  if (finalTheaterWorthy === "Yes" && aiReview.theaterWorthyReason) {
-    sheet.getRange(lastRow, 40).setValue(aiReview.theaterWorthyReason);
-  } else if (finalTheaterWorthy === "No") {
-    sheet.getRange(lastRow, 40).setValue(""); // not theater-worthy — no reason needed
-  }
-
   // --- Keep the sheet tidy: clip long text + fix this row's height to 21px ---
   try {
     // Clip wrapping for the whole row so long reviews don't expand the row
@@ -1030,9 +1007,7 @@ Return ONLY valid JSON. No markdown, no backticks, no explanation.
   "imdbVotesLive": "",
   "streamingLive": "",
   "streamingLiveUK": "",
-  "letterboxdRatingLive": "",
-  "theaterWorthy": "",
-  "theaterWorthyReason": ""
+  "letterboxdRatingLive": ""
 }
 
 reviewSummary: Write a CONCISE, captivating hook — 2-3 sentences, about 40-55 words. This is the first thing people read, so make it engaging and specific, not a full breakdown. Capture the essence and the critical verdict (is it worth watching and why) WITHOUT spoilers. Do NOT dump the full plot here (that goes in storyline) and do NOT list every strength/weakness (that's the score breakdown). Make someone want to watch — or know to skip. Write naturally and specifically about THIS film.
@@ -1245,59 +1220,6 @@ film-watchers there, unlike Rotten Tomatoes' typically thin sample for Indian
 films. Return ONLY the number (e.g. "3.8"), not "3.8/5" or "3.8 stars".
 Return "N/A" if you cannot find a Letterboxd page for this specific film or
 aren't confident it's the correct match.
-
-theaterWorthy: This is a SEPARATE question from the film's overall quality
-score — a mediocre film can still be worth theaters (pure spectacle), and an
-excellent film can be perfectly fine to skip theaters for (a quiet, dialogue-
-driven drama loses nothing on a couch). This is a HIGH BAR, reserved for
-genuine top-tier spectacle — NOT a broad category that most mass-market
-action films, comedies, or "engaging" genre entertainers qualify for.
-
-Judge ONLY: does this specific film have CONCRETE, LARGE-SCALE production
-value — big-budget VFX, elaborate action set-pieces choreographed for
-big-screen impact, IMAX-caliber cinematography, or a sound mix specifically
-designed to be felt in a theater (not just "good background score")?
-
-DO NOT qualify a film based on any of these — they are NOT scale/spectacle,
-even though they might tempt you to say yes:
-  - "Mass appeal" or being a genre entertainer (action/comedy/drama) — genre
-    alone means nothing here
-  - "Engaging," "riotous," "chaotic," "entertaining," or similar quality
-    descriptors — those describe how GOOD a film is, not its SCALE
-  - "Communal viewing energy" or "better with an audience" as a standalone
-    reason — nearly every film benefits somewhat from a crowd; this is not
-    a distinguishing signal on its own and must NEVER be the primary or only
-    reason given
-  - A film simply being a "rural action drama," "gangster comedy," or other
-    mid-budget regional entertainer — these are NOT automatically spectacle
-    films just because they have some action or a lively tone
-
-Calibration — films confirmed to genuinely earn this (note the actual scale
-of these productions): Baahubali (both parts), RRR, KGF (both parts), Pushpa
-(both parts), Kalki 2898 AD, S. Shankar's VFX-driven films (Enthiran/2.0,
-Indian, Sivaji), Mani Ratnam's large-scale epics (Ponniyin Selvan I & II,
-NOT his intimate dramas like Mouna Ragam or O Kadhal Kanmani), Dhurandhar
-and Dhurandhar: The Revenge (reviewers specifically noted its rare-for-
-Indian-cinema scale), Jailer, Leo, Animal.
-
-Sanity check before answering "Yes": would this film's own trailer or
-reviews specifically call out its VFX budget, scale, or big-screen
-spectacle as a headline feature — the way reviews of Baahubali or RRR do?
-If the honest answer is "not really, it's just a solidly-made genre film,"
-the answer is "No," regardless of how entertaining or well-reviewed it is.
-When genuinely uncertain, default to "No" — a false negative here just
-means a film doesn't get an extra badge; a false positive misleads someone
-into a needless theater trip.
-
-Return exactly "Yes" or "No" — never anything else, never a maybe.
-
-theaterWorthyReason: ONLY if theaterWorthy is "Yes" — a short, SPECIFIC
-reason for THIS film (under 12 words) naming the actual CONCRETE production
-element that earns it — e.g. "Massive battle sequences and immersive sound
-design", "Grand scale VFX and larger-than-life action set pieces". Never use
-vague justifications like "mass appeal," "engaging," or "communal energy" —
-those aren't valid reasons on their own. Leave this field empty ("") if
-theaterWorthy is "No".
 `;
 
   const url =
@@ -1491,6 +1413,7 @@ function onOpen() {
     .addItem("Remove low-scoring movies (below 65)", "removeLowScoringMovies")
     .addSeparator()
     .addItem("Auto-add new releases now", "autoAddNewReleases")
+    .addItem("Add upcoming releases (next 7 days, no review yet)", "autoAddUpcomingReleases")
     .addItem("Find NEW movies now streaming (5mo, adds to catalog)", "autoAddNewlyStreaming")
     .addItem("Update streaming info (movies I already have)", "refreshStreamingStatus")
     .addSeparator()
@@ -1558,7 +1481,12 @@ function refreshOneBlankMovie() {
   for (let row = 2; row <= lastRow; row++) {
     const title = sheet.getRange(row, 1).getValue();
     const director = sheet.getRange(row, 3).getValue();
-    if (title && !director) {
+    const score = sheet.getRange(row, 10).getValue();
+    // "Blank" = still missing either the director (an old-style stuck row)
+    // or a score (e.g. a Coming Soon row that autoAddUpcomingReleases added
+    // with metadata only, ahead of its actual release — this is what picks
+    // those up and completes them into a real review once they're ready).
+    if (title && (!director || !score)) {
       fillMovieData({ range: sheet.getRange(row, 1) });
       SpreadsheetApp.getActive().toast("Filled: " + title, "GMDB", 5);
       return;
@@ -2324,6 +2252,135 @@ function autoAddNewReleasesCore() {
   SpreadsheetApp.getActive().toast(
     "Auto-add done: " + added.length + " added, " + skipped.length + " skipped." +
     (stoppedEarly ? " (Stopped early to stay under the time limit — run again to screen more.)" : "")
+  );
+}
+
+// =============================================
+// AUTO-ADD UPCOMING RELEASES (not out yet)
+// Discovers Indian-language films with a CONFIRMED release date in the next
+// 7 days and adds them with metadata only — title, year, director, genre,
+// poster, ReleaseDate, TMDbID. No Gemini call: there's nothing to review
+// yet for a film that hasn't released. The website shows these under its
+// "Coming Soon" filter (any row with a future ReleaseDate).
+//
+// GauthamScore is deliberately left blank. refreshOneBlankMovie() already
+// treats "title but no score" as unfinished, so once the film actually
+// releases, running that (or a normal re-score) picks the row back up and
+// completes it into a real review — at which point it naturally starts
+// showing under "Now in Theaters" too, since that's purely ReleaseDate-based.
+// =============================================
+function autoAddUpcomingReleases() {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty("BULK_RUNNING", "true");
+  try {
+    autoAddUpcomingReleasesCore();
+  } finally {
+    props.deleteProperty("BULK_RUNNING");
+  }
+}
+
+function autoAddUpcomingReleasesCore() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
+  const indianLangs = ["ta", "hi", "te", "ml", "kn"];
+  const WINDOW_DAYS = 7;
+
+  const today = new Date();
+  const future = new Date();
+  future.setDate(today.getDate() + WINDOW_DAYS);
+  const fmt = d => d.toISOString().substring(0, 10);
+  const dateFrom = fmt(today);
+  const dateTo = fmt(future);
+
+  const existing = sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 1), 1)
+    .getValues().map(r => String(r[0]).trim().toLowerCase());
+
+  let candidates = [];
+  indianLangs.forEach(lang => {
+    try {
+      const url = "https://api.themoviedb.org/3/discover/movie?api_key=" + TMDB_API_KEY +
+        "&include_adult=false&with_original_language=" + lang +
+        "&primary_release_date.gte=" + dateFrom +
+        "&primary_release_date.lte=" + dateTo +
+        "&sort_by=popularity.desc";
+      const res = JSON.parse(UrlFetchApp.fetch(url).getContentText());
+      (res.results || []).forEach(m => {
+        candidates.push({ id: m.id, title: m.title, lang: lang });
+      });
+    } catch (err) {
+      Logger.log("Upcoming discover failed for " + lang + ": " + err);
+    }
+  });
+
+  const seen = {};
+  candidates = candidates.filter(c => {
+    const key = c.title.toLowerCase().trim();
+    if (seen[key]) return false;
+    seen[key] = true;
+    if (existing.indexOf(key) !== -1) return false; // already tracked (Coming Soon or otherwise)
+    return true;
+  });
+
+  const MAX_PER_RUN = 15;
+  candidates = candidates.slice(0, MAX_PER_RUN);
+
+  const added = [];
+  const startTime = Date.now();
+  const MAX_RUNTIME = 4.5 * 60 * 1000; // stop well before the 6-min hard limit
+  let stoppedEarly = false;
+
+  // Same adult-content guard as fillMovieData — an upcoming title shouldn't
+  // slip in unreviewed just because this path skips the usual full pipeline.
+  const adultTitlePatterns = /\b(xxx|porn|erotic|erotica|adult film|hardcore|softcore|bhabhi\s*hot|uncut\s*adult|18\+|nsfw)\b/i;
+
+  for (const c of candidates) {
+    if (Date.now() - startTime > MAX_RUNTIME) {
+      stoppedEarly = true;
+      break; // don't start another candidate — leaves nothing half-written
+    }
+    try {
+      const detailsUrl = "https://api.themoviedb.org/3/movie/" + c.id + "?api_key=" + TMDB_API_KEY;
+      const details = JSON.parse(UrlFetchApp.fetch(detailsUrl).getContentText());
+
+      if (details.adult === true ||
+          adultTitlePatterns.test(String(details.title || "")) ||
+          adultTitlePatterns.test(String(details.original_title || ""))) {
+        continue;
+      }
+
+      const creditsUrl = "https://api.themoviedb.org/3/movie/" + c.id + "/credits?api_key=" + TMDB_API_KEY;
+      const credits = JSON.parse(UrlFetchApp.fetch(creditsUrl).getContentText());
+      const director = (credits.crew || []).find(p => p.job === "Director")?.name || "";
+      const genre = (details.genres || []).map(g => g.name).join(", ");
+      const posterUrl = details.poster_path ? "https://image.tmdb.org/t/p/w500" + details.poster_path : "";
+      const releaseDate = details.release_date || "";
+      const releaseYear = releaseDate ? releaseDate.substring(0, 4) : "";
+      const officialTitle = details.title || c.title;
+
+      const newRow = sheet.getLastRow() + 1;
+      // Write everything in one pass — the BULK_RUNNING flag (set by the
+      // wrapper above) keeps the onEdit trigger from also firing a full
+      // fillMovieData pass on this same row while we do this lighter one.
+      sheet.getRange(newRow, 1).setValue(officialTitle);
+      sheet.getRange(newRow, 2).setValue(releaseYear);
+      if (director) sheet.getRange(newRow, 3).setValue(director);
+      if (genre) sheet.getRange(newRow, 4).setValue(genre);
+      if (posterUrl) sheet.getRange(newRow, 5).setValue(posterUrl);
+      sheet.getRange(newRow, 31).setValue(releaseDate); // ReleaseDate — drives "Coming Soon" on the site
+      sheet.getRange(newRow, 35).setValue(c.id); // TMDbID, so the eventual fill/re-score uses the exact-ID fast path
+      SpreadsheetApp.flush();
+
+      added.push(officialTitle + " (" + releaseDate + ")");
+    } catch (err) {
+      Logger.log("Upcoming auto-add failed for " + c.title + ": " + err);
+    }
+  }
+
+  SpreadsheetApp.getUi().alert(
+    "Upcoming-releases sweep done.\n\n" +
+    "Added " + added.length + " movie(s) releasing in the next " + WINDOW_DAYS + " days:\n" +
+    (added.length ? added.map(a => "  " + a).join("\n") : "  (none)") +
+    (stoppedEarly ? "\n\n(Stopped early to stay under the time limit — run again to screen more.)" : "") +
+    "\n\nThese rows have no review yet — \"Fill next blank movie\" (or a re-score) will complete them once they've actually released."
   );
 }
 
