@@ -589,6 +589,27 @@ function fillMovieData(e) {
   sheet.getRange(lastRow, 27).setValue(aiReview.musicDirector || "");
   sheet.getRange(lastRow, 28).setValue(aiReview.hitSongs || "");
   sheet.getRange(lastRow, 29).setValue(aiReview.takeaway || "");
+  // HitSongsDetails (col 42): per-song "why it's a hit" + Masala Meter Song
+  // Score, keyed to the titles in column 28 (HitSongs). Same
+  // preserve-if-empty caution as cast photos below — a Gemini response that
+  // skipped this array shouldn't erase a previously-good one.
+  let hitSongsDetails = [];
+  if (Array.isArray(aiReview.hitSongsDetails)) {
+    hitSongsDetails = aiReview.hitSongsDetails
+      .filter(d => d && d.title)
+      .map(d => {
+        const scoreNum = Math.round(Number(d.score) * 10) / 10;
+        return {
+          title: String(d.title).trim(),
+          whyHit: String(d.whyHit || "").trim(),
+          score: (scoreNum > 0 && scoreNum <= 10) ? scoreNum.toFixed(1) : ""
+        };
+      });
+  }
+  const existingSongDetails = sheet.getRange(lastRow, 42).getValue();
+  if (hitSongsDetails.length || !existingSongDetails) {
+    sheet.getRange(lastRow, 42).setValue(JSON.stringify(hitSongsDetails));
+  }
   // Same protection — don't overwrite existing cast photos with an empty
   // list if this particular TMDB credits call happened to return none.
   const existingCastPhotos = sheet.getRange(lastRow, 38).getValue();
@@ -1002,6 +1023,7 @@ Return ONLY valid JSON. No markdown, no backticks, no explanation.
   "cast": "",
   "musicDirector": "",
   "hitSongs": "",
+  "hitSongsDetails": [],
   "takeaway": "",
   "imdbRatingLive": "",
   "imdbVotesLive": "",
@@ -1076,6 +1098,23 @@ background score, no soundtrack singles), leave this field COMPLETELY EMPTY
 descriptive text here, since that isn't a searchable song title either and
 will look just as broken. The music director's name already has its own
 separate field (musicDirector) — don't duplicate that here.
+
+hitSongsDetails: A short per-song analysis for EVERY song listed in hitSongs
+above (same titles, same order), as a JSON array of objects:
+[{"title": "", "whyHit": "", "score": ""}]
+- title: must exactly match one of the song titles in hitSongs.
+- whyHit: ONE sentence, MAXIMUM 20 WORDS, explaining that specific song's
+  appeal through its melody, vocals, lyrics, rhythm, emotion, or replay
+  value. Be specific to THIS song — not a generic "catchy tune, great
+  vibes" that could describe any song.
+- score: a single number 0.0-10.0 with one decimal place (e.g. "8.5"),
+  computed as a weighted blend of melody (40%), vocals (25%), lyrics (20%),
+  and replay value (15%). Judge each dimension using whatever's actually
+  known about the song (chart/streaming performance, critic or audience
+  commentary, its role in the film) — don't default to a flat number for
+  every song.
+If hitSongs is empty (film has no notable songs), return an empty array
+([]) here too.
 
 takeaway: A single memorable one-line critic verdict that captures the essence of the film. Keep it punchy and specific; avoid clichéd words like "poignant", "must-watch", or "tour de force".
 Write it in a SERIOUS critic tone but MATCH THE MOOD of the film.

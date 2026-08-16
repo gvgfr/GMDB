@@ -364,9 +364,14 @@ footer span{color:var(--red);}
 .meta-block-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#FFB020;margin-bottom:4px;font-weight:600;}
 .meta-block-value{font-size:14px;color:var(--text);line-height:1.5;}
 .songs-value{font-size:13px;color:var(--red);font-weight:500;}
-.songs-wrap{display:flex;flex-wrap:wrap;gap:8px;}
-.song-link{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:#1DB954;font-weight:500;text-decoration:none;background:rgba(29,185,84,0.1);padding:5px 12px;border-radius:20px;border:1px solid rgba(29,185,84,0.3);transition:all 0.2s;}
-.song-link:hover{background:rgba(29,185,84,0.2);border-color:#1DB954;}
+.songs-wrap{display:flex;flex-direction:column;gap:8px;}
+.song-card{background:rgba(29,185,84,0.06);border:1px solid rgba(29,185,84,0.25);border-radius:10px;padding:10px 14px;transition:border-color 0.2s;}
+.song-card:hover{border-color:rgba(29,185,84,0.5);}
+.song-link{display:inline-flex;align-items:center;gap:4px;font-size:14px;color:#1DB954;font-weight:700;text-decoration:none;}
+.song-link:hover{text-decoration:underline;}
+.song-why{font-size:13px;color:var(--text2);line-height:1.5;margin-top:5px;}
+.song-why b{color:var(--text);font-weight:600;}
+.song-score{font-size:12px;color:#1DB954;font-weight:700;margin-top:4px;}
 .add-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid var(--red);border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;transition:all 0.4s;display:flex;align-items:center;gap:10px;max-width:90vw;}
 .add-toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 .toast-spinner{width:16px;height:16px;border:2px solid rgba(229,32,32,0.3);border-top-color:var(--red);border-radius:50%;animation:toastspin 0.8s linear infinite;display:inline-block;}
@@ -923,13 +928,31 @@ function buildMetaGrid(m) {
   if (music) html += `<div class="meta-grid"><div class="meta-block"><div class="meta-block-label">Music</div><div class="meta-block-value">${music}</div></div></div>`;
   if (songs) {
     const movieName = m.Title || "";
-    const songLinks = songs.split(",").map(s => {
+    let songDetails = [];
+    try {
+      if (m.HitSongsDetails) songDetails = JSON.parse(m.HitSongsDetails);
+    } catch (e) { songDetails = []; }
+    const findDetail = (title) => {
+      const wanted = title.trim().toLowerCase();
+      return songDetails.find(d => String(d.title || "").trim().toLowerCase() === wanted);
+    };
+
+    const songCards = songs.split(",").map(s => {
       const song = s.trim();
       if (!song) return "";
       const query = encodeURIComponent(song + " " + movieName);
-      return `<a href="https://open.spotify.com/search/${query}/tracks" target="_blank" class="song-link">♪ ${song}</a>`;
+      const detail = findDetail(song);
+      const why = detail && detail.whyHit
+        ? `<div class="song-why"><b>Why it's a hit:</b> ${detail.whyHit}</div>` : "";
+      const scoreNum = detail ? Number(detail.score) : 0;
+      const score = scoreNum > 0
+        ? `<div class="song-score">Masala Meter Song Score: ${scoreNum.toFixed(1)}/10</div>` : "";
+      return `<div class="song-card">
+        <a href="https://open.spotify.com/search/${query}/tracks" target="_blank" class="song-link">♪ ${song}</a>
+        ${why}${score}
+      </div>`;
     }).filter(Boolean).join("");
-    html += `<div class="modal-section"><div class="modal-section-label">Hit Songs</div><div class="songs-wrap">${songLinks}</div></div>`;
+    html += `<div class="modal-section"><div class="modal-section-label">Hit Songs</div><div class="songs-wrap">${songCards}</div></div>`;
   }
   return html;
 }
