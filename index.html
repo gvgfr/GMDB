@@ -753,6 +753,22 @@ let currentFilter = "all";
 // a fire-tier legend item; click the same one again to clear it.
 let currentTierFilter = "all";
 
+// Safely embeds a string as a single-quoted JS string literal inside an
+// HTML attribute (e.g. onclick="fn('...')"). Needs BOTH escape layers: JS
+// (backslash, single quote) so the inline handler's code parses correctly,
+// and HTML (double quote, as an entity) so a literal " in a title can't
+// prematurely close the surrounding double-quoted attribute — a title like
+// He Said "Run" would otherwise truncate the onclick handler entirely,
+// silently breaking that button (this hit freshly-added movies more than
+// the hand-curated catalog, since a searched title comes straight from
+// TMDB unfiltered).
+function jsAttrEscape(str) {
+  return String(str || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/"/g, "&quot;");
+}
+
 function getBarColor(score) {
   const s = Number(score);
   if (s >= 85) return "#10D96A";
@@ -1357,7 +1373,7 @@ function renderMovies(movies) {
   const grid = document.getElementById("moviesGrid");
   if(!movies.length){
     const currentQuery = (document.getElementById("searchInput")?.value || "").trim();
-    const safeQuery = currentQuery.replace(/'/g, "\\'");
+    const safeQuery = jsAttrEscape(currentQuery);
     grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
       <div class="empty-icon">🎬</div>
       <div class="empty-title">No movies found</div>
@@ -1498,7 +1514,7 @@ function showSuggestions() {
   box.innerHTML = matches.map((m) => {
     const poster = m.PosterURL ? `<img class="suggestion-poster" src="${m.PosterURL}" alt=""/>` : `<div class="suggestion-poster"></div>`;
     const tierClass = getTierClass(m.ConsensusTier, m.GauthamScore);
-    return `<div class="suggestion-item" onclick="pickSuggestion('${String(m.Title||'').replace(/'/g,"\\'")}')">
+    return `<div class="suggestion-item" onclick="pickSuggestion('${jsAttrEscape(m.Title)}')">
       ${poster}
       <div class="suggestion-info">
         <div class="suggestion-title">${m.Title||""}</div>
@@ -1972,7 +1988,7 @@ async function loadTMDBRecommendations(title, year, lang, director, genre) {
     box.innerHTML = recs.slice(0,8).map(r => {
       const inList = haveTitles.has(String(r.title||"").toLowerCase());
       const poster = r.poster ? `<img src="${r.poster}" alt=""/>` : `<div class="similar-noposter">🎬</div>`;
-      const safeTitle = String(r.title||"").replace(/'/g,"\\'");
+      const safeTitle = jsAttrEscape(r.title);
       const badge = inList
         ? `<div class="rec-badge rec-have">✓ In list</div>`
         : `<div class="rec-badge rec-add">+ Add</div>`;
@@ -2082,7 +2098,7 @@ function openMovie(index) {
       </div>
     </div>
       <div class="modal-actions">
-        <button class="modal-btn modal-btn-share" onclick="shareMovie('${String(m.Title||'').replace(/'/g,"\\'")}', '${m.Year||''}')">↗ Share</button>
+        <button class="modal-btn modal-btn-share" onclick="shareMovie('${jsAttrEscape(m.Title)}', '${m.Year||''}')">↗ Share</button>
         <button class="modal-btn modal-btn-secondary" onclick="closeDetail()" style="flex:1;">Close</button>
       </div>`;
   document.getElementById("detailModal").classList.add("open");
@@ -2279,7 +2295,7 @@ function searchTMDBSuggestions() {
       box.innerHTML = results.map(m => {
         const poster = m.poster ? `<img class="suggestion-poster" src="${m.poster}" alt=""/>` : `<div class="suggestion-poster"></div>`;
         const lang = langNames[m.lang] || m.lang || "";
-        const safeTitle = String(m.title||"").replace(/'/g,"\\'");
+        const safeTitle = jsAttrEscape(m.title);
         return `<div class="suggestion-item" onclick="pickAddSuggestion('${safeTitle}', '${m.year||""}')">
           ${poster}
           <div class="suggestion-info">
@@ -2378,7 +2394,7 @@ function showAddToast(title) {
 function updateAddToast(title) {
   const toast = document.getElementById("addToast");
   if(!toast) return;
-  toast.innerHTML = `✅ <b>${title}</b> added! <button class="toast-btn" onclick="jumpToMovie('${title.replace(/'/g,"\\'")}')">View it</button>`;
+  toast.innerHTML = `✅ <b>${title}</b> added! <button class="toast-btn" onclick="jumpToMovie('${jsAttrEscape(title)}')">View it</button>`;
   setTimeout(()=>{ toast.classList.remove("show"); }, 8000);
 }
 
