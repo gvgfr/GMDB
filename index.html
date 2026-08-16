@@ -1162,14 +1162,17 @@ function isNewOnStreaming(m) {
 // last month that ISN'T already available to stream anywhere (US or UK —
 // this isn't tied to the Region toggle). Once a film hits streaming it's
 // no longer meaningfully "in theaters" for this badge's purpose, even if
-// it happens to still be within its first month theatrically. No quality
-// judgment involved (that's what the Masala Meter score is for).
+// it happens to still be within its first month theatrically. Also
+// requires a Masala Meter score above 50 — a bare "released recently"
+// filter surfaced a lot of skip-tier films; this keeps it to films
+// actually worth a theater trip.
 function isNowInTheaters(m) {
   const relRaw = m.ReleaseDate || m.Year || "";
   const released = new Date(relRaw).getTime();
   if (isNaN(released)) return false;
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000; // last 1 month
   if (released < cutoff || released > Date.now()) return false;
+  if (!(Number(m.GauthamScore) > 50)) return false; // also excludes NaN/blank (not yet reviewed)
   const streamingAnywhere = m.OTTInfo || m.OTTinfo || m.Streaming || m.StreamingUK || m.Streaminguk || "";
   return !streamingAnywhere;
 }
