@@ -246,6 +246,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .card-score{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;font-size:16px;font-weight:700;}
 .tier-vera{background:rgba(16,185,90,0.22);color:#10D96A;}
 .tier-semma{background:rgba(56,150,255,0.22);color:#5BA8FF;}
+.tier-paakkalam{background:rgba(124,92,252,0.22);color:#7C5CFC;}
 .tier-parava{background:rgba(255,176,32,0.22);color:#FFB020;}
 .tier-mokkai{background:rgba(255,82,110,0.22);color:#FF5C7A;}
 .tier-unknown{background:rgba(255,255,255,0.1);color:var(--text2);}
@@ -323,6 +324,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .score-card{padding:12px;border-radius:8px;border:1px solid var(--border);}
 .score-range{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:2px;}
 .score-label{font-size:14px;color:var(--text);font-weight:600;}
+.score-translation{font-size:12px;color:var(--text2);font-style:italic;margin-top:1px;}
 .score-bar{height:3px;border-radius:2px;margin-top:8px;}
 .source-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:15px;color:var(--text);}
 .source-row:last-child{border-bottom:none;}
@@ -638,8 +640,9 @@ footer span{color:var(--red);}
     <p class="section-title" id="gridLabel">All Movies</p>
     <div class="score-legend">
       <span class="legend-intro">Masala Meter /100:</span>
-      <span class="legend-item legend-clickable" onclick="toggleTierFilter('Vera Level', this)"><span style="color:#10D96A;">🔥🔥🔥🔥</span> 85+</span>
-      <span class="legend-item legend-clickable" onclick="toggleTierFilter('Semma', this)"><span style="color:#5BA8FF;">🔥🔥🔥</span> 75+</span>
+      <span class="legend-item legend-clickable" onclick="toggleTierFilter('Vera Level', this)"><span style="color:#10D96A;">🔥🔥🔥🔥🔥</span> 85+</span>
+      <span class="legend-item legend-clickable" onclick="toggleTierFilter('Semma', this)"><span style="color:#5BA8FF;">🔥🔥🔥🔥</span> 75+</span>
+      <span class="legend-item legend-clickable" onclick="toggleTierFilter('Paakkalam', this)"><span style="color:#7C5CFC;">🔥🔥🔥</span> 65+</span>
       <span class="legend-item legend-clickable" onclick="toggleTierFilter('Parava illa', this)"><span style="color:#FFB020;">🔥🔥</span> 50+</span>
       <span class="legend-item legend-clickable" onclick="toggleTierFilter('Mokkai', this)"><span style="color:#FF5C7A;">🔥</span> &lt;50</span>
       <span class="legend-clear" id="legendClear" onclick="clearTierFilter()" style="display:none;">✕ Clear</span>
@@ -696,10 +699,11 @@ footer span{color:var(--red);}
       <div class="source-row"><span>Audience Reception</span><span class="source-weight">5%</span></div>
       <p style="font-size:14px;color:var(--text);line-height:1.6;margin-top:0.75rem;">Each dimension is independently evaluated against source material — critic reviews, audience data, and box office reception — before the weighted formula is applied. Scores are anchored against benchmark films at every tier, producing a researched, consistent yardstick rather than an intuitive guess.</p>
       <div class="score-grid" style="margin-top:1rem;">
-        <div class="score-card"><div class="score-range" style="color:#10D96A">85–100</div><div class="score-label">🔥🔥🔥🔥 Vera Level</div><div class="score-bar" style="background:#10D96A"></div></div>
-        <div class="score-card"><div class="score-range" style="color:#5BA8FF">75–84</div><div class="score-label">🔥🔥🔥 Semma</div><div class="score-bar" style="background:#5BA8FF"></div></div>
-        <div class="score-card"><div class="score-range" style="color:#FFB020">50–74</div><div class="score-label">🔥🔥 Parava illa</div><div class="score-bar" style="background:#FFB020"></div></div>
-        <div class="score-card"><div class="score-range" style="color:#FF5C7A">Below 50</div><div class="score-label">🔥 Mokkai</div><div class="score-bar" style="background:#FF5C7A"></div></div>
+        <div class="score-card"><div class="score-range" style="color:#10D96A">85–100</div><div class="score-label">🔥🔥🔥🔥🔥 Vera Level</div><div class="score-translation">"On another level"</div><div class="score-bar" style="background:#10D96A"></div></div>
+        <div class="score-card"><div class="score-range" style="color:#5BA8FF">75–84</div><div class="score-label">🔥🔥🔥🔥 Semma</div><div class="score-translation">"Awesome"</div><div class="score-bar" style="background:#5BA8FF"></div></div>
+        <div class="score-card"><div class="score-range" style="color:#7C5CFC">65–74</div><div class="score-label">🔥🔥🔥 Paakkalam</div><div class="score-translation">"Watchable"</div><div class="score-bar" style="background:#7C5CFC"></div></div>
+        <div class="score-card"><div class="score-range" style="color:#FFB020">50–64</div><div class="score-label">🔥🔥 Parava illa</div><div class="score-translation">"Not bad"</div><div class="score-bar" style="background:#FFB020"></div></div>
+        <div class="score-card"><div class="score-range" style="color:#FF5C7A">Below 50</div><div class="score-label">🔥 Mokkai</div><div class="score-translation">"Lame"</div><div class="score-bar" style="background:#FF5C7A"></div></div>
       </div>
     </div>
 
@@ -1195,13 +1199,27 @@ function countUp(el, target) {
   requestAnimationFrame(tick);
 }
 
-function getTierFromScore(score) {
+// Single source of truth for the Masala Meter classification. Ordered
+// highest-to-lowest; getMasalaTier() returns the first tier whose `min`
+// the score clears. getTierFromScore/getTierClass/getTierEmoji/getTierLabel
+// all derive from this table instead of each re-implementing the boundaries.
+const MASALA_TIERS = [
+  { name: "Vera Level",  min: 85, emoji: "🔥🔥🔥🔥🔥", cssClass: "tier-vera",      color: "#10D96A" },
+  { name: "Semma",       min: 75, emoji: "🔥🔥🔥🔥",   cssClass: "tier-semma",     color: "#5BA8FF" },
+  { name: "Paakkalam",   min: 65, emoji: "🔥🔥🔥",     cssClass: "tier-paakkalam", color: "#7C5CFC" },
+  { name: "Parava illa", min: 50, emoji: "🔥🔥",       cssClass: "tier-parava",    color: "#FFB020" },
+  { name: "Mokkai",      min: 0,  emoji: "🔥",         cssClass: "tier-mokkai",    color: "#FF5C7A" }
+];
+
+function getMasalaTier(score) {
   const s = Number(score);
-  if (s >= 85) return "Vera Level";
-  if (s >= 75) return "Semma";
-  if (s >= 50) return "Parava illa";
-  if (s > 0) return "Mokkai";
-  return null;
+  if (!(s > 0)) return null;
+  return MASALA_TIERS.find(t => s >= t.min) || null;
+}
+
+function getTierFromScore(score) {
+  const t = getMasalaTier(score);
+  return t ? t.name : null;
 }
 
 // Shared definition used by both the "New on Streaming" filter toggle and
@@ -1411,21 +1429,13 @@ function populateYears() {
 }
 
 function getTierClass(tier, score) {
-  const t = score ? getTierFromScore(score) : tier;
-  if(t==="Vera Level") return "tier-vera";
-  if(t==="Semma") return "tier-semma";
-  if(t==="Parava illa") return "tier-parava";
-  if(t==="Mokkai") return "tier-mokkai";
-  return "tier-unknown";
+  const t = score ? getMasalaTier(score) : MASALA_TIERS.find(x => x.name === tier);
+  return t ? t.cssClass : "tier-unknown";
 }
 
 function getTierEmoji(tier, score) {
-  const t = score ? getTierFromScore(score) : tier;
-  if(t==="Vera Level") return "🔥🔥🔥🔥";
-  if(t==="Semma") return "🔥🔥🔥";
-  if(t==="Parava illa") return "🔥🔥";
-  if(t==="Mokkai") return "🔥";
-  return "";
+  const t = score ? getMasalaTier(score) : MASALA_TIERS.find(x => x.name === tier);
+  return t ? t.emoji : "";
 }
 
 function getTierLabel(tier, score) {

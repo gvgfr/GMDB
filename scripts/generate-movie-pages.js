@@ -24,10 +24,12 @@ function slugify(title, year) {
   return base || "movie";
 }
 
+// Kept in sync by hand with the MASALA_TIERS boundaries in index.html.
 function getTierFromScore(score) {
   const s = Number(score);
   if (s >= 85) return "Vera Level";
   if (s >= 75) return "Semma";
+  if (s >= 65) return "Paakkalam";
   if (s >= 50) return "Parava illa";
   if (s > 0) return "Mokkai";
   return null;

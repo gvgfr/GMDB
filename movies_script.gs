@@ -487,28 +487,30 @@ function fillMovieData(e) {
   if (newImdbRating || !existingImdbRating) sheet.getRange(lastRow, 7).setValue(newImdbRating);
   if (newImdbVotes || !existingImdbVotes) sheet.getRange(lastRow, 8).setValue(newImdbVotes);
   // --- Score-based tier override ---
+  // Kept in sync by hand with the MASALA_TIERS boundaries in index.html.
   function getTierFromScore(score) {
     const s = Number(score);
-    if (s >= 90) return "Must Watch";
-    if (s >= 75) return "Strong Recommend";
-    if (s >= 60) return "Worth Watching";
-    return "Skip";
+    if (s >= 85) return "Vera Level";
+    if (s >= 75) return "Semma";
+    if (s >= 65) return "Paakkalam";
+    if (s >= 50) return "Parava illa";
+    return "Mokkai";
   }
   const roundedScore = Math.round(Number(aiReview.gauthamScore)) || "";
-  // getTierFromScore() always returns SOME tier (falls through to "Skip"
+  // getTierFromScore() always returns SOME tier (falls through to "Mokkai"
   // for 0/NaN) — only meaningful when there's an actual score to back it;
-  // otherwise this would write "Skip" next to a blank score (e.g. the
+  // otherwise this would write "Mokkai" next to a blank score (e.g. the
   // Gemini-failure fallback above), which is misleading and unnecessary
   // since a blank score already keeps the row off the site regardless.
   const correctedTier = roundedScore ? getTierFromScore(roundedScore) : "";
 
   sheet.getRange(lastRow, 9).setValue(correctedTier);
   sheet.getRange(lastRow, 10).setValue(roundedScore);
-  sheet.getRange(lastRow, 11).setValue(aiReview.reviewSummary);
-  sheet.getRange(lastRow, 33).setValue(aiReview.storyline || "");   // Storyline (synopsis)
-  sheet.getRange(lastRow, 34).setValue(aiReview.trivia || "");      // Trivia (facts)
+  sheet.getRange(lastRow, 11).setValue(stripCitationMarkers_(aiReview.reviewSummary));
+  sheet.getRange(lastRow, 33).setValue(stripCitationMarkers_(aiReview.storyline));   // Storyline (synopsis)
+  sheet.getRange(lastRow, 34).setValue(stripCitationMarkers_(aiReview.trivia));      // Trivia (facts)
   sheet.getRange(lastRow, 12).setValue(aiReview.reviewSources);
-  sheet.getRange(lastRow, 13).setValue(aiReview.scoreReasoning);
+  sheet.getRange(lastRow, 13).setValue(stripCitationMarkers_(aiReview.scoreReasoning));
   sheet.getRange(lastRow, 14).setValue(aiReview.confidence);
 
   // Same protection as IMDb/TMDB ratings: a re-score can hit a brief TMDB
@@ -536,7 +538,7 @@ function fillMovieData(e) {
   // same as if it had found nothing, rather than trusting the US claim.
   const INDIA_ONLY_PLATFORMS = /jiohotstar|^hotstar$|disney\+? ?hotstar/i;
   let geminiStreamingRaw = (aiReview.streamingLive && aiReview.streamingLive !== "N/A")
-    ? String(aiReview.streamingLive).trim() : "";
+    ? stripCitationMarkers_(aiReview.streamingLive) : "";
   if (geminiStreamingRaw && INDIA_ONLY_PLATFORMS.test(geminiStreamingRaw)) {
     Logger.log("Rejected Gemini streaming claim '" + geminiStreamingRaw + "' for '" + officialTitle + "' — confirmed India-only platform, not trusted as US availability.");
     geminiStreamingRaw = "";
@@ -553,7 +555,7 @@ function fillMovieData(e) {
   // column above, with the same TMDB-empty -> Gemini live-search fallback
   // (TMDB/JustWatch provider data can lag real UK announcements too).
   const geminiStreamingUK = (aiReview.streamingLiveUK && aiReview.streamingLiveUK !== "N/A")
-    ? String(aiReview.streamingLiveUK).trim() : "";
+    ? stripCitationMarkers_(aiReview.streamingLiveUK) : "";
   const effectiveStreamingUK = streamingUK || geminiStreamingUK;
 
   const existingStreamingUK = sheet.getRange(lastRow, 41).getValue();
@@ -628,7 +630,7 @@ function fillMovieData(e) {
   sheet.getRange(lastRow, 26).setValue(aiReview.cast || "");
   sheet.getRange(lastRow, 27).setValue(aiReview.musicDirector || "");
   sheet.getRange(lastRow, 28).setValue(aiReview.hitSongs || "");
-  sheet.getRange(lastRow, 29).setValue(aiReview.takeaway || "");
+  sheet.getRange(lastRow, 29).setValue(stripCitationMarkers_(aiReview.takeaway));
   // HitSongsDetails (col 42): per-song "why it's a hit" + Masala Meter Song
   // Score, keyed to the titles in column 28 (HitSongs). Same
   // preserve-if-empty caution as cast photos below — a Gemini response that
@@ -641,7 +643,7 @@ function fillMovieData(e) {
         const scoreNum = Math.round(Number(d.score) * 10) / 10;
         return {
           title: String(d.title).trim(),
-          whyHit: String(d.whyHit || "").trim(),
+          whyHit: stripCitationMarkers_(d.whyHit),
           score: (scoreNum > 0 && scoreNum <= 10) ? scoreNum.toFixed(1) : ""
         };
       });
@@ -995,11 +997,11 @@ CRITICAL — reviewSources field rules:
 
 CRITICAL — SCORE STABILITY:
 - Anchor every score to the calibration examples above
-- Before finalizing, ask: "Is this movie genuinely better than [Worth Watching anchor] but worse than [Strong Recommend anchor]?"
+- Before finalizing, ask: "Is this movie genuinely better than [Parava illa anchor] but worse than [Semma anchor]?"
 - A commercial masala film with mixed reviews should score 50-65, NOT 70+
 - If critics are divided or reviews are mediocre, lean LOWER not higher
 - Do not let a film's box office success alone inflate the score — commercial success ≠ quality
-- A star-vehicle mass film (Suriya/Vijay/Ajith) with an engaging first half but a weak/dragging second half and "mixed reviews" = 55-62 (Worth Watching, lower end)
+- A star-vehicle mass film (Suriya/Vijay/Ajith) with an engaging first half but a weak/dragging second half and "mixed reviews" = 55-62 (Parava illa, lower end)
 - Phrases in reviews like "flawed but watchable", "ambitious but uneven", "lost opportunity", "passable", "works in parts" = score 55-65
 - Phrases like "masterpiece", "best of the year", "must watch", "stunning" = score 85+
 - Karuppu (2026) is the reference for a mixed-review commercial film = 58
@@ -1036,10 +1038,11 @@ criticalConsensus x 0.10
 audienceReception x 0.05
 
 consensusTier is derived from gauthamScore:
-90-100 = Must Watch
-75-89 = Strong Recommend
-60-74 = Worth Watching
-Below 60 = Skip
+85-100 = Vera Level
+75-84 = Semma
+65-74 = Paakkalam
+50-64 = Parava illa
+Below 50 = Mokkai
 
 Return ONLY valid JSON. No markdown, no backticks, no explanation.
 
@@ -1080,7 +1083,10 @@ genuinely reflect which band it's in, not read like a recommendation regardless
 of score:
   85-100 (Vera Level) — genuinely enthusiastic, a real recommendation
   75-84  (Semma) — positive with real caveats acknowledged
-  50-74  (Parava illa) — MIXED/MEDIOCRE. This is NOT a recommendation. Write it
+  65-74  (Paakkalam) — cautiously positive at best; "worth a watch if you're in
+    the mood" rather than a genuine recommendation. Avoid glowing language —
+    this band is decent, not good.
+  50-64  (Parava illa) — MIXED/MEDIOCRE. This is NOT a recommendation. Write it
     so a reader understands "watchable but forgettable," "only for fans of X,"
     or "has some merit but doesn't add up to much" — not glowing language like
     "praised for," "compelling," "solid entertainer," or "effective blend."
@@ -1116,7 +1122,7 @@ storyline: Write a spoiler-free plot synopsis of 3-4 sentences (about 60-90 word
 
 trivia: Write 3-5 interesting, factual bullet-style facts about the film, separated by " | " (pipe). Draw from: notable awards/nominations, box-office milestones, the director's background or other work, lead actors' careers or breakthroughs, music/soundtrack facts, production or casting stories, records set, or cultural impact. Keep each fact to one short sentence. Only include facts you are reasonably confident are true — do NOT invent. If little is known, give fewer facts rather than making them up. Example: "Won the National Film Award for Best Tamil Film. | Marked the directorial debut of the filmmaker. | The lead actor learned Tamil specifically for this role. | The soundtrack topped charts for six weeks."
 reviewSources: list only sources actually found. Do not guess.
-scoreReasoning: one sentence explaining the overall score. Same calibration rule as reviewSummary above — the tone must match the score band (a 50-69 "Parava illa" score needs mixed/mediocre language, not praise).
+scoreReasoning: one sentence explaining the overall score. Same calibration rule as reviewSummary above — the tone must match the score band (a 50-64 "Parava illa" score needs mixed/mediocre language, not praise).
 confidence:
   High = multiple critics reviewed and broadly agree
   Medium = some coverage, mixed or limited consensus
@@ -1416,6 +1422,17 @@ function stripGeminiFences_(text) {
   return String(text || "")
     .replace(/```json/gi, "")
     .replace(/```/g, "")
+    .trim();
+}
+
+// Google Search grounding sometimes leaves citation markers like
+// "[cite: 1, 9, 12]" or "[citation: ...]" embedded directly in the prose
+// text of a JSON string field instead of stripping them out itself. Strip
+// those out of any free-text review field before it's shown to users.
+function stripCitationMarkers_(text) {
+  return String(text || "")
+    .replace(/\[\s*cite[^\]]*\]/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
     .trim();
 }
 
@@ -2703,7 +2720,7 @@ Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly
     if (!cand.content || !cand.content.parts || !cand.content.parts[0]) return ""; // empty/filtered response — treat as "couldn't confirm"
     const text = (data.candidates[0].content.parts[0].text || "").trim();
     if (!text || /^n\/a$/i.test(text)) return "";
-    const cleaned = text.replace(/["'.]/g, "").trim();
+    const cleaned = stripCitationMarkers_(text).replace(/["'.]/g, "").trim();
     // Same hard blocklist as the main streamingLive field — JioHotstar is
     // verified India-only, not trusted as a genuine US confirmation even
     // when Gemini names it.
