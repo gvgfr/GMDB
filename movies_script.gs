@@ -506,11 +506,11 @@ function fillMovieData(e) {
 
   sheet.getRange(lastRow, 9).setValue(correctedTier);
   sheet.getRange(lastRow, 10).setValue(roundedScore);
-  sheet.getRange(lastRow, 11).setValue(aiReview.reviewSummary);
-  sheet.getRange(lastRow, 33).setValue(aiReview.storyline || "");   // Storyline (synopsis)
-  sheet.getRange(lastRow, 34).setValue(aiReview.trivia || "");      // Trivia (facts)
+  sheet.getRange(lastRow, 11).setValue(stripCitationMarkers_(aiReview.reviewSummary));
+  sheet.getRange(lastRow, 33).setValue(stripCitationMarkers_(aiReview.storyline));   // Storyline (synopsis)
+  sheet.getRange(lastRow, 34).setValue(stripCitationMarkers_(aiReview.trivia));      // Trivia (facts)
   sheet.getRange(lastRow, 12).setValue(aiReview.reviewSources);
-  sheet.getRange(lastRow, 13).setValue(aiReview.scoreReasoning);
+  sheet.getRange(lastRow, 13).setValue(stripCitationMarkers_(aiReview.scoreReasoning));
   sheet.getRange(lastRow, 14).setValue(aiReview.confidence);
 
   // Same protection as IMDb/TMDB ratings: a re-score can hit a brief TMDB
@@ -538,7 +538,7 @@ function fillMovieData(e) {
   // same as if it had found nothing, rather than trusting the US claim.
   const INDIA_ONLY_PLATFORMS = /jiohotstar|^hotstar$|disney\+? ?hotstar/i;
   let geminiStreamingRaw = (aiReview.streamingLive && aiReview.streamingLive !== "N/A")
-    ? String(aiReview.streamingLive).trim() : "";
+    ? stripCitationMarkers_(aiReview.streamingLive) : "";
   if (geminiStreamingRaw && INDIA_ONLY_PLATFORMS.test(geminiStreamingRaw)) {
     Logger.log("Rejected Gemini streaming claim '" + geminiStreamingRaw + "' for '" + officialTitle + "' — confirmed India-only platform, not trusted as US availability.");
     geminiStreamingRaw = "";
@@ -555,7 +555,7 @@ function fillMovieData(e) {
   // column above, with the same TMDB-empty -> Gemini live-search fallback
   // (TMDB/JustWatch provider data can lag real UK announcements too).
   const geminiStreamingUK = (aiReview.streamingLiveUK && aiReview.streamingLiveUK !== "N/A")
-    ? String(aiReview.streamingLiveUK).trim() : "";
+    ? stripCitationMarkers_(aiReview.streamingLiveUK) : "";
   const effectiveStreamingUK = streamingUK || geminiStreamingUK;
 
   const existingStreamingUK = sheet.getRange(lastRow, 41).getValue();
@@ -630,7 +630,7 @@ function fillMovieData(e) {
   sheet.getRange(lastRow, 26).setValue(aiReview.cast || "");
   sheet.getRange(lastRow, 27).setValue(aiReview.musicDirector || "");
   sheet.getRange(lastRow, 28).setValue(aiReview.hitSongs || "");
-  sheet.getRange(lastRow, 29).setValue(aiReview.takeaway || "");
+  sheet.getRange(lastRow, 29).setValue(stripCitationMarkers_(aiReview.takeaway));
   // HitSongsDetails (col 42): per-song "why it's a hit" + Masala Meter Song
   // Score, keyed to the titles in column 28 (HitSongs). Same
   // preserve-if-empty caution as cast photos below — a Gemini response that
@@ -643,7 +643,7 @@ function fillMovieData(e) {
         const scoreNum = Math.round(Number(d.score) * 10) / 10;
         return {
           title: String(d.title).trim(),
-          whyHit: String(d.whyHit || "").trim(),
+          whyHit: stripCitationMarkers_(d.whyHit),
           score: (scoreNum > 0 && scoreNum <= 10) ? scoreNum.toFixed(1) : ""
         };
       });
@@ -1422,6 +1422,17 @@ function stripGeminiFences_(text) {
   return String(text || "")
     .replace(/```json/gi, "")
     .replace(/```/g, "")
+    .trim();
+}
+
+// Google Search grounding sometimes leaves citation markers like
+// "[cite: 1, 9, 12]" or "[citation: ...]" embedded directly in the prose
+// text of a JSON string field instead of stripping them out itself. Strip
+// those out of any free-text review field before it's shown to users.
+function stripCitationMarkers_(text) {
+  return String(text || "")
+    .replace(/\[\s*cite[^\]]*\]/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
     .trim();
 }
 
@@ -2709,7 +2720,7 @@ Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly
     if (!cand.content || !cand.content.parts || !cand.content.parts[0]) return ""; // empty/filtered response — treat as "couldn't confirm"
     const text = (data.candidates[0].content.parts[0].text || "").trim();
     if (!text || /^n\/a$/i.test(text)) return "";
-    const cleaned = text.replace(/["'.]/g, "").trim();
+    const cleaned = stripCitationMarkers_(text).replace(/["'.]/g, "").trim();
     // Same hard blocklist as the main streamingLive field — JioHotstar is
     // verified India-only, not trusted as a genuine US confirmation even
     // when Gemini names it.
