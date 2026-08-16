@@ -1283,9 +1283,14 @@ aren't confident it's the correct match.
   // plain prose instead of the requested JSON (e.g. starting with "The movie
   // ..." instead of "{"). That's not a quota issue or a sign the movie is
   // fake, just a one-off formatting slip. Retry once with the same prompt
-  // before giving up, since a second attempt very likely succeeds.
+  // before giving up, since a second attempt very likely succeeds. Same
+  // reasoning applies to an empty/no-content candidate (safety filtering,
+  // truncation, or just a one-off API hiccup) — that used to throw
+  // immediately on attempt 1 with a message literally telling the user to
+  // "try re-scoring again," instead of the code just doing that itself.
   let lastParseError = null;
   let lastRawText = "";
+  let lastEmptyReason = null;
   for (let attempt = 1; attempt <= 2; attempt++) {
     const response = UrlFetchApp.fetch(url, {
       method: "post",
@@ -1333,8 +1338,10 @@ aren't confident it's the correct match.
     // undefined (reading '0')" and the whole re-score fails opaquely.
     const cand = data.candidates[0];
     if (!cand.content || !cand.content.parts || !cand.content.parts[0]) {
-      const reason = cand.finishReason || "UNKNOWN";
-      throw new Error("GEMINI_EMPTY_RESPONSE: finishReason=" + reason + " — response had no usable content, likely safety filtering or truncation. Try re-scoring again.");
+      lastEmptyReason = cand.finishReason || "UNKNOWN";
+      Logger.log("Gemini empty response on attempt " + attempt + " for '" + title + "': finishReason=" + lastEmptyReason);
+      if (attempt < 2) continue; // retry once, same as a JSON-parse slip
+      throw new Error("GEMINI_EMPTY_RESPONSE: finishReason=" + lastEmptyReason + " — response had no usable content after 2 attempts, likely safety filtering or truncation. Try re-scoring again.");
     }
     const text = data.candidates[0].content.parts[0].text;
     lastRawText = text;
