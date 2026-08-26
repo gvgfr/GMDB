@@ -1503,17 +1503,30 @@ function removeDuplicateMovies() {
     return;
   }
   const titles = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  // BUG FIX: title-only matching missed duplicates where TMDB's returned
+  // title for the SAME film changed slightly between two separate auto-add
+  // runs (e.g. "Toxic" vs "Toxic: A Fairy Tale for Greed" once TMDB added
+  // the subtitle closer to release) — both rows got fully reviewed and
+  // scored independently, showing as two different-looking "duplicates"
+  // with two different scores. TMDB ID (col 35) never changes, so it
+  // catches this case even when the title text doesn't match.
+  const tmdbIds = sheet.getRange(2, 35, lastRow - 1, 1).getValues();
 
-  const seen = {};
+  const seenTitles = {};
+  const seenIds = {};
   const rowsToDelete = [];
 
   for (let i = 0; i < titles.length; i++) {
     const t = String(titles[i][0]).trim().toLowerCase();
     if (!t) continue;
-    if (seen[t]) {
+    const idRaw = String(tmdbIds[i][0]).trim();
+    const idKey = /^\d+$/.test(idRaw) ? idRaw : null;
+
+    if (seenTitles[t] || (idKey && seenIds[idKey])) {
       rowsToDelete.push(i + 2); // actual sheet row
     } else {
-      seen[t] = true;
+      seenTitles[t] = true;
+      if (idKey) seenIds[idKey] = true;
     }
   }
 
@@ -2231,6 +2244,15 @@ function autoAddNewReleasesCore() {
   // Existing titles (lowercased) to avoid duplicates
   const existing = sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 1), 1)
     .getValues().map(r => String(r[0]).trim().toLowerCase());
+  // BUG FIX: title-only matching missed a movie already in the sheet if
+  // TMDB's returned title for it changed slightly since it was added (e.g.
+  // a subtitle added closer to release) — this function's own discover
+  // call would then see it as a "new" candidate under the new title string
+  // and add a second row, fully reviewed and scored independently from the
+  // first (see removeDuplicateMovies for the exact case this caused).
+  // TMDB ID (col 35) is stable regardless of title text, so check that too.
+  const existingIds = sheet.getRange(2, 35, Math.max(sheet.getLastRow() - 1, 1), 1)
+    .getValues().map(r => String(r[0]).trim()).filter(id => /^\d+$/.test(id));
 
   // REJECTED-TITLE MEMORY: without this, a movie that scored below 65 gets
   // its row deleted with no trace, so the NEXT run re-discovers and
@@ -2268,6 +2290,7 @@ function autoAddNewReleasesCore() {
       const res = JSON.parse(UrlFetchApp.fetch(url).getContentText());
       (res.results || []).forEach(m => {
         candidates.push({
+          id: m.id,
           title: m.title,
           year: m.release_date ? m.release_date.substring(0, 4) : "",
           popularity: m.popularity,
@@ -2284,9 +2307,12 @@ function autoAddNewReleasesCore() {
   const seen = {};
   candidates = candidates.filter(c => {
     const key = c.title.toLowerCase().trim();
-    if (seen[key]) return false;
+    const idKey = String(c.id);
+    if (seen[key] || seen["id:" + idKey]) return false;
     seen[key] = true;
+    seen["id:" + idKey] = true;
     if (existing.indexOf(key) !== -1) return false;
+    if (existingIds.indexOf(idKey) !== -1) return false; // same film, title text just changed since it was added
     if (recentlyRejected.indexOf(key) !== -1) return false;
     return true;
   });
@@ -2435,6 +2461,12 @@ function autoAddUpcomingReleasesCore() {
 
   const existing = sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 1), 1)
     .getValues().map(r => String(r[0]).trim().toLowerCase());
+  // BUG FIX: title-only matching missed a movie already tracked if TMDB's
+  // returned title for it changed since it was added (e.g. a subtitle
+  // added closer to release) — see removeDuplicateMovies for the exact
+  // case this caused. TMDB ID (col 35) is stable regardless of title text.
+  const existingIds = sheet.getRange(2, 35, Math.max(sheet.getLastRow() - 1, 1), 1)
+    .getValues().map(r => String(r[0]).trim()).filter(id => /^\d+$/.test(id));
 
   let candidates = [];
   indianLangs.forEach(lang => {
@@ -2456,9 +2488,12 @@ function autoAddUpcomingReleasesCore() {
   const seen = {};
   candidates = candidates.filter(c => {
     const key = c.title.toLowerCase().trim();
-    if (seen[key]) return false;
+    const idKey = String(c.id);
+    if (seen[key] || seen["id:" + idKey]) return false;
     seen[key] = true;
+    seen["id:" + idKey] = true;
     if (existing.indexOf(key) !== -1) return false; // already tracked (Coming Soon or otherwise)
+    if (existingIds.indexOf(idKey) !== -1) return false;
     return true;
   });
 
@@ -2566,6 +2601,12 @@ function autoAddNewlyStreamingCore() {
 
   const existing = sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 1), 1)
     .getValues().map(r => String(r[0]).trim().toLowerCase());
+  // BUG FIX: title-only matching missed a movie already tracked if TMDB's
+  // returned title for it changed since it was added (e.g. a subtitle
+  // added closer to release) — see removeDuplicateMovies for the exact
+  // case this caused. TMDB ID (col 35) is stable regardless of title text.
+  const existingIds = sheet.getRange(2, 35, Math.max(sheet.getLastRow() - 1, 1), 1)
+    .getValues().map(r => String(r[0]).trim()).filter(id => /^\d+$/.test(id));
 
   const props = PropertiesService.getScriptProperties();
 
@@ -2602,9 +2643,12 @@ function autoAddNewlyStreamingCore() {
   const seen = {};
   candidates = candidates.filter(c => {
     const key = c.title.toLowerCase().trim();
-    if (seen[key]) return false;
+    const idKey = String(c.id);
+    if (seen[key] || seen["id:" + idKey]) return false;
     seen[key] = true;
+    seen["id:" + idKey] = true;
     if (existing.indexOf(key) !== -1) return false;
+    if (existingIds.indexOf(idKey) !== -1) return false;
     if (rejectedCache[key]) return false;
     if (notStreamingCache[key]) return false;
     return true;
