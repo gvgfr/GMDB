@@ -3017,12 +3017,7 @@ function refreshStreamingStatus() {
   if (startRow > lastRow) startRow = 2; // wrap around
 
   const startTime = Date.now();
-  // 6 minutes is Apps Script's HARD execution ceiling for a personal Gmail
-  // account (30 min only applies to Workspace accounts) — Google force-kills
-  // the script the instant it's hit, with no chance to run cleanup code.
-  // 5.5 min leaves a real but not overly conservative buffer against one
-  // unusually slow API call tipping the total over that wall mid-row.
-  const CUTOFF_MS = 5.5 * 60 * 1000;
+  const CUTOFF_MS = 5 * 60 * 1000; // stop before the 6-min Apps Script limit
   let row = startRow;
   let checked = 0, newlyAdded = 0;
 
