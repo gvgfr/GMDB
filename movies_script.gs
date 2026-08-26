@@ -3017,7 +3017,12 @@ function refreshStreamingStatus() {
   if (startRow > lastRow) startRow = 2; // wrap around
 
   const startTime = Date.now();
-  const CUTOFF_MS = 5 * 60 * 1000; // stop before the 6-min Apps Script limit
+  // 6 minutes is Apps Script's HARD execution ceiling for a personal Gmail
+  // account (30 min only applies to Workspace accounts) — Google force-kills
+  // the script the instant it's hit, with no chance to run cleanup code.
+  // 5.5 min leaves a real but not overly conservative buffer against one
+  // unusually slow API call tipping the total over that wall mid-row.
+  const CUTOFF_MS = 5.5 * 60 * 1000;
   let row = startRow;
   let checked = 0, newlyAdded = 0;
 
@@ -3193,10 +3198,16 @@ function refreshStreamingStatus() {
     } catch (err) {
       Logger.log("Refresh failed for '" + title + "' row " + row + ": " + err);
     }
+
+    // Save progress after EVERY row, not just once when the loop exits
+    // cleanly. Google's hard 6-min kill (see CUTOFF_MS above) can strike
+    // between our own timing checks with no warning — without this, a run
+    // that gets force-killed loses its resume position entirely and the
+    // next click restarts from the same old spot, silently re-doing (or
+    // worse, never actually covering) rows it already processed.
+    props.setProperty("STREAM_REFRESH_ROW", (row + 1 > lastRow ? "2" : String(row + 1)));
   }
 
-  // Save progress (wrap to top when we reach the end)
-  props.setProperty("STREAM_REFRESH_ROW", (row > lastRow ? "2" : String(row)));
   SpreadsheetApp.getUi().alert(
     "Streaming refresh done.\n\n" +
     "This run covered rows " + startRow + " to " + (row - 1) + ".\n" +
