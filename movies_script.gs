@@ -1851,6 +1851,19 @@ function escapeHtml_(str) {
     .replace(/'/g, "&#039;");
 }
 
+// encodeURIComponent deliberately leaves !'()* unescaped, but most chat
+// apps' link auto-detection treats a trailing "!" (or similar) as sentence
+// punctuation and silently drops it from the clickable link — so a shared
+// "?movie=Hi!" URL can arrive as "?movie=Hi" once pasted into
+// iMessage/WhatsApp/SMS/etc. Escape those characters too so they survive
+// intact. Kept in sync by hand with the identical helper in index.html and
+// generate-movie-pages.js.
+function encodeURIComponentStrict_(str) {
+  return encodeURIComponent(str).replace(/[!'()*]/g, function(c) {
+    return "%" + c.charCodeAt(0).toString(16).toUpperCase();
+  });
+}
+
 function doGet(e) {
   // Server-side poster proxy for the website's Share feature. TMDB's image
   // CDN inconsistently includes the CORS header browsers need to actually
@@ -1908,7 +1921,7 @@ function doGet(e) {
       }
 
       const SITE = "https://gvgfr.github.io/GMDB/";
-      const redirectUrl = SITE + "?movie=" + encodeURIComponent(e.parameter.title);
+      const redirectUrl = SITE + "?movie=" + encodeURIComponentStrict_(e.parameter.title);
 
       // Movie not found — redirect straight through, no special preview.
       if (!match) {
@@ -1951,7 +1964,7 @@ function doGet(e) {
       // Something went wrong generating the preview — still get the person
       // to the real site rather than showing them a broken page.
       const SITE = "https://gvgfr.github.io/GMDB/";
-      const fallbackUrl = SITE + "?movie=" + encodeURIComponent(e.parameter.title);
+      const fallbackUrl = SITE + "?movie=" + encodeURIComponentStrict_(e.parameter.title);
       return HtmlService.createHtmlOutput(
         `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${fallbackUrl}"></head><body></body></html>`
       );
