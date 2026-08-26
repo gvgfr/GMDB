@@ -1238,6 +1238,16 @@ function getTierFromScore(score) {
 // it actually arrives. Reads whichever region's streaming column is
 // currently selected in the Region dropdown (US or UK).
 function isNewOnStreaming(m) {
+  // Guard: a film can't genuinely be "new on streaming" before its own
+  // release date has passed. TMDB/Gemini can occasionally report provider
+  // availability for an announced/pre-release title early (same failure
+  // mode the "Where to Watch" modal already guards against), which can
+  // leave a bad StreamingSince stamp pointing at today even though the
+  // film hasn't released yet. Trust ReleaseDate as the tie-breaker.
+  const relRawGuard = m.ReleaseDate || "";
+  const relTimeGuard = new Date(relRawGuard).getTime();
+  if (!isNaN(relTimeGuard) && relTimeGuard > Date.now()) return false;
+
   const region = getSelectedRegion();
   const ott = region === "UK"
     ? (m.StreamingUK || m.Streaminguk || "")

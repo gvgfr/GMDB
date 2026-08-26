@@ -593,7 +593,13 @@ function fillMovieData(e) {
     const existingSinceRaw = sinceCell.getValue();
     const existingSince = String(existingSinceRaw || "").trim();
     const relTime = new Date(releaseDate || "").getTime();
-    const isRecent = !isNaN(relTime) && relTime >= (Date.now() - 5 * 30 * 24 * 60 * 60 * 1000); // 5 months, matches the website's "New on Streaming" window
+    // BUG FIX: this only checked "not older than 5 months," never "has the
+    // release date actually passed" — so a film with a future ReleaseDate
+    // (always "recent" by that lone check) could get stamped as streaming
+    // TODAY the moment TMDB/Gemini reported provider info early, ahead of
+    // its real release (e.g. Babita Singh Reporting: ReleaseDate 2 days
+    // out, but Amazon Prime Video already showing in TMDB/Gemini's search).
+    const isRecent = !isNaN(relTime) && relTime <= Date.now() && relTime >= (Date.now() - 5 * 30 * 24 * 60 * 60 * 1000); // 5 months, matches the website's "New on Streaming" window
     // Use whichever confirms streaming — a fresh find from THIS run, or the
     // already-known value already protected in column 15. Without this,
     // a transient TMDB/Gemini gap on a re-score (common — same class of
@@ -3076,9 +3082,13 @@ function refreshStreamingStatus() {
 
       // Is this a recent release (within the last 5 months)? Only those
       // qualify as "new on streaming" — old catalog titles shouldn't be stamped.
+      // Same bug fix as fillMovieData's copy of this check: also require the
+      // release has actually happened, not just "not older than 5 months" —
+      // otherwise a future-dated ReleaseDate can get stamped as streaming
+      // today the moment TMDB/Gemini reports provider info early.
       const relRaw = sheet.getRange(row, 31).getValue(); // ReleaseDate
       const relTime = new Date(relRaw).getTime();
-      const isRecent = !isNaN(relTime) && relTime >= (Date.now() - 5 * 30 * 24 * 60 * 60 * 1000); // 5 months, matches the website's "New on Streaming" window
+      const isRecent = !isNaN(relTime) && relTime <= Date.now() && relTime >= (Date.now() - 5 * 30 * 24 * 60 * 60 * 1000); // 5 months, matches the website's "New on Streaming" window
 
       // STAMP: if there's streaming right now, it's a recent release, and
       // the stamp itself is simply missing — set it. This does NOT require
