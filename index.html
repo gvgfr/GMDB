@@ -1127,7 +1127,13 @@ function applyMoviesData(data) {
     if (shared) {
       const want = shared.trim().toLowerCase();
       let target = allMovies.find(m => String(m.Title||"").trim().toLowerCase() === want);
-      if (!target) target = allMovies.find(m => String(m.Title||"").trim().toLowerCase().includes(want));
+      // Fallback for a link that lost trailing punctuation in transit (e.g.
+      // a chat app's auto-linker trimming "?movie=Hi!" down to "...Hi" —
+      // see encodeURIComponentStrict above). Deliberately startsWith, not
+      // includes/substring — "hi" as a loose substring would also match
+      // "The Philadelphia Story" (the "hi" inside "p-hi-ladelphia"), which
+      // is exactly the false-positive this was reported for.
+      if (!target) target = allMovies.find(m => String(m.Title||"").trim().toLowerCase().startsWith(want));
       if (target) {
         sharedLinkHandled = true;
         cameFromSharedLink = true;
@@ -1238,6 +1244,16 @@ function getTierFromScore(score) {
 // it actually arrives. Reads whichever region's streaming column is
 // currently selected in the Region dropdown (US or UK).
 function isNewOnStreaming(m) {
+  // Guard: a film can't genuinely be "new on streaming" before its own
+  // release date has passed. TMDB/Gemini can occasionally report provider
+  // availability for an announced/pre-release title early (same failure
+  // mode the "Where to Watch" modal already guards against), which can
+  // leave a bad StreamingSince stamp pointing at today even though the
+  // film hasn't released yet. Trust ReleaseDate as the tie-breaker.
+  const relRawGuard = m.ReleaseDate || "";
+  const relTimeGuard = new Date(relRawGuard).getTime();
+  if (!isNaN(relTimeGuard) && relTimeGuard > Date.now()) return false;
+
   const region = getSelectedRegion();
   const ott = region === "UK"
     ? (m.StreamingUK || m.Streaminguk || "")
@@ -2326,6 +2342,17 @@ function openMovie(index) {
 
 function closeModalOverlay(e,id){if(e.target===document.getElementById(id)){if(id==="detailModal"){closeDetail();}else{document.getElementById(id).classList.remove("open");}}}
 
+// encodeURIComponent deliberately leaves !'()* unescaped (they're valid
+// unreserved-ish URI characters), but most chat apps' link auto-detection
+// treats a trailing "!" (or similar) as sentence punctuation and silently
+// drops it from the clickable link — so a shared "?movie=Hi!" URL can
+// arrive as "?movie=Hi" once pasted into iMessage/WhatsApp/SMS/etc. Escape
+// those characters too so they survive intact. Kept in sync by hand with
+// the identical helper in movies_script.gs and generate-movie-pages.js.
+function encodeURIComponentStrict(str) {
+  return encodeURIComponent(str).replace(/[!'()*]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+}
+
 // Kept in sync by hand with slugify() in scripts/generate-movie-pages.js —
 // both must produce the same slug for the same title/year, or share links 404.
 function slugifyMovie(title, year) {
@@ -2345,7 +2372,7 @@ function slugifyMovie(title, year) {
 // URL (single share item, no poster) if it 404s, so a share link never breaks.
 async function resolveShareUrl(title, year) {
   const siteUrl = "https://gvgfr.github.io/GMDB/";
-  const fallback = siteUrl + "?movie=" + encodeURIComponent(title);
+  const fallback = siteUrl + "?movie=" + encodeURIComponentStrict(title);
   const candidate = siteUrl + "m/" + slugifyMovie(title, year) + ".html";
   try {
     const controller = new AbortController();

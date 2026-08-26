@@ -24,6 +24,17 @@ function slugify(title, year) {
   return base || "movie";
 }
 
+// encodeURIComponent deliberately leaves !'()* unescaped, but most chat
+// apps' link auto-detection treats a trailing "!" (or similar) as sentence
+// punctuation and silently drops it from the clickable link — so a shared
+// "?movie=Hi!" URL can arrive as "?movie=Hi" once pasted into
+// iMessage/WhatsApp/SMS/etc. Escape those characters too so they survive
+// intact. Kept in sync by hand with the identical helper in index.html and
+// movies_script.gs.
+function encodeURIComponentStrict(str) {
+  return encodeURIComponent(str).replace(/[!'()*]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+}
+
 // Kept in sync by hand with the MASALA_TIERS boundaries in index.html.
 function getTierFromScore(score) {
   const s = Number(score);
@@ -47,7 +58,7 @@ function pageHtml(movie) {
   const score = movie.GauthamScore;
   const tier = getTierFromScore(score);
   const poster = movie.PosterURL || FALLBACK_IMAGE;
-  const appUrl = SITE_URL + "index.html?movie=" + encodeURIComponent(title);
+  const appUrl = SITE_URL + "index.html?movie=" + encodeURIComponentStrict(title);
   const pageTitle = `${title}${year ? ` (${year})` : ""} — Masala Meter`;
   const description = score
     ? `${title} scores ${score}/100 on the Masala Meter${tier ? ` (${tier})` : ""}. Read the full review, where to stream, and similar picks.`
