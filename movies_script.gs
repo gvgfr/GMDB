@@ -3050,14 +3050,37 @@ function refreshStreamingStatus() {
       // function's separate copy of the same logic didn't match, which is
       // exactly why a manual re-score could find streaming info that this
       // refresh function then failed to detect on its own.
+      // streamType tracked the same way as fillMovieData's own provider
+      // detection (ads folds into "free") so the OTTInfo label below reads
+      // identically regardless of which code path found it.
       let streaming = "";
+      let streamType = "";
       if (provData.results && provData.results.US) {
         const us = provData.results.US;
-        if (us.flatrate && us.flatrate.length) streaming = us.flatrate.map(p => p.provider_name).join(", ");
-        else if (us.free && us.free.length) streaming = us.free.map(p => p.provider_name).join(", ");
-        else if (us.ads && us.ads.length) streaming = us.ads.map(p => p.provider_name).join(", ");
-        else if (us.rent && us.rent.length) streaming = us.rent.map(p => p.provider_name).join(", ");
-        else if (us.buy && us.buy.length) streaming = us.buy.map(p => p.provider_name).join(", ");
+        if (us.flatrate && us.flatrate.length) { streaming = us.flatrate.map(p => p.provider_name).join(", "); streamType = "stream"; }
+        else if (us.free && us.free.length) { streaming = us.free.map(p => p.provider_name).join(", "); streamType = "free"; }
+        else if (us.ads && us.ads.length) { streaming = us.ads.map(p => p.provider_name).join(", "); streamType = "free"; }
+        else if (us.rent && us.rent.length) { streaming = us.rent.map(p => p.provider_name).join(", "); streamType = "rent"; }
+        else if (us.buy && us.buy.length) { streaming = us.buy.map(p => p.provider_name).join(", "); streamType = "buy"; }
+      }
+
+      // GAP FIX: this function only ever checked US availability — UK
+      // (col 41, StreamingUK) was set once by fillMovieData at add-time and
+      // then NEVER rechecked by this periodic refresh, so it went stale
+      // forever even as US availability kept getting updated on every run.
+      // Same watch/providers response already covers GB, no extra API call.
+      let streamingUK = "";
+      if (provData.results && provData.results.GB) {
+        const gb = provData.results.GB;
+        if (gb.flatrate && gb.flatrate.length) streamingUK = gb.flatrate.map(p => p.provider_name).join(", ");
+        else if (gb.free && gb.free.length) streamingUK = gb.free.map(p => p.provider_name).join(", ");
+        else if (gb.ads && gb.ads.length) streamingUK = gb.ads.map(p => p.provider_name).join(", ");
+        else if (gb.rent && gb.rent.length) streamingUK = gb.rent.map(p => p.provider_name).join(", ");
+        else if (gb.buy && gb.buy.length) streamingUK = gb.buy.map(p => p.provider_name).join(", ");
+      }
+      const existingStreamingUK = sheet.getRange(row, 41).getValue();
+      if (streamingUK || !existingStreamingUK) {
+        sheet.getRange(row, 41).setValue(streamingUK);
       }
 
       const prevStreaming = sheet.getRange(row, 15).getValue();
@@ -3091,6 +3114,25 @@ function refreshStreamingStatus() {
       // that might just be a momentary data hiccup rather than a real exit.
       if (streaming || !prevStreaming) {
         sheet.getRange(row, 15).setValue(streaming);
+      }
+
+      // BUG FIX: this function was updating the raw Streaming column (15)
+      // above but never touching OTTInfo (col 16) — the human-readable
+      // label ("Stream on Netflix (US)") that card ribbons and the "Where
+      // to Watch" panel actually display with priority over column 15. A
+      // platform change (e.g. Netflix -> Amazon) or a genuine removal
+      // would update column 15 correctly but leave the visible label
+      // frozen at whatever fillMovieData originally wrote, months earlier
+      // — this was the actual cause of "streaming info doesn't update."
+      // Same protect-existing condition as column 15 just above, and the
+      // same label format fillMovieData uses (typeLabel falls back to
+      // "Available" for the Gemini-fallback case, where streamType is
+      // still "" since only the TMDB branch above sets it).
+      if (streaming) {
+        const typeLabel = { stream: "Stream", free: "Free", rent: "Rent", buy: "Buy" }[streamType] || "Available";
+        sheet.getRange(row, 16).setValue(typeLabel + " on " + streaming + " (US)");
+      } else if (!prevStreaming) {
+        sheet.getRange(row, 16).setValue("");
       }
 
       // Is this a recent release (within the last 5 months)? Only those
