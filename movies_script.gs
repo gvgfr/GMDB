@@ -2282,8 +2282,16 @@ function autoAddNewReleasesCore() {
       // a candidate only gets kept if Gemini scores it 65+ AND confirms
       // the correct language, so low-quality/junk entries get filtered
       // there instead, after we actually have real data on them.
+      // without_genres=99 excludes TMDB's Documentary genre — stand-up
+      // comedy specials are almost always tagged under it too (TMDB has no
+      // separate "stand-up" category), so this is the one filter worth
+      // applying at discovery time rather than leaving to Gemini's
+      // downstream scoring: a documentary/special isn't a quality problem,
+      // it's the wrong TYPE of content for a narrative-film site entirely,
+      // and there's no reason to burn a full review on one.
       const url = "https://api.themoviedb.org/3/discover/movie?api_key=" + TMDB_API_KEY +
         "&include_adult=false&with_original_language=" + lang +
+        "&without_genres=99" +
         "&primary_release_date.gte=" + dateFrom +
         "&primary_release_date.lte=" + dateTo +
         "&sort_by=popularity.desc";
@@ -2471,8 +2479,16 @@ function autoAddUpcomingReleasesCore() {
   let candidates = [];
   indianLangs.forEach(lang => {
     try {
+      // without_genres=99 excludes TMDB's Documentary genre — stand-up
+      // comedy specials are almost always tagged under it too (TMDB has no
+      // separate "stand-up" category), so this is the one filter worth
+      // applying at discovery time rather than leaving to Gemini's
+      // downstream scoring: a documentary/special isn't a quality problem,
+      // it's the wrong TYPE of content for a narrative-film site entirely,
+      // and there's no reason to burn a full review on one.
       const url = "https://api.themoviedb.org/3/discover/movie?api_key=" + TMDB_API_KEY +
         "&include_adult=false&with_original_language=" + lang +
+        "&without_genres=99" +
         "&primary_release_date.gte=" + dateFrom +
         "&primary_release_date.lte=" + dateTo +
         "&sort_by=popularity.desc";
@@ -2625,8 +2641,16 @@ function autoAddNewlyStreamingCore() {
   let candidates = [];
   indianLangs.forEach(lang => {
     try {
+      // without_genres=99 excludes TMDB's Documentary genre — stand-up
+      // comedy specials are almost always tagged under it too (TMDB has no
+      // separate "stand-up" category), so this is the one filter worth
+      // applying at discovery time rather than leaving to Gemini's
+      // downstream scoring: a documentary/special isn't a quality problem,
+      // it's the wrong TYPE of content for a narrative-film site entirely,
+      // and there's no reason to burn a full review on one.
       const url = "https://api.themoviedb.org/3/discover/movie?api_key=" + TMDB_API_KEY +
         "&include_adult=false&with_original_language=" + lang +
+        "&without_genres=99" +
         "&primary_release_date.gte=" + dateFrom +
         "&primary_release_date.lte=" + dateTo +
         "&sort_by=popularity.desc";
