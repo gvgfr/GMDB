@@ -55,9 +55,11 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .streaming-carousel-section{padding:1.25rem 0 1.5rem;border-bottom:1px solid var(--border);}
 .streaming-carousel-label{font-size:20px;font-weight:800;color:var(--text);margin:0 1.5rem 0.85rem;}
 .streaming-carousel-tv-icon{font-size:26px;vertical-align:middle;margin-right:2px;}
-.streaming-carousel{display:flex;gap:12px;overflow-x:auto;padding:0 1.5rem 6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;}
-.streaming-carousel::-webkit-scrollbar{height:6px;}
-.streaming-carousel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.streaming-carousel{display:flex;gap:12px;overflow-x:auto;padding:0 1.5rem 10px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--red) rgba(255,255,255,0.08);}
+.streaming-carousel::-webkit-scrollbar{height:8px;}
+.streaming-carousel::-webkit-scrollbar-track{background:rgba(255,255,255,0.08);border-radius:4px;}
+.streaming-carousel::-webkit-scrollbar-thumb{background:var(--red);border-radius:4px;}
+.streaming-carousel::-webkit-scrollbar-thumb:hover{background:var(--red2);}
 .carousel-card{flex:0 0 auto;width:155px;cursor:pointer;scroll-snap-align:start;transition:transform 0.15s;}
 .carousel-card:hover{transform:translateY(-4px);}
 .carousel-poster-wrap{position:relative;width:155px;height:220px;border-radius:8px;overflow:hidden;background:var(--bg2);}
@@ -356,7 +358,11 @@ footer span{color:var(--red);}
 
 /* CAST & MUSIC */
 .meta-grid{display:flex;flex-wrap:wrap;gap:1.5rem;margin-bottom:1.25rem;}
-.cast-photo-strip{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px;}
+.cast-photo-strip{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;scrollbar-width:thin;scrollbar-color:var(--red) rgba(255,255,255,0.08);}
+.cast-photo-strip::-webkit-scrollbar{height:8px;}
+.cast-photo-strip::-webkit-scrollbar-track{background:rgba(255,255,255,0.08);border-radius:4px;}
+.cast-photo-strip::-webkit-scrollbar-thumb{background:var(--red);border-radius:4px;}
+.cast-photo-strip::-webkit-scrollbar-thumb:hover{background:var(--red2);}
 .cast-photo-item{flex:0 0 auto;width:72px;text-align:center;}
 .cast-photo-img{width:64px;height:64px;border-radius:50%;object-fit:cover;object-position:top center;background:var(--bg3);border:2px solid rgba(255,255,255,0.1);}
 .cast-photo-placeholder{width:64px;height:64px;border-radius:50%;background:var(--bg3);border:2px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:22px;}
