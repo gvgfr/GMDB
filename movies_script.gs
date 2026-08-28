@@ -2641,16 +2641,23 @@ function autoAddNewlyStreamingCore() {
 
   candidates.sort((a, b) => b.popularity - a.popularity);
   const seen = {};
+  // Diagnostic counters — surfaced in the summary alert below so it's
+  // possible to tell "nothing new to find" apart from "found candidates
+  // but they're all pre-filtered for a specific reason" without having to
+  // dig through the execution log.
+  let skippedAlreadyTracked = 0;
+  let skippedRejected = 0;
+  let skippedRecentlyCheckedNotStreaming = 0;
+  const totalDiscovered = candidates.length;
   candidates = candidates.filter(c => {
     const key = c.title.toLowerCase().trim();
     const idKey = String(c.id);
-    if (seen[key] || seen["id:" + idKey]) return false;
+    if (seen[key] || seen["id:" + idKey]) return false; // duplicate within this run's own TMDB results
     seen[key] = true;
     seen["id:" + idKey] = true;
-    if (existing.indexOf(key) !== -1) return false;
-    if (existingIds.indexOf(idKey) !== -1) return false;
-    if (rejectedCache[key]) return false;
-    if (notStreamingCache[key]) return false;
+    if (existing.indexOf(key) !== -1 || existingIds.indexOf(idKey) !== -1) { skippedAlreadyTracked++; return false; }
+    if (rejectedCache[key]) { skippedRejected++; return false; }
+    if (notStreamingCache[key]) { skippedRecentlyCheckedNotStreaming++; return false; }
     return true;
   });
 
@@ -2746,7 +2753,11 @@ function autoAddNewlyStreamingCore() {
 
   SpreadsheetApp.getUi().alert(
     "Newly-streaming sweep done.\n\n" +
-    "Checked " + streamingChecked + " candidate(s) from the last 5 months.\n" +
+    "Discovered " + totalDiscovered + " Indian release(s) from the last 5 months.\n" +
+    "  Already in your sheet: " + skippedAlreadyTracked + "\n" +
+    "  Rejected in a past run (low score/wrong language, 20-day memory): " + skippedRejected + "\n" +
+    "  Checked recently, not streaming yet (5-day memory): " + skippedRecentlyCheckedNotStreaming + "\n" +
+    "  Actually checked this run: " + streamingChecked + "\n\n" +
     "Added: " + added.length + (added.length ? "\n  " + added.join("\n  ") : "") + "\n\n" +
     "Not yet streaming (will re-check in a few days): " + stillWaiting.length +
     (skipped.length ? "\n\nSkipped (scored below " + SCORE_THRESHOLD + "): " + skipped.length : "") +
