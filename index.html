@@ -380,8 +380,15 @@ footer span{color:var(--red);}
 .song-why{font-size:13px;color:var(--text2);line-height:1.5;margin-top:5px;}
 .song-why b{color:var(--text);font-weight:600;}
 .song-score{font-size:12px;color:#1DB954;font-weight:700;margin-top:4px;}
-.add-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid var(--red);border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;transition:all 0.4s;display:flex;align-items:center;gap:10px;max-width:90vw;}
-.add-toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.add-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid var(--red);border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;display:flex;align-items:center;gap:10px;max-width:90vw;}
+/* BUG FIX: without pointer-events:none above, a "dismissed" toast (opacity:0,
+   only translated 100px — not actually off-screen, especially the taller
+   .ready card variant) kept silently swallowing taps in whatever part of the
+   bottom-center viewport it still geometrically covered — exactly where a
+   modal's Share/Close footer buttons render. jumpToMovie() (the toast's own
+   "View Review" button) removes .show right before opening the review
+   modal, so this hit on every movie added via search. */
+.add-toast.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto;}
 .toast-spinner{width:16px;height:16px;border:2px solid rgba(229,32,32,0.3);border-top-color:var(--red);border-radius:50%;animation:toastspin 0.8s linear infinite;display:inline-block;}
 @keyframes toastspin{to{transform:rotate(360deg);}}
 .toast-btn{background:var(--red);color:white;border:none;padding:5px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;margin-left:6px;}
