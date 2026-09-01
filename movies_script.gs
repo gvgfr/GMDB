@@ -1889,16 +1889,35 @@ function tmdbPosterForMovie_(title, year) {
   try {
     const base = "https://api.themoviedb.org/3/search/movie?api_key=" + TMDB_API_KEY +
       "&query=" + encodeURIComponent(title) + "&include_adult=false";
+
+    // BUG FIX: this used to just take results[0] — TMDB's top hit by
+    // popularity, not necessarily the right film. For anything but a
+    // distinctive title (a generic phrase like "Cola Cola", say), an
+    // unrelated same-named entry with NO poster can rank ahead of the real
+    // film, which DOES have one — so a real, long-established movie (a
+    // 1985 release, not just a too-new one) could still come back blank.
+    // Scan every result instead: prefer one that both has a poster and
+    // matches the given year, falling back to any poster'd result.
+    const pickBest = (results) => {
+      const withPoster = (results || []).filter(r => r.poster_path);
+      if (!withPoster.length) return null;
+      if (year) {
+        const yearMatch = withPoster.find(r => (r.release_date || "").slice(0, 4) === String(year).trim());
+        if (yearMatch) return yearMatch;
+      }
+      return withPoster[0];
+    };
+
     let json = JSON.parse(UrlFetchApp.fetch(base + (year ? "&year=" + encodeURIComponent(year) : "")).getContentText());
-    let match = (json.results || [])[0];
+    let match = pickBest(json.results);
     // A year-scoped search can come up empty for a very new/upcoming title
     // whose TMDB release date isn't finalized yet — retry unscoped rather
     // than giving up on the poster entirely.
-    if ((!match || !match.poster_path) && year) {
+    if (!match && year) {
       json = JSON.parse(UrlFetchApp.fetch(base).getContentText());
-      match = (json.results || [])[0];
+      match = pickBest(json.results);
     }
-    return match && match.poster_path ? "https://image.tmdb.org/t/p/w500" + match.poster_path : "";
+    return match ? "https://image.tmdb.org/t/p/w500" + match.poster_path : "";
   } catch (err) {
     return "";
   }
