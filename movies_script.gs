@@ -668,6 +668,7 @@ function fillMovieData(e) {
         const scoreNum = Math.round(Number(d.score) * 10) / 10;
         return {
           title: String(d.title).trim(),
+          singers: stripCitationMarkers_(d.singers),
           whyHit: stripCitationMarkers_(d.whyHit),
           score: (scoreNum > 0 && scoreNum <= 10) ? scoreNum.toFixed(1) : ""
         };
@@ -1173,8 +1174,13 @@ separate field (musicDirector) — don't duplicate that here.
 
 hitSongsDetails: A short per-song analysis for EVERY song listed in hitSongs
 above (same titles, same order), as a JSON array of objects:
-[{"title": "", "whyHit": "", "score": ""}]
+[{"title": "", "singers": "", "whyHit": "", "score": ""}]
 - title: must exactly match one of the song titles in hitSongs.
+- singers: the actual playback singer(s) who performed this specific song —
+  not the music director/composer (that's already captured separately in
+  musicDirector) and not the on-screen actor unless they genuinely sang it
+  themselves. Comma-separate multiple singers (e.g. a duet). Leave blank
+  ("") only if you genuinely can't find this, don't guess.
 - whyHit: ONE sentence, MAXIMUM 20 WORDS, explaining that specific song's
   appeal through its melody, vocals, lyrics, rhythm, emotion, or replay
   value. Be specific to THIS song — not a generic "catchy tune, great
@@ -1860,10 +1866,11 @@ function doPost(e) {
 // =============================================
 // SONGS — standalone song reviews, independent of the movie needing to
 // already be in the Movies sheet. Lives in its own "Songs" tab (columns:
-// Title | Movie | Year | MusicDirector | Language | Score | WhyHit |
-// DateAdded) since a bare song title can't be resolved via TMDB (it only
-// indexes films) — this uses a dedicated Gemini-only identification +
-// scoring pipeline instead of reusing fillMovieData's TMDB-based flow.
+// Title | Movie | Year | MusicDirector | Singers | Language | Score |
+// WhyHit | DateAdded) since a bare song title can't be resolved via TMDB
+// (it only indexes films) — this uses a dedicated Gemini-only
+// identification + scoring pipeline instead of reusing fillMovieData's
+// TMDB-based flow.
 // =============================================
 function addSongEntry_(songTitle) {
   if (!songTitle) return;
@@ -1896,11 +1903,12 @@ function addSongEntry_(songTitle) {
   }
 
   const newRow = sheet.getLastRow() + 1;
-  sheet.getRange(newRow, 1, 1, 8).setValues([[
+  sheet.getRange(newRow, 1, 1, 9).setValues([[
     review.title || songTitle,
     review.movie || "",
     review.year || "",
     review.musicDirector || "",
+    stripCitationMarkers_(review.singers || ""),
     review.language || "",
     Number(review.score).toFixed(1),
     stripCitationMarkers_(review.whyHit || ""),
@@ -1927,6 +1935,7 @@ If found, return ONLY valid JSON, no markdown, no backticks:
   "movie": "the film it's from",
   "year": "YYYY",
   "musicDirector": "composer/music director name",
+  "singers": "the actual playback singer(s) who performed it, comma-separated if more than one — not the music director and not the on-screen actor unless they genuinely sang it themselves. Leave blank if you genuinely can't find this, don't guess.",
   "language": "Tamil/Telugu/Hindi/Malayalam/Kannada/Bengali/Marathi/Punjabi/etc.",
   "score": "a single number 0.0-10.0 with one decimal place, computed as a weighted blend of melody (40%), vocals (25%), lyrics (20%), and replay value (15%) — judge each dimension using whatever's actually known about the song (chart/streaming performance, critic or audience commentary, its role in the film)",
   "whyHit": "ONE sentence, MAXIMUM 20 WORDS, explaining this song's specific appeal — be specific to THIS song, not a generic 'catchy tune, great vibes' description"
@@ -1952,6 +1961,54 @@ If found, return ONLY valid JSON, no markdown, no backticks:
   const cand = data.candidates && data.candidates[0];
   if (!cand || !cand.content || !cand.content.parts || !cand.content.parts[0]) {
     throw new Error("Gemini song review: empty/filtered response for '" + songTitle + "'");
+  }
+  return parseGeminiJsonObject_(cand.content.parts[0].text || "");
+}
+
+// Lightweight identify-only counterpart to getGeminiSongReview_ — same
+// resolution step (title/movie/year/musicDirector/singers/language via
+// live search) but skips scoring entirely, so it's fast enough to run
+// live as someone types in the Add-a-Song box (mirrors the TMDB
+// suggestion dropdown for movies) instead of only finding out what was
+// matched after the full ~30s review completes.
+function identifyGeminiSong_(songTitle) {
+  const prompt = `Using Google Search, identify the real Indian film song titled "${songTitle}".
+
+STRICT RULES:
+- Only proceed if you can confidently identify a REAL song from an Indian film (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Punjabi, etc.) — not a generic/non-Indian song, not a guess.
+- If you cannot confidently identify it, return exactly {"found": false} and nothing else.
+
+If found, return ONLY valid JSON, no markdown, no backticks:
+{
+  "found": true,
+  "title": "official song title",
+  "movie": "the film it's from",
+  "year": "YYYY",
+  "musicDirector": "composer/music director name",
+  "singers": "the actual playback singer(s) who performed it, comma-separated if more than one. Leave blank if you genuinely can't find this, don't guess.",
+  "language": "Tamil/Telugu/Hindi/Malayalam/Kannada/Bengali/Marathi/Punjabi/etc."
+}`;
+
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    tools: [{ google_search: {} }],
+    generationConfig: { temperature: 0.3 }
+  };
+
+  const response = UrlFetchApp.fetch(url, {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  const code = response.getResponseCode();
+  const bodyText = response.getContentText();
+  if (code !== 200) throw new Error("Gemini song identify HTTP " + code + ": " + bodyText.slice(0, 200));
+  const data = JSON.parse(bodyText);
+  const cand = data.candidates && data.candidates[0];
+  if (!cand || !cand.content || !cand.content.parts || !cand.content.parts[0]) {
+    throw new Error("Gemini song identify: empty/filtered response for '" + songTitle + "'");
   }
   return parseGeminiJsonObject_(cand.content.parts[0].text || "");
 }
@@ -2133,6 +2190,24 @@ function doGet(e) {
     return ContentService
       .createTextOutput(JSON.stringify(songs))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Identify (not score) a song for the Add-a-Song confirm step — lets
+  // someone see which real song/movie was matched before committing to the
+  // full ~30s scored review, the same way the movie search dropdown shows
+  // TMDB candidates before "Fetch & Add Movie" actually runs.
+  if (e && e.parameter && e.parameter.action === "identifySong" && e.parameter.q) {
+    try {
+      const result = identifyGeminiSong_(String(e.parameter.q).trim());
+      return ContentService
+        .createTextOutput(JSON.stringify(result || { found: false }))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      Logger.log("identifySong failed for '" + e.parameter.q + "': " + err);
+      return ContentService
+        .createTextOutput(JSON.stringify({ found: false }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
   }
 
   // Search TMDB for movie suggestions (for Add Movie autocomplete)
