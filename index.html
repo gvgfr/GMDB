@@ -1191,12 +1191,20 @@ function renderSongsList() {
   }).join("");
 }
 
-// Full-detail view for one song — poster, Spotify and YouTube links —
-// opened by tapping anywhere on a song card (the Spotify badge itself stops
-// propagation so it launches directly without also opening this).
+// Full-detail view for one song — poster, Spotify and YouTube links, and a
+// Share button — opened by tapping anywhere on a song card (the Spotify
+// badge itself stops propagation so it launches directly without also
+// opening this) or by a shared ?song= link (see handleSharedSongLink below).
+let _currentSongDetail = null;
 function openSongDetail(i) {
   const s = _renderedSongsCache[i];
   if (!s) return;
+  openSongDetailObj(s);
+}
+
+function openSongDetailObj(s) {
+  if (!s) return;
+  _currentSongDetail = s;
   const query = encodeURIComponent(s.Title + " " + (s.Movie||""));
   const poster = s.PosterURL
     ? `<img class="song-detail-poster" src="${s.PosterURL}" alt=""/>`
@@ -1215,9 +1223,82 @@ function openSongDetail(i) {
     <div class="song-detail-links">
       <a class="modal-btn modal-btn-primary" style="background:#1DB954;" href="https://open.spotify.com/search/${query}" target="_blank">${SPOTIFY_ICON}&nbsp; Listen on Spotify</a>
       <a class="modal-btn modal-btn-secondary" href="https://www.youtube.com/results?search_query=${query}%20song" target="_blank">▶ Watch on YouTube</a>
+      <button class="modal-btn modal-btn-share" onclick="shareSong()">↗ Share This Song</button>
     </div>`;
   document.getElementById("songDetailModal").classList.add("open");
   history.pushState({modal:true}, "", "");
+}
+
+// Same Web Share API / clipboard-copy pattern as shareMovie() — there's no
+// per-song static preview page (movies get one via generate-movie-pages.js
+// for a real og:image; songs don't have that pipeline), so this just deep
+// links back into the app via ?song=, which handleSharedSongLink() below
+// opens straight to this song's detail view on load.
+async function shareSong() {
+  const s = _currentSongDetail;
+  if (!s) return;
+  const url = "https://gvgfr.github.io/GMDB/?song=" + encodeURIComponentStrict(s.Title);
+  const songLabel = `"${s.Title}"${s.Movie ? ` from ${s.Movie}` : ""}`;
+  const text = `${songLabel} — scored ${s.Score.toFixed(1)}/10 on the Masala Meter:`;
+
+  function showCopyToast(msg) {
+    const t = document.createElement("div");
+    t.textContent = msg;
+    t.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1DD3B0;color:#04231d;font-weight:700;padding:10px 18px;border-radius:24px;z-index:99999;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,0.4);";
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2200);
+  }
+
+  async function copyFallback() {
+    const shareText = `${text} ${url}`;
+    try {
+      await navigator.clipboard.writeText(shareText);
+      showCopyToast("Song link copied ✓");
+    } catch (err) {
+      const area = document.createElement("textarea");
+      area.value = shareText;
+      area.setAttribute("readonly", "");
+      area.style.cssText = "position:fixed;opacity:0;pointer-events:none;";
+      document.body.appendChild(area);
+      area.select();
+      const copied = document.execCommand("copy");
+      area.remove();
+      showCopyToast(copied ? "Song link copied ✓" : "Couldn't copy — long-press to copy manually");
+    }
+  }
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: `${s.Title} — Masala Meter`, text, url });
+    } catch (err) {
+      if (err && err.name === "AbortError") return;
+      await copyFallback();
+    }
+  } else {
+    await copyFallback();
+  }
+}
+
+// Opened via a shared link (?song=Title) — mirrors the ?movie= handling in
+// applyMoviesData(), but songs load separately (loadSongs(), not
+// loadMovies()) so this runs on its own once both sources are ready.
+let sharedSongLinkHandled = false;
+function handleSharedSongLink() {
+  if (sharedSongLinkHandled) return;
+  const params = new URLSearchParams(location.search);
+  const shared = params.get("song");
+  if (!shared) return;
+  const want = shared.trim().toLowerCase();
+  const all = getAllSongs();
+  let target = all.find(s => String(s.Title||"").trim().toLowerCase() === want);
+  if (!target) target = all.find(s => String(s.Title||"").trim().toLowerCase().startsWith(want));
+  if (!target) return;
+  sharedSongLinkHandled = true;
+  setTimeout(() => {
+    document.getElementById("songsModal").classList.add("open");
+    _renderedSongsCache = all;
+    openSongDetailObj(target);
+  }, 400);
 }
 
 // "Get It Reviewed" fallback — for a song that isn't in the catalog under
@@ -3073,8 +3154,7 @@ window.addEventListener("popstate", () => {
   }
 });
 
-loadMovies();
-loadSongs();
+Promise.all([loadMovies(), loadSongs()]).then(handleSharedSongLink);
 
 // Keep an already-open tab from showing stale data indefinitely if a movie
 // gets re-scored (or added) directly in the sheet while someone's already
