@@ -1833,7 +1833,7 @@ function doPost(e) {
   // title can't be resolved via TMDB search at all (TMDB only indexes
   // films), so it needs its own Gemini-only identification pipeline.
   if (data.SongTitle) {
-    addSongEntry_(String(data.SongTitle).trim());
+    addSongEntry_(String(data.SongTitle).trim(), String(data.SongMovieHint || "").trim());
     return ContentService.createTextOutput("OK");
   }
 
@@ -1927,7 +1927,7 @@ function backfillSongPosters() {
   Logger.log("Backfilled posters for " + updated + " song(s).");
 }
 
-function addSongEntry_(songTitle) {
+function addSongEntry_(songTitle, movieHint) {
   if (!songTitle) return;
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
   if (!sheet) {
@@ -1943,7 +1943,7 @@ function addSongEntry_(songTitle) {
 
   let review;
   try {
-    review = getGeminiSongReview_(songTitle);
+    review = getGeminiSongReview_(songTitle, movieHint);
   } catch (err) {
     Logger.log("Song review failed for '" + songTitle + "': " + err);
     return;
@@ -2070,8 +2070,17 @@ function fillSongData(e) {
 // (melody 40%, vocals 25%, lyrics 20%, replay value 15%), but resolves the
 // song's own movie/album via live search first instead of assuming one's
 // already known, since this is invoked with just a bare song title.
-function getGeminiSongReview_(songTitle) {
-  const prompt = `Using Google Search, identify the real Indian film song titled "${songTitle}" and review it.
+//
+// movieHint is optional — set when this request came via the frontend's
+// identify-confirm step (identifyGeminiSong_ found a match and the person
+// confirmed it). identifyGeminiSong_ doesn't use Google Search grounding
+// (see its own comment for why), so it can occasionally confirm a song
+// this GROUNDED call then can't independently verify on a bare, ambiguous
+// title — passing along which film identify found narrows the search onto
+// the same song instead of leaving this call to re-search cold.
+function getGeminiSongReview_(songTitle, movieHint) {
+  const hintClause = movieHint ? ` (likely from the film "${movieHint}")` : "";
+  const prompt = `Using Google Search, identify the real Indian film song titled "${songTitle}"${hintClause} and review it.
 
 STRICT RULES:
 - Only proceed if you can confidently identify a REAL song from an Indian film (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Punjabi, etc.) — not a generic/non-Indian song, not a guess.
