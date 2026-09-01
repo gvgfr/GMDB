@@ -1103,8 +1103,15 @@ async function loadSongs() {
 }
 
 // Combines both sources into one list, deduping by normalized title —
-// preferring the movie-linked version when a song exists in both (it
-// carries the movie/context for free), sorted highest-scored first.
+// preferring the movie-linked version's context (it comes with the movie
+// for free) when a song exists in both, sorted highest-scored first.
+//
+// BUG FIX: this used to fully discard the standalone entry on a dupe, even
+// when IT had a poster and the movie-linked one didn't (e.g. an unreleased
+// film added to Movies before it has a poster of its own) — a correctly
+// filled-in Songs-sheet PosterURL would get silently thrown away. Now it
+// backfills any field the movie-linked entry is missing from the
+// standalone one instead of dropping it outright.
 function getAllSongs() {
   const norm = s => String(s||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"");
   const fromMovies = [];
@@ -1120,13 +1127,23 @@ function getAllSongs() {
       });
     });
   });
-  const seen = new Set(fromMovies.map(s => norm(s.Title)));
-  const fromStandalone = (allSongsStandalone||[])
-    .filter(s => s.Title && Number(s.Score) > 0 && !seen.has(norm(s.Title)))
-    .map(s => ({
+  const seen = new Map(fromMovies.map(s => [norm(s.Title), s]));
+  const fromStandalone = [];
+  (allSongsStandalone||[]).forEach(s => {
+    if (!s.Title || !(Number(s.Score) > 0)) return;
+    const key = norm(s.Title);
+    const existing = seen.get(key);
+    if (existing) {
+      if (!existing.PosterURL && s.PosterURL) existing.PosterURL = s.PosterURL;
+      if (!existing.Singers && s.Singers) existing.Singers = s.Singers;
+      if (!existing.MusicDirector && s.MusicDirector) existing.MusicDirector = s.MusicDirector;
+      return;
+    }
+    fromStandalone.push({
       Title: s.Title, WhyHit: s.WhyHit || "", Score: Number(s.Score), Singers: s.Singers || "",
       Movie: s.Movie || "", Year: s.Year || "", MusicDirector: s.MusicDirector || "", PosterURL: s.PosterURL || ""
-    }));
+    });
+  });
   return [...fromMovies, ...fromStandalone].sort((a,b) => b.Score - a.Score);
 }
 
