@@ -1881,15 +1881,44 @@ function doPost(e) {
 function tmdbPosterForMovie_(title, year) {
   if (!title) return "";
   try {
-    let url = "https://api.themoviedb.org/3/search/movie?api_key=" + TMDB_API_KEY +
+    const base = "https://api.themoviedb.org/3/search/movie?api_key=" + TMDB_API_KEY +
       "&query=" + encodeURIComponent(title) + "&include_adult=false";
-    if (year) url += "&year=" + encodeURIComponent(year);
-    const json = JSON.parse(UrlFetchApp.fetch(url).getContentText());
-    const match = (json.results || [])[0];
+    let json = JSON.parse(UrlFetchApp.fetch(base + (year ? "&year=" + encodeURIComponent(year) : "")).getContentText());
+    let match = (json.results || [])[0];
+    // A year-scoped search can come up empty for a very new/upcoming title
+    // whose TMDB release date isn't finalized yet — retry unscoped rather
+    // than giving up on the poster entirely.
+    if ((!match || !match.poster_path) && year) {
+      json = JSON.parse(UrlFetchApp.fetch(base).getContentText());
+      match = (json.results || [])[0];
+    }
     return match && match.poster_path ? "https://image.tmdb.org/t/p/w500" + match.poster_path : "";
   } catch (err) {
     return "";
   }
+}
+
+// One-time backfill for songs added before the PosterURL column existed (or
+// whose lookup missed at add-time) — run manually from the Apps Script
+// editor: select "backfillSongPosters" from the function dropdown at the
+// top, then click ▶ Run. Safe to re-run; only touches rows still blank.
+function backfillSongPosters() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
+  if (!sheet) return;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  const data = sheet.getRange(2, 1, lastRow - 1, 10).getValues(); // Title..PosterURL
+  let updated = 0;
+  for (let i = 0; i < data.length; i++) {
+    const title = data[i][0], movie = data[i][1], year = data[i][2], posterUrl = data[i][9];
+    if (!title || posterUrl) continue;
+    const poster = tmdbPosterForMovie_(movie, year);
+    if (poster) {
+      sheet.getRange(i + 2, 10).setValue(poster);
+      updated++;
+    }
+  }
+  Logger.log("Backfilled posters for " + updated + " song(s).");
 }
 
 function addSongEntry_(songTitle) {
