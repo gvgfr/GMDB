@@ -380,6 +380,7 @@ footer span{color:var(--red);}
 .song-card:hover{border-color:rgba(29,185,84,0.5);}
 .song-link{display:inline-flex;align-items:center;gap:4px;font-size:14px;color:#1DB954;font-weight:700;text-decoration:none;}
 .song-link:hover{text-decoration:underline;}
+.song-singers{font-size:12px;color:var(--text3);margin-top:2px;}
 .song-why{font-size:13px;color:var(--text2);line-height:1.5;margin-top:5px;}
 .song-why b{color:var(--text);font-weight:600;}
 .song-score{font-size:12px;color:#1DB954;font-weight:700;margin-top:4px;}
@@ -822,7 +823,8 @@ footer span{color:var(--red);}
     <h2 class="add-title">Review a Song</h2>
     <p class="add-desc">Type a song name and we'll identify the film it's from and score it — melody, vocals, lyrics, and replay value.</p>
     <div class="status-msg" id="addSongStatus"></div>
-    <input class="add-input" type="text" id="songTitleInput" placeholder="Song name — e.g. Rowdy Baby" autocomplete="new-password" autocapitalize="words" autocorrect="off" spellcheck="false" name="song-add-field" onkeydown="if(event.key==='Enter'){event.preventDefault();submitSong();}"/>
+    <input class="add-input" type="text" id="songTitleInput" placeholder="Song name — e.g. Rowdy Baby" autocomplete="new-password" autocapitalize="words" autocorrect="off" spellcheck="false" name="song-add-field" oninput="searchSongIdentity()" onkeydown="if(event.key==='Enter'){event.preventDefault();submitSong();}"/>
+    <div id="songIdentifyResult" style="display:none;"></div>
     <div class="add-actions">
       <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('addSongModal').classList.remove('open')">Cancel</button>
       <button class="btn btn-primary" style="flex:2" id="addSongBtn" onclick="submitSong()">Review This Song</button>
@@ -1050,6 +1052,8 @@ function buildHitSongs(m) {
   const songCards = songList.map((song, i) => {
     const query = encodeURIComponent(song + " " + movieName);
     const detail = findDetail(song, i);
+    const singers = detail && detail.singers
+      ? `<div class="song-singers">${detail.singers}</div>` : "";
     const why = detail && detail.whyHit
       ? `<div class="song-why"><b>Why it's a hit:</b> ${detail.whyHit}</div>` : "";
     const scoreNum = detail ? Number(detail.score) : 0;
@@ -1057,7 +1061,7 @@ function buildHitSongs(m) {
       ? `<div class="song-score">Masala Meter Song Score: ${scoreNum.toFixed(1)}/10</div>` : "";
     return `<div class="song-card">
       <a href="https://open.spotify.com/search/${query}" target="_blank" class="song-link">♪ ${song}</a>
-      ${why}${score}
+      ${singers}${why}${score}
     </div>`;
   }).join("");
   return `<div class="modal-section"><div class="modal-section-label">Hit Songs</div><div class="songs-wrap">${songCards}</div></div>`;
@@ -1091,7 +1095,7 @@ function getAllSongs() {
     details.forEach(d => {
       if (!d || !d.title || !(Number(d.score) > 0)) return;
       fromMovies.push({
-        Title: d.title, WhyHit: d.whyHit || "", Score: Number(d.score),
+        Title: d.title, WhyHit: d.whyHit || "", Score: Number(d.score), Singers: d.singers || "",
         Movie: m.Title || "", Year: m.Year || "", MusicDirector: m.MusicDirector || ""
       });
     });
@@ -1100,7 +1104,7 @@ function getAllSongs() {
   const fromStandalone = (allSongsStandalone||[])
     .filter(s => s.Title && Number(s.Score) > 0 && !seen.has(norm(s.Title)))
     .map(s => ({
-      Title: s.Title, WhyHit: s.WhyHit || "", Score: Number(s.Score),
+      Title: s.Title, WhyHit: s.WhyHit || "", Score: Number(s.Score), Singers: s.Singers || "",
       Movie: s.Movie || "", Year: s.Year || "", MusicDirector: s.MusicDirector || ""
     }));
   return [...fromMovies, ...fromStandalone].sort((a,b) => b.Score - a.Score);
@@ -1119,7 +1123,8 @@ function renderSongsList() {
   const filtered = q
     ? all.filter(s => s.Title.toLowerCase().includes(q) ||
         String(s.Movie||"").toLowerCase().includes(q) ||
-        String(s.MusicDirector||"").toLowerCase().includes(q))
+        String(s.MusicDirector||"").toLowerCase().includes(q) ||
+        String(s.Singers||"").toLowerCase().includes(q))
     : all;
 
   const wrap = document.getElementById("songsListWrap");
@@ -1142,10 +1147,12 @@ function renderSongsList() {
     const query = encodeURIComponent(s.Title + " " + (s.Movie||""));
     const movieLine = s.Movie
       ? `<div style="font-size:12px;color:var(--text3);margin-top:2px;">${s.Movie}${s.Year ? " ("+s.Year+")" : ""}</div>` : "";
+    const singers = s.Singers ? `<div class="song-singers">${s.Singers}</div>` : "";
     const why = s.WhyHit ? `<div class="song-why"><b>Why it's a hit:</b> ${s.WhyHit}</div>` : "";
     return `<div class="song-card">
       <a href="https://open.spotify.com/search/${query}" target="_blank" class="song-link">♪ ${s.Title}</a>
       ${movieLine}
+      ${singers}
       ${why}
       <div class="song-score">Masala Meter Song Score: ${s.Score.toFixed(1)}/10</div>
     </div>`;
@@ -1161,8 +1168,69 @@ function openAddSongModal() {
   document.getElementById("addSongStatus").style.display = "none";
   document.getElementById("addSongBtn").disabled = false;
   document.getElementById("addSongBtn").textContent = "Review This Song";
+  const identifyBox = document.getElementById("songIdentifyResult");
+  identifyBox.style.display = "none";
+  identifyBox.innerHTML = "";
   document.getElementById("addSongModal").classList.add("open");
-  setTimeout(() => document.getElementById("songTitleInput").focus(), 100);
+  setTimeout(() => {
+    document.getElementById("songTitleInput").focus();
+    // Setting .value directly doesn't fire the input event a real keystroke
+    // would — trigger the identify lookup explicitly so a prefilled title
+    // (from the Songs search box) still shows its confirm card right away.
+    if (q) searchSongIdentity();
+  }, 100);
+}
+
+// Quick "which song is this?" lookup as someone types — same purpose as
+// searchTMDBSuggestions() for movies (show what will actually get reviewed
+// BEFORE committing to the ~30s scored review), but there's no TMDB
+// equivalent for songs, so this hits the lightweight identifySong endpoint
+// instead and shows a single confirm card rather than a multi-result list.
+let songIdentifyTimer = null;
+async function searchSongIdentity() {
+  const input = document.getElementById("songTitleInput");
+  const box = document.getElementById("songIdentifyResult");
+  const q = input.value.trim();
+  if (q.length < 3) { box.style.display = "none"; box.innerHTML = ""; return; }
+
+  clearTimeout(songIdentifyTimer);
+  box.style.display = "block";
+  box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Identifying...</div>`;
+
+  songIdentifyTimer = setTimeout(async () => {
+    const requestedFor = q;
+    try {
+      const res = await fetch(API_URL + "?action=identifySong&q=" + encodeURIComponent(q));
+      const result = await res.json();
+      // A slower response landing after the person kept typing shouldn't
+      // clobber whatever's now showing for their newer input.
+      if (input.value.trim() !== requestedFor) return;
+
+      if (!result || !result.found) {
+        box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;">Couldn't confidently identify this song — try adding the movie name, or hit "Review This Song" below to try anyway.</div>`;
+        return;
+      }
+      const meta = [
+        result.movie ? (result.movie + (result.year ? " (" + result.year + ")" : "")) : "",
+        result.singers ? "Sung by " + result.singers : "",
+        result.musicDirector ? "Music by " + result.musicDirector : ""
+      ].filter(Boolean).join(" · ");
+      const safeTitle = jsAttrEscape(result.title);
+      box.innerHTML = `<div style="background:rgba(29,185,84,0.08);border:1px solid rgba(29,185,84,0.3);border-radius:8px;padding:10px 12px;">
+        <div style="font-weight:700;color:#1DB954;font-size:14px;">♪ ${result.title}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px;">${meta}</div>
+        <button class="btn btn-primary" style="margin-top:8px;width:100%;padding:8px;" onclick="confirmSongIdentity('${safeTitle}')">✓ Yes, this is it — Review It</button>
+      </div>`;
+    } catch (err) {
+      box.style.display = "none";
+    }
+  }, 500);
+}
+
+function confirmSongIdentity(title) {
+  document.getElementById("songTitleInput").value = title;
+  document.getElementById("songIdentifyResult").style.display = "none";
+  submitSong();
 }
 
 let activeAddSongTitle = "";
