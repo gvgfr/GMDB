@@ -1097,11 +1097,30 @@ function buildHitSongs(m) {
 // no extra fetch), plus a standalone "Songs" sheet tab for songs reviewed
 // on their own via the "Get It Reviewed" fallback below.
 // =============================================
+// BUG FIX: a shared song link (?song=X) used to sit on the plain homepage
+// for however long the live fetch took (several seconds, worse on a cold
+// Apps Script start) before popping open — movies never had this problem
+// because loadMovies() renders last session's cached data instantly and
+// refreshes in the background (see MOVIES_CACHE_KEY below). Songs never
+// had an equivalent cache, so every single visit paid the full network
+// wait. Same pattern here closes that gap for returning visitors.
+const SONGS_CACHE_KEY = "gmdb_songs_cache_v1";
 async function loadSongs() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(SONGS_CACHE_KEY));
+    if (Array.isArray(cached) && cached.length) {
+      allSongsStandalone = cached;
+      handleSharedSongLink(); // give a shared song link a chance to open instantly from cache
+    }
+  } catch (err) { /* corrupt/missing cache — fall through to network */ }
+
   try {
     const res = await fetch(API_URL + "?action=songs");
     const data = await res.json();
-    if (Array.isArray(data)) allSongsStandalone = data;
+    if (Array.isArray(data)) {
+      allSongsStandalone = data;
+      try { localStorage.setItem(SONGS_CACHE_KEY, JSON.stringify(data)); } catch(err) { /* storage unavailable/full — non-fatal */ }
+    }
   } catch (err) { /* Songs tab may not exist yet, or a transient network blip — fail quietly */ }
 }
 
