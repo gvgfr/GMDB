@@ -50,6 +50,8 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .btn-ghost:hover{color:var(--text);border-color:var(--red);}
 .btn-about{background:rgba(22,201,94,0.08);color:#6FE34A;border:1.5px solid #16C95E;font-weight:700;}
 .btn-about:hover{background:rgba(22,201,94,0.16);color:#C5F23B;}
+.btn-songs{background:rgba(29,185,84,0.1);color:#1DB954;border:1.5px solid #1DB954;font-weight:700;}
+.btn-songs:hover{background:rgba(29,185,84,0.2);}
 
 .hero{padding:2.25rem 1.5rem 1rem;text-align:center;border-bottom:1px solid var(--border);position:relative;}
 .streaming-carousel-section{padding:1.25rem 0 1.5rem;border-bottom:1px solid var(--border);}
@@ -316,6 +318,8 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 #aboutModal{align-items:flex-start;overflow-y:auto;padding:2rem 1rem;}
 #aboutModal .about-modal{margin:1rem auto;}
 .modal-overlay.open .about-modal{transform:translateY(0);}
+#songsModal{align-items:flex-start;overflow-y:auto;padding:2rem 1rem;}
+#songsModal .songs-modal{margin:1rem auto;max-width:560px;}
 .about-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;}
 .about-title{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;}
 .about-title span{color:var(--red);}
@@ -554,6 +558,7 @@ footer span{color:var(--red);}
 <header>
   <div class="logo">Masala Meter<span>Indian Movie Recommendations</span></div>
   <div class="header-actions">
+    <button class="btn btn-songs" onclick="openSongs()">♪ Songs</button>
     <button class="btn btn-about" onclick="openAbout()">About Masala Meter</button>
   </div>
 </header>
@@ -792,9 +797,43 @@ footer span{color:var(--red);}
   </div>
 </div>
 
+<!-- Songs Modal -->
+<div class="modal-overlay" id="songsModal" onclick="closeModalOverlay(event,'songsModal')">
+  <div class="about-modal songs-modal">
+    <div class="about-header">
+      <h2 class="about-title" style="font-size:1.8rem;">♪ Songs</h2>
+      <button class="modal-close" style="position:relative;top:auto;right:auto;" onclick="document.getElementById('songsModal').classList.remove('open')">✕</button>
+    </div>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;line-height:1.6;">Every song already scored across the catalog, in one place — search for a song directly without needing to find its movie first.</p>
+    <div style="position:relative;">
+      <input class="search-input" type="text" id="songSearchInput" placeholder="Search for a song..." oninput="renderSongsList()" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    </div>
+    <div id="songsListWrap" class="songs-wrap" style="margin-top:1rem;max-height:50vh;overflow-y:auto;"></div>
+    <div id="songNotFoundWrap" style="display:none;text-align:center;margin-top:1rem;padding:1rem;background:var(--bg3);border-radius:10px;">
+      <p style="font-size:14px;color:var(--text2);margin-bottom:0.75rem;">Can't find <b id="songNotFoundQuery"></b>?</p>
+      <button class="btn btn-primary" onclick="openAddSongModal()">Get It Reviewed →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Song Modal -->
+<div class="modal-overlay" id="addSongModal" onclick="closeModalOverlay(event,'addSongModal')">
+  <div class="add-modal">
+    <h2 class="add-title">Review a Song</h2>
+    <p class="add-desc">Type a song name and we'll identify the film it's from and score it — melody, vocals, lyrics, and replay value.</p>
+    <div class="status-msg" id="addSongStatus"></div>
+    <input class="add-input" type="text" id="songTitleInput" placeholder="Song name — e.g. Rowdy Baby" autocomplete="new-password" autocapitalize="words" autocorrect="off" spellcheck="false" name="song-add-field" onkeydown="if(event.key==='Enter'){event.preventDefault();submitSong();}"/>
+    <div class="add-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('addSongModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" style="flex:2" id="addSongBtn" onclick="submitSong()">Review This Song</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbz9ngvixIyBdUhi5caTheX74ppJyQtjFB_rvBbIfs4OS3nLJ-sY8vRLUDmSEZYbaEp2/exec";
 let allMovies = [];
+let allSongsStandalone = [];
 let currentFilter = "all";
 // Separate from currentFilter — this refines WITHIN whatever's currently
 // showing (e.g. New on Streaming) rather than replacing it. Set by clicking
@@ -1022,6 +1061,199 @@ function buildHitSongs(m) {
     </div>`;
   }).join("");
   return `<div class="modal-section"><div class="modal-section-label">Hit Songs</div><div class="songs-wrap">${songCards}</div></div>`;
+}
+
+// =============================================
+// SONGS SECTION — browse/search every song already scored across the
+// catalog directly, without needing to find its movie first. Backed by
+// two sources: every movie's own HitSongsDetails (the common case, free —
+// no extra fetch), plus a standalone "Songs" sheet tab for songs reviewed
+// on their own via the "Get It Reviewed" fallback below.
+// =============================================
+async function loadSongs() {
+  try {
+    const res = await fetch(API_URL + "?action=songs");
+    const data = await res.json();
+    if (Array.isArray(data)) allSongsStandalone = data;
+  } catch (err) { /* Songs tab may not exist yet, or a transient network blip — fail quietly */ }
+}
+
+// Combines both sources into one list, deduping by normalized title —
+// preferring the movie-linked version when a song exists in both (it
+// carries the movie/context for free), sorted highest-scored first.
+function getAllSongs() {
+  const norm = s => String(s||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"");
+  const fromMovies = [];
+  allMovies.forEach(m => {
+    if (!m.HitSongsDetails) return;
+    let details = [];
+    try { details = JSON.parse(m.HitSongsDetails); } catch(e) { return; }
+    details.forEach(d => {
+      if (!d || !d.title || !(Number(d.score) > 0)) return;
+      fromMovies.push({
+        Title: d.title, WhyHit: d.whyHit || "", Score: Number(d.score),
+        Movie: m.Title || "", Year: m.Year || "", MusicDirector: m.MusicDirector || ""
+      });
+    });
+  });
+  const seen = new Set(fromMovies.map(s => norm(s.Title)));
+  const fromStandalone = (allSongsStandalone||[])
+    .filter(s => s.Title && Number(s.Score) > 0 && !seen.has(norm(s.Title)))
+    .map(s => ({
+      Title: s.Title, WhyHit: s.WhyHit || "", Score: Number(s.Score),
+      Movie: s.Movie || "", Year: s.Year || "", MusicDirector: s.MusicDirector || ""
+    }));
+  return [...fromMovies, ...fromStandalone].sort((a,b) => b.Score - a.Score);
+}
+
+function openSongs() {
+  document.getElementById("songSearchInput").value = "";
+  document.getElementById("songsModal").classList.add("open");
+  renderSongsList();
+  loadSongs().then(() => renderSongsList()); // pick up anything added since the last visit
+}
+
+function renderSongsList() {
+  const q = (document.getElementById("songSearchInput")?.value || "").trim().toLowerCase();
+  const all = getAllSongs();
+  const filtered = q
+    ? all.filter(s => s.Title.toLowerCase().includes(q) ||
+        String(s.Movie||"").toLowerCase().includes(q) ||
+        String(s.MusicDirector||"").toLowerCase().includes(q))
+    : all;
+
+  const wrap = document.getElementById("songsListWrap");
+  const notFoundWrap = document.getElementById("songNotFoundWrap");
+
+  if (!filtered.length && q) {
+    wrap.innerHTML = "";
+    document.getElementById("songNotFoundQuery").textContent = `"${q}"`;
+    notFoundWrap.style.display = "block";
+    return;
+  }
+  notFoundWrap.style.display = "none";
+
+  if (!filtered.length) {
+    wrap.innerHTML = `<div style="text-align:center;color:var(--text3);padding:1.5rem;">No songs scored yet.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = filtered.map(s => {
+    const query = encodeURIComponent(s.Title + " " + (s.Movie||""));
+    const movieLine = s.Movie
+      ? `<div style="font-size:12px;color:var(--text3);margin-top:2px;">${s.Movie}${s.Year ? " ("+s.Year+")" : ""}</div>` : "";
+    const why = s.WhyHit ? `<div class="song-why"><b>Why it's a hit:</b> ${s.WhyHit}</div>` : "";
+    return `<div class="song-card">
+      <a href="https://open.spotify.com/search/${query}" target="_blank" class="song-link">♪ ${s.Title}</a>
+      ${movieLine}
+      ${why}
+      <div class="song-score">Masala Meter Song Score: ${s.Score.toFixed(1)}/10</div>
+    </div>`;
+  }).join("");
+}
+
+// "Get It Reviewed" fallback — for a song that isn't in the catalog under
+// any movie yet. Prefills whatever was typed into the Songs search box so
+// there's no re-typing needed.
+function openAddSongModal() {
+  const q = document.getElementById("songSearchInput")?.value || "";
+  document.getElementById("songTitleInput").value = q;
+  document.getElementById("addSongStatus").style.display = "none";
+  document.getElementById("addSongBtn").disabled = false;
+  document.getElementById("addSongBtn").textContent = "Review This Song";
+  document.getElementById("addSongModal").classList.add("open");
+  setTimeout(() => document.getElementById("songTitleInput").focus(), 100);
+}
+
+let activeAddSongTitle = "";
+async function submitSong() {
+  const input = document.getElementById("songTitleInput");
+  const title = input.value.trim();
+  if (!title) return;
+
+  if (/\b(xxx|porn|erotic|erotica|hardcore|softcore|nsfw|18\+)\b/i.test(title)) {
+    alert("Adult content isn't allowed on Masala Meter.");
+    return;
+  }
+
+  // Fire the request — same fire-and-forget no-cors POST pattern as
+  // submitMovie(), just routed to the SongTitle branch in doPost instead.
+  try {
+    fetch(API_URL, {
+      method: "post",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ SongTitle: title }),
+      mode: "no-cors"
+    });
+  } catch (err) { /* fire-and-forget; nothing to recover from here */ }
+
+  document.getElementById("addSongModal").classList.remove("open");
+  document.getElementById("songsModal").classList.add("open");
+  showAddSongToast(title);
+  setTimeout(async () => {
+    await loadSongs();
+    updateAddSongToast(title);
+  }, 30000);
+}
+
+function findRecentlyAddedSong(title) {
+  const norm = s => String(s||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"");
+  const wanted = norm(title);
+  return (allSongsStandalone||[]).find(s => norm(s.Title) === wanted) || null;
+}
+
+// Same persistent-toast pattern as the movie Add flow (showAddToast/
+// updateAddToast/dismissAddToast) — separate state and DOM element so a
+// song review in progress can't collide with a movie add in progress.
+function showAddSongToast(title) {
+  activeAddSongTitle = title;
+  let toast = document.getElementById("addSongToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "addSongToast";
+    document.body.appendChild(toast);
+  }
+  toast.className = "add-toast";
+  toast.innerHTML = `<span class="toast-spinner"></span> Reviewing <b>${title}</b>… ready in ~30s.`;
+  toast.classList.add("show");
+}
+
+async function updateAddSongToast(title, attempt) {
+  attempt = attempt || 1;
+  if (title !== activeAddSongTitle) return; // a newer song review has taken over the toast
+  const toast = document.getElementById("addSongToast");
+  if (!toast) return;
+  const target = findRecentlyAddedSong(title);
+
+  const MAX_ATTEMPTS = 3;
+  if (!target && attempt < MAX_ATTEMPTS) {
+    toast.className = "add-toast show";
+    toast.innerHTML = `<span class="toast-spinner"></span> Still working on <b>${title}</b>…`;
+    setTimeout(async () => {
+      if (title !== activeAddSongTitle) return;
+      await loadSongs();
+      updateAddSongToast(title, attempt + 1);
+    }, 15000);
+    return;
+  }
+
+  toast.className = "add-toast show ready";
+  const eyebrow = target ? "✅ Reviewed" : "⏳ Couldn't confirm it";
+  const body = target
+    ? `<div class="add-toast-title">${target.Title}${target.Movie ? " — " + target.Movie : ""}</div><button class="add-toast-view-btn" onclick="dismissAddSongToast();renderSongsList();">View in Songs</button>`
+    : `<span style="font-size:12px;color:var(--text2);">Couldn't confidently identify this as a real Indian film song. Try the exact song title.</span>`;
+  toast.innerHTML = `
+    <button class="add-toast-close" onclick="dismissAddSongToast()" aria-label="Dismiss">✕</button>
+    <div class="add-toast-poster-placeholder">🎵</div>
+    <div class="add-toast-body">
+      <div class="add-toast-eyebrow">${eyebrow}</div>
+      ${body}
+    </div>`;
+}
+
+function dismissAddSongToast() {
+  const toast = document.getElementById("addSongToast");
+  if (toast) toast.classList.remove("show");
 }
 
 function buildStoryline(text) {
@@ -2691,23 +2923,24 @@ function jumpToMovie(title) {
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){
     if(document.getElementById("detailModal").classList.contains("open")){ closeDetail(); }
-    ["addModal","aboutModal"].forEach(id=>document.getElementById(id).classList.remove("open"));
+    ["addModal","aboutModal","songsModal","addSongModal"].forEach(id=>document.getElementById(id).classList.remove("open"));
   }
 });
 
 // Back button closes modal instead of leaving site
 window.addEventListener("popstate", () => {
-  const anyOpen = ["detailModal","addModal","aboutModal"].some(id =>
+  const anyOpen = ["detailModal","addModal","aboutModal","songsModal","addSongModal"].some(id =>
     document.getElementById(id).classList.contains("open")
   );
   if (anyOpen) {
-    ["detailModal","addModal","aboutModal"].forEach(id =>
+    ["detailModal","addModal","aboutModal","songsModal","addSongModal"].forEach(id =>
       document.getElementById(id).classList.remove("open")
     );
   }
 });
 
 loadMovies();
+loadSongs();
 
 // Keep an already-open tab from showing stale data indefinitely if a movie
 // gets re-scored (or added) directly in the sheet while someone's already
