@@ -1229,15 +1229,17 @@ function openSongDetailObj(s) {
   history.pushState({modal:true}, "", "");
 }
 
-// Same Web Share API / clipboard-copy pattern as shareMovie() — there's no
-// per-song static preview page (movies get one via generate-movie-pages.js
-// for a real og:image; songs don't have that pipeline), so this just deep
-// links back into the app via ?song=, which handleSharedSongLink() below
-// opens straight to this song's detail view on load.
+// Same Web Share API / clipboard-copy pattern as shareMovie() — and, like
+// shareMovie(), prefers a static /s/ preview page (generate-song-pages.js)
+// that carries the song's real poster as its og:image, falling back to the
+// plain ?song= deep link (generic site card, no poster) if that page
+// doesn't exist yet — a song added since the last scheduled run, or one
+// with no poster at all. handleSharedSongLink() below opens either straight
+// to this song's detail view on load.
 async function shareSong() {
   const s = _currentSongDetail;
   if (!s) return;
-  const url = "https://gvgfr.github.io/GMDB/?song=" + encodeURIComponentStrict(s.Title);
+  const url = await resolveSongShareUrl(s.Title, s.Movie);
   const songLabel = `"${s.Title}"${s.Movie ? ` from ${s.Movie}` : ""}`;
   const text = `${songLabel} — scored ${s.Score.toFixed(1)}/10 on the Masala Meter:`;
 
@@ -2864,6 +2866,45 @@ async function resolveShareUrl(title, year) {
   const siteUrl = "https://gvgfr.github.io/GMDB/";
   const fallback = siteUrl + "?movie=" + encodeURIComponentStrict(title);
   const candidate = siteUrl + "m/" + slugifyMovie(title, year) + ".html";
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch(candidate, { method: "HEAD", signal: controller.signal });
+    clearTimeout(timeout);
+    return res.ok ? candidate : fallback;
+  } catch (err) {
+    return fallback;
+  }
+}
+
+// Kept in sync by hand with slugify() in scripts/generate-song-pages.js —
+// both must produce the same slug for the same title/movie, or song share
+// links 404. Title + movie (not just title) since the same song title can
+// recur across different films.
+function slugifySong(title, movie) {
+  let base = String(title || "")
+    .toLowerCase()
+    .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (movie) {
+    const movieSlug = String(movie).toLowerCase()
+      .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (movieSlug) base += "-" + movieSlug;
+  }
+  return base || "song";
+}
+
+// Same probe-and-fallback pattern as resolveShareUrl for movies — static
+// pages under /s/ only exist for songs that have a poster (see
+// generate-song-pages.js), and only after the next scheduled run picks up
+// a just-added song, so this always has a working fallback.
+async function resolveSongShareUrl(title, movie) {
+  const siteUrl = "https://gvgfr.github.io/GMDB/";
+  const fallback = siteUrl + "?song=" + encodeURIComponentStrict(title);
+  const candidate = siteUrl + "s/" + slugifySong(title, movie) + ".html";
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2500);
