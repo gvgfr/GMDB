@@ -1575,6 +1575,10 @@ function onOpen() {
     .addSeparator()
     .addItem("Backfill missing TMDB IDs", "backfillMissingTMDbID")
     .addItem("Backfill missing directors", "backfillMissingDirectors")
+    .addSeparator()
+    .addItem("♪ Fill next blank song (one)", "refreshOneBlankSong")
+    .addItem("♪ Re-score selected song (click a row first)", "rescoreOneSong")
+    .addItem("♪ Backfill song posters", "backfillSongPosters")
     .addToUi();
 }
 
@@ -1923,15 +1927,22 @@ function tmdbPosterForMovie_(title, year) {
   }
 }
 
-// One-time backfill for songs added before the PosterURL column existed (or
-// whose lookup missed at add-time) — run manually from the Apps Script
-// editor: select "backfillSongPosters" from the function dropdown at the
-// top, then click ▶ Run. Safe to re-run; only touches rows still blank.
+// Backfill for songs whose poster lookup missed (added before the
+// PosterURL column existed, or TMDB had nothing at the time) — run it from
+// the 🎬 GMDB menu ("♪ Backfill song posters") on the spreadsheet, or from
+// the Apps Script editor's function dropdown. Safe to re-run any time;
+// only touches rows still blank.
 function backfillSongPosters() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
-  if (!sheet) return;
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert("No 'Songs' sheet tab found.");
+    return;
+  }
   const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return;
+  if (lastRow < 2) {
+    SpreadsheetApp.getActive().toast("No songs to backfill.", "GMDB", 5);
+    return;
+  }
   const data = sheet.getRange(2, 1, lastRow - 1, 10).getValues(); // Title..PosterURL
   let updated = 0;
   for (let i = 0; i < data.length; i++) {
@@ -1944,6 +1955,7 @@ function backfillSongPosters() {
     }
   }
   Logger.log("Backfilled posters for " + updated + " song(s).");
+  SpreadsheetApp.getActive().toast("Backfilled posters for " + updated + " song(s).", "GMDB", 6);
 }
 
 function addSongEntry_(songTitle, movieHint) {
@@ -2042,17 +2054,22 @@ function fillSongData(e) {
   // — by the time it fires the row already has a score, so this correctly
   // no-ops instead of double-reviewing it. Also skip a title that's already
   // scored on some OTHER row, so retyping the same song twice doesn't burn
-  // a second Gemini call.
+  // a second Gemini call. forceRescore (set by the "Re-score selected song"
+  // menu item) bypasses both — someone explicitly asking to re-score a row
+  // should always run, not get silently skipped.
+  const forceRescore = !!(e && e.forceRescore);
   const existingScore = sheet.getRange(row, 7).getValue();
-  if (existingScore) return;
-  const lastRow = sheet.getLastRow();
-  const otherTitles = lastRow >= 2
-    ? sheet.getRange(2, 1, lastRow - 1, 1).getValues().map((r, i) => ({ t: String(r[0]).trim().toLowerCase(), row: i + 2 }))
-    : [];
-  const dupe = otherTitles.find(o => o.row !== row && o.t === title.toLowerCase());
-  if (dupe && sheet.getRange(dupe.row, 7).getValue()) {
-    SpreadsheetApp.getActive().toast("\"" + title + "\" is already scored on row " + dupe.row + ".", "GMDB", 6);
-    return;
+  if (existingScore && !forceRescore) return;
+  if (!forceRescore) {
+    const lastRow = sheet.getLastRow();
+    const otherTitles = lastRow >= 2
+      ? sheet.getRange(2, 1, lastRow - 1, 1).getValues().map((r, i) => ({ t: String(r[0]).trim().toLowerCase(), row: i + 2 }))
+      : [];
+    const dupe = otherTitles.find(o => o.row !== row && o.t === title.toLowerCase());
+    if (dupe && sheet.getRange(dupe.row, 7).getValue()) {
+      SpreadsheetApp.getActive().toast("\"" + title + "\" is already scored on row " + dupe.row + ".", "GMDB", 6);
+      return;
+    }
   }
 
   SpreadsheetApp.getActive().toast("Reviewing song: " + title, "GMDB", 6);
@@ -2082,6 +2099,57 @@ function fillSongData(e) {
     new Date(),
     tmdbPosterForMovie_(review.movie, review.year)
   ]]);
+}
+
+// Fill the next song row that has a title but no score yet — same "next
+// blank" pattern as refreshOneBlankMovie, for the 🎬 GMDB menu.
+function refreshOneBlankSong() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert("No 'Songs' sheet tab found.");
+    return;
+  }
+  const lastRow = sheet.getLastRow();
+  for (let row = 2; row <= lastRow; row++) {
+    const title = sheet.getRange(row, 1).getValue();
+    const score = sheet.getRange(row, 7).getValue();
+    if (title && !score) {
+      fillSongData({ range: sheet.getRange(row, 1) });
+      SpreadsheetApp.getActive().toast("Filled: " + title, "GMDB", 5);
+      return;
+    }
+  }
+  SpreadsheetApp.getActive().toast("No blank songs found!", "GMDB", 5);
+}
+
+// Re-score ONE song: click any cell in that song's row first, then run
+// this — same pattern as rescoreOneMovie, for the 🎬 GMDB menu.
+function rescoreOneSong() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert("No 'Songs' sheet tab found.");
+    return;
+  }
+  const activeRange = SpreadsheetApp.getActiveRange();
+  const row = activeRange ? activeRange.getRow() : 0;
+
+  if (row < 2 || activeRange.getSheet().getName() !== "Songs") {
+    SpreadsheetApp.getUi().alert("Click a cell in the song's row (on the Songs tab) first, then run this again.");
+    return;
+  }
+
+  const title = sheet.getRange(row, 1).getValue();
+  if (!title) {
+    SpreadsheetApp.getUi().alert("Row " + row + " has no title.");
+    return;
+  }
+
+  try {
+    fillSongData({ range: sheet.getRange(row, 1), forceRescore: true });
+    SpreadsheetApp.getActive().toast("Re-scored: " + title, "GMDB", 6);
+  } catch (err) {
+    SpreadsheetApp.getUi().alert("Re-score failed for row " + row + ":\n\n" + err);
+  }
 }
 
 // Lightweight, dedicated Gemini call for a standalone song review — same
