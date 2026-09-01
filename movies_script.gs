@@ -39,6 +39,12 @@ function fillMovieData(e) {
     return;
   }
 
+  // The installable "On edit" trigger fires for an edit on ANY sheet in the
+  // workbook, not just this one — without this guard, typing into the Songs
+  // tab would run this function against the Movies sheet using the Songs
+  // sheet's edited row/column, silently reading/overwriting the wrong row.
+  if (e.range.getSheet().getName() !== "Movies") return;
+
   // --- Bulk re-entrancy guard ---
   // During bulk jobs (bulk import / auto-add), the bulk function calls this directly.
   // The installable onEdit trigger ALSO fires on the same setValue edit, causing a race
@@ -1954,6 +1960,99 @@ function addSongEntry_(songTitle) {
   const newRow = sheet.getLastRow() + 1;
   sheet.getRange(newRow, 1, 1, 10).setValues([[
     review.title || songTitle,
+    review.movie || "",
+    review.year || "",
+    review.musicDirector || "",
+    stripCitationMarkers_(review.singers || ""),
+    review.language || "",
+    Number(review.score).toFixed(1),
+    stripCitationMarkers_(review.whyHit || ""),
+    new Date(),
+    tmdbPosterForMovie_(review.movie, review.year)
+  ]]);
+}
+
+// =============================================
+// Triggered on cell edit — mirrors fillMovieData for the Movies sheet, so
+// typing a song title into column A of the Songs sheet works the same way
+// as typing a movie title does: runs it through the review pipeline and
+// fills the rest of that same row in place, instead of only working
+// through the website's "Get It Reviewed" flow.
+//
+// SETUP (one-time, in the Apps Script editor): Triggers (clock icon) →
+// Add Trigger → function: fillSongData → event source: From spreadsheet →
+// event type: On edit → Save. This is separate from the existing Movies
+// trigger — both fire on every edit anywhere in the workbook, which is why
+// each checks e.range.getSheet().getName() before doing anything.
+// =============================================
+function fillSongData(e) {
+  if (!e || !e.range) return;
+  if (e.range.getSheet().getName() !== "Songs") return;
+
+  const sheet = e.range.getSheet();
+
+  // Pasting several song titles at once fires one edit event spanning all
+  // the pasted rows — process each row separately, same as fillMovieData.
+  if (e.range.getNumRows() > 1 && e.range.getColumn() === 1) {
+    const startRow = e.range.getRow();
+    const numRows = e.range.getNumRows();
+    for (let r = startRow; r < startRow + numRows; r++) {
+      if (r === 1) continue; // header
+      const rowTitle = sheet.getRange(r, 1).getValue();
+      if (rowTitle) {
+        try {
+          fillSongData({ range: sheet.getRange(r, 1) });
+        } catch (err) {
+          Logger.log("Song paste-fill failed for row " + r + ": " + err);
+        }
+        Utilities.sleep(500);
+      }
+    }
+    return;
+  }
+
+  if (e.range.getColumn() !== 1) return;
+  if (e.range.getRow() === 1) return;
+
+  const row = e.range.getRow();
+  const title = String(sheet.getRange(row, 1).getValue()).trim();
+  if (!title) return;
+
+  // addSongEntry_() (the website's add flow) writes all 10 columns of a row
+  // in one setValues() call, which ALSO fires this same installable trigger
+  // — by the time it fires the row already has a score, so this correctly
+  // no-ops instead of double-reviewing it. Also skip a title that's already
+  // scored on some OTHER row, so retyping the same song twice doesn't burn
+  // a second Gemini call.
+  const existingScore = sheet.getRange(row, 7).getValue();
+  if (existingScore) return;
+  const lastRow = sheet.getLastRow();
+  const otherTitles = lastRow >= 2
+    ? sheet.getRange(2, 1, lastRow - 1, 1).getValues().map((r, i) => ({ t: String(r[0]).trim().toLowerCase(), row: i + 2 }))
+    : [];
+  const dupe = otherTitles.find(o => o.row !== row && o.t === title.toLowerCase());
+  if (dupe && sheet.getRange(dupe.row, 7).getValue()) {
+    SpreadsheetApp.getActive().toast("\"" + title + "\" is already scored on row " + dupe.row + ".", "GMDB", 6);
+    return;
+  }
+
+  SpreadsheetApp.getActive().toast("Reviewing song: " + title, "GMDB", 6);
+
+  let review;
+  try {
+    review = getGeminiSongReview_(title);
+  } catch (err) {
+    Logger.log("Song review failed for '" + title + "': " + err);
+    return;
+  }
+  if (!review || !review.found || !(Number(review.score) > 0)) {
+    Logger.log("Song review inconclusive for '" + title + "': " + JSON.stringify(review));
+    SpreadsheetApp.getActive().toast("Couldn't confidently identify/score \"" + title + "\".", "GMDB", 6);
+    return;
+  }
+
+  sheet.getRange(row, 1, 1, 10).setValues([[
+    review.title || title,
     review.movie || "",
     review.year || "",
     review.musicDirector || "",
