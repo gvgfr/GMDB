@@ -1359,11 +1359,14 @@ async function searchSongIdentity() {
     // Gemini with search grounding routinely takes several seconds.
     const reassureTimer = setTimeout(() => {
       if (input.value.trim() !== requestedFor) return;
-      box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Still identifying… this can take up to 30s.</div>`;
-    }, 4000);
+      box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Still identifying…</div>`;
+    }, 3000);
 
+    // Doesn't use Google Search grounding server-side (see
+    // identifyGeminiSong_'s comment) specifically so this can stay snappy —
+    // a real answer should land well under this.
     const controller = new AbortController();
-    const abortTimer = setTimeout(() => controller.abort(), 30000);
+    const abortTimer = setTimeout(() => controller.abort(), 10000);
     try {
       const res = await fetch(API_URL + "?action=identifySong&q=" + encodeURIComponent(q), { signal: controller.signal });
       const result = await res.json();

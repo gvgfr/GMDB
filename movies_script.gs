@@ -2114,18 +2114,23 @@ If found, return ONLY valid JSON, no markdown, no backticks:
   return parseGeminiJsonObject_(cand.content.parts[0].text || "");
 }
 
-// Lightweight identify-only counterpart to getGeminiSongReview_ — same
-// resolution step (title/movie/year/musicDirector/singers/language via
-// live search) but skips scoring entirely, so it's fast enough to run
-// live as someone types in the Add-a-Song box (mirrors the TMDB
-// suggestion dropdown for movies) instead of only finding out what was
-// matched after the full ~30s review completes.
+// Lightweight identify-only counterpart to getGeminiSongReview_ — meant to
+// be the FAST live-preview lookup (the frontend calls it on every
+// keystroke), so unlike the full review this deliberately does NOT use
+// Google Search grounding: the grounded round-trip itself (not the model's
+// "thinking", which thinkingBudget:0 already rules out) is what made this
+// reliably take 20-30s and look hung. Answering from the model's own
+// knowledge instead is a few seconds at most. The tradeoff is it can miss a
+// song released after the model's knowledge cutoff or too obscure to know
+// off the top of its head — that's fine, since this is just a "does this
+// look right?" preview: "Add It Anyway" falls through to the full,
+// still-grounded getGeminiSongReview_, which can still resolve it.
 function identifyGeminiSong_(songTitle) {
-  const prompt = `Using Google Search, identify the real Indian film song titled "${songTitle}".
+  const prompt = `Identify the real Indian film song titled "${songTitle}", using only what you already know.
 
 STRICT RULES:
-- Only proceed if you can confidently identify a REAL song from an Indian film (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Punjabi, etc.) — not a generic/non-Indian song, not a guess.
-- If you cannot confidently identify it, return exactly {"found": false} and nothing else.
+- Only answer if you're confident you know this specific song from memory — a real song from an Indian film (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Punjabi, etc.), not a generic/non-Indian song, not a guess, not a plausible-sounding fabrication.
+- If the title is ambiguous, could match multiple different songs, sounds like it might be a recent release you're not certain about, or you're not genuinely confident — return exactly {"found": false} and nothing else. A missed real song is fine here; a wrong or hallucinated match is not — false positives are far worse than saying you don't know.
 
 If found, return ONLY valid JSON, no markdown, no backticks:
 {
@@ -2134,23 +2139,17 @@ If found, return ONLY valid JSON, no markdown, no backticks:
   "movie": "the film it's from",
   "year": "YYYY",
   "musicDirector": "composer/music director name",
-  "singers": "the actual playback singer(s) who performed it, comma-separated if more than one. Leave blank if you genuinely can't find this, don't guess.",
+  "singers": "the actual playback singer(s) who performed it, comma-separated if more than one. Leave blank if you genuinely can't recall this, don't guess.",
   "language": "Tamil/Telugu/Hindi/Malayalam/Kannada/Bengali/Marathi/Punjabi/etc."
 }`;
 
   const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
-    tools: [{ google_search: {} }],
-    // thinkingBudget:0 — this is meant to be the FAST live-preview lookup
-    // (the frontend calls it on every keystroke), but 2.5 Flash's default
-    // extended "thinking" adds several extra seconds on top of the Google
-    // Search round-trip regardless, which was the actual cause of the
-    // identify step reliably taking 20s+ and looking hung. The full scored
-    // review (getGeminiSongReview_) intentionally keeps its default
-    // thinking budget — that one already sets a ~30s expectation and
-    // benefits from more careful reasoning for the score itself.
-    generationConfig: { temperature: 0.3, thinkingConfig: { thinkingBudget: 0 } }
+    // thinkingBudget:0 — no grounding tool here to begin with (see comment
+    // above), and disabling thinking too keeps this call as fast as
+    // possible since it fires on every keystroke.
+    generationConfig: { temperature: 0.2, thinkingConfig: { thinkingBudget: 0 } }
   };
 
   const response = UrlFetchApp.fetch(url, {
