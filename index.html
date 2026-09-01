@@ -833,7 +833,10 @@ footer span{color:var(--red);}
     <h2 class="add-title">Review a Song</h2>
     <p class="add-desc">Type a song name and we'll identify the film it's from and score it — melody, vocals, lyrics, and replay value.</p>
     <div class="status-msg" id="addSongStatus"></div>
-    <input class="add-input" type="text" id="songTitleInput" placeholder="Song name — e.g. Rowdy Baby" autocomplete="new-password" autocapitalize="words" autocorrect="off" spellcheck="false" name="song-add-field" oninput="searchSongIdentity()" onkeydown="if(event.key==='Enter'){event.preventDefault();submitSong();}"/>
+    <div style="position:relative;">
+      <input class="add-input" type="text" id="songTitleInput" placeholder="Song name — e.g. Rowdy Baby" autocomplete="new-password" autocapitalize="words" autocorrect="off" spellcheck="false" name="song-add-field" oninput="searchSongSuggestions()" onkeydown="if(event.key==='Enter'){event.preventDefault();submitSong();}"/>
+      <div id="songSuggestions" class="suggestions"></div>
+    </div>
     <div id="songIdentifyResult" style="display:none;"></div>
     <div class="add-actions">
       <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('addSongModal').classList.remove('open')">Cancel</button>
@@ -1332,21 +1335,102 @@ function openAddSongModal() {
   const identifyBox = document.getElementById("songIdentifyResult");
   identifyBox.style.display = "none";
   identifyBox.innerHTML = "";
+  const suggestBox = document.getElementById("songSuggestions");
+  suggestBox.classList.remove("show");
+  suggestBox.innerHTML = "";
+  identifiedMovieHint = "";
+  identifiedPosterHint = "";
   document.getElementById("addSongModal").classList.add("open");
   setTimeout(() => {
     document.getElementById("songTitleInput").focus();
     // Setting .value directly doesn't fire the input event a real keystroke
-    // would — trigger the identify lookup explicitly so a prefilled title
-    // (from the Songs search box) still shows its confirm card right away.
-    if (q) searchSongIdentity();
+    // would — trigger the lookup explicitly so a prefilled title (from the
+    // Songs search box) still shows suggestions right away.
+    if (q) searchSongSuggestions();
   }, 100);
 }
 
-// Quick "which song is this?" lookup as someone types — same purpose as
-// searchTMDBSuggestions() for movies (show what will actually get reviewed
-// BEFORE committing to the ~30s scored review), but there's no TMDB
-// equivalent for songs, so this hits the lightweight identifySong endpoint
-// instead and shows a single confirm card rather than a multi-result list.
+// Real, searchable song suggestions (Spotify) — same purpose and shape as
+// searchTMDBSuggestions() for movies: several actual candidates as someone
+// types a few letters, picked from a real index instead of asking an LLM
+// to guess. Falls back to searchSongIdentity() (Gemini, single best guess
+// from memory) only when Spotify itself has nothing for this query.
+let songSuggestionsTimer = null;
+let songSuggestionsCache = [];
+async function searchSongSuggestions() {
+  const input = document.getElementById("songTitleInput");
+  const box = document.getElementById("songSuggestions");
+  const identifyBox = document.getElementById("songIdentifyResult");
+  const q = input.value.trim();
+  identifiedMovieHint = ""; // any edit invalidates a previously confirmed pick
+  identifiedPosterHint = "";
+
+  if (q.length < 2) {
+    box.classList.remove("show"); box.innerHTML = "";
+    identifyBox.style.display = "none"; identifyBox.innerHTML = "";
+    return;
+  }
+
+  clearTimeout(songSuggestionsTimer);
+  songSuggestionsTimer = setTimeout(async () => {
+    const requestedFor = q;
+    try {
+      const res = await fetch(API_URL + "?action=searchSongs&q=" + encodeURIComponent(q));
+      const results = await res.json();
+      if (input.value.trim() !== requestedFor) return;
+
+      if (!results || !results.length) {
+        box.classList.remove("show");
+        box.innerHTML = "";
+        // Nothing in Spotify's index for this — fall back to asking Gemini
+        // if it recognizes the title from memory.
+        searchSongIdentity();
+        return;
+      }
+
+      identifyBox.style.display = "none"; // a real suggestions list beats the single-guess card
+      identifyBox.innerHTML = "";
+      songSuggestionsCache = results;
+      box.innerHTML = results.map((r, i) => {
+        const poster = r.poster
+          ? `<img class="suggestion-poster" src="${r.poster}" alt=""/>` : `<div class="suggestion-poster"></div>`;
+        const meta = [r.movie, r.year, r.artists].filter(Boolean).join(" · ");
+        return `<div class="suggestion-item" onclick="pickSongSuggestion(${i})">
+          ${poster}
+          <div class="suggestion-info">
+            <div class="suggestion-title">${r.title}</div>
+            <div class="suggestion-meta">${meta}</div>
+          </div>
+        </div>`;
+      }).join("");
+      box.classList.add("show");
+    } catch (err) {
+      box.classList.remove("show");
+      box.innerHTML = "";
+    }
+  }, 350);
+}
+
+// Picking a suggestion just fills the input (+ carries the movie/poster
+// hints through to submitSong()) — same as pickAddSuggestion() for movies,
+// which doesn't auto-submit either. The person still confirms with
+// "Review This Song".
+function pickSongSuggestion(i) {
+  const r = songSuggestionsCache[i];
+  if (!r) return;
+  document.getElementById("songTitleInput").value = r.title;
+  identifiedMovieHint = r.movie || "";
+  identifiedPosterHint = r.poster || "";
+  const box = document.getElementById("songSuggestions");
+  box.classList.remove("show");
+  box.innerHTML = "";
+}
+
+// Quick "which song is this?" lookup as someone types — fallback for when
+// Spotify's real search (above) has nothing for this query. Works from
+// Gemini's own memory (no grounding — see identifyGeminiSong_'s comment
+// server-side) rather than a search index, so it can only confirm one
+// exact, complete title rather than offer several candidates.
 let songIdentifyTimer = null;
 async function searchSongIdentity() {
   const input = document.getElementById("songTitleInput");
@@ -1435,10 +1519,17 @@ async function searchSongIdentity() {
 // search comes back too ambiguous to confidently score, which looks like
 // a broken promise right after the confirm step said it was fine.
 let identifiedMovieHint = "";
+// Spotify album-art URL carried through the same way, from
+// pickSongSuggestion() — a film soundtrack's cover art is very often
+// literally the movie poster, so this backs up the TMDB poster lookup when
+// that comes up empty (see addSongEntry_ server-side). Gemini identify
+// (this confirm path) has no poster of its own, so this stays blank here.
+let identifiedPosterHint = "";
 function confirmSongIdentity(title, movie) {
   document.getElementById("songTitleInput").value = title;
   document.getElementById("songIdentifyResult").style.display = "none";
   identifiedMovieHint = movie || "";
+  identifiedPosterHint = "";
   submitSong();
 }
 
@@ -1466,11 +1557,12 @@ async function submitSong() {
     fetch(API_URL, {
       method: "post",
       headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ SongTitle: title, SongMovieHint: identifiedMovieHint }),
+      body: JSON.stringify({ SongTitle: title, SongMovieHint: identifiedMovieHint, SongPosterHint: identifiedPosterHint }),
       mode: "no-cors"
     });
   } catch (err) { /* fire-and-forget; nothing to recover from here */ }
   identifiedMovieHint = "";
+  identifiedPosterHint = "";
 
   document.getElementById("addSongModal").classList.remove("open");
   document.getElementById("songsModal").classList.add("open");

@@ -4,6 +4,8 @@
 const TMDB_API_KEY =
 const GEMINI_API_KEY =
 const OMDB_API_KEY =
+const SPOTIFY_CLIENT_ID =
+const SPOTIFY_CLIENT_SECRET =
 
 
 
@@ -1837,7 +1839,11 @@ function doPost(e) {
   // title can't be resolved via TMDB search at all (TMDB only indexes
   // films), so it needs its own Gemini-only identification pipeline.
   if (data.SongTitle) {
-    addSongEntry_(String(data.SongTitle).trim(), String(data.SongMovieHint || "").trim());
+    addSongEntry_(
+      String(data.SongTitle).trim(),
+      String(data.SongMovieHint || "").trim(),
+      String(data.SongPosterHint || "").trim()
+    );
     return ContentService.createTextOutput("OK");
   }
 
@@ -1958,7 +1964,72 @@ function backfillSongPosters() {
   SpreadsheetApp.getActive().toast("Backfilled posters for " + updated + " song(s).", "GMDB", 6);
 }
 
-function addSongEntry_(songTitle, movieHint) {
+// =============================================
+// SPOTIFY — real, searchable song index for the Add-a-Song suggestions
+// dropdown (mirrors how TMDB backs the Add-Movie dropdown). Gemini
+// identify (below) can only confirm one exact, complete title from its own
+// memory — it has no index to search, so a few letters gets nothing. This
+// is what actually lets someone type a few letters and see several real
+// candidate songs, the way movie search already works.
+// =============================================
+
+// Client-Credentials OAuth (app-only, no user login) — cached in
+// CacheService so we're not re-authenticating on every keystroke. Spotify
+// tokens last ~1hr; refreshed a minute early to avoid edge-of-expiry 401s.
+function getSpotifyToken_() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get("spotify_token");
+  if (cached) return cached;
+
+  const creds = Utilities.base64Encode(SPOTIFY_CLIENT_ID + ":" + SPOTIFY_CLIENT_SECRET);
+  const response = UrlFetchApp.fetch("https://accounts.spotify.com/api/token", {
+    method: "post",
+    headers: { "Authorization": "Basic " + creds },
+    contentType: "application/x-www-form-urlencoded",
+    payload: "grant_type=client_credentials",
+    muteHttpExceptions: true
+  });
+  if (response.getResponseCode() !== 200) {
+    throw new Error("Spotify auth HTTP " + response.getResponseCode() + ": " + response.getContentText().slice(0, 200));
+  }
+  const data = JSON.parse(response.getContentText());
+  const ttl = Math.max(60, Number(data.expires_in || 3600) - 60);
+  cache.put("spotify_token", data.access_token, ttl);
+  return data.access_token;
+}
+
+// Real track search — returns several candidates, same shape purpose as
+// the TMDB suggestions list for movies. market=IN just controls stream
+// availability, not language/origin, so results aren't filtered to Indian
+// film songs specifically — same philosophy as manual Add Movie already
+// allowing any language and trusting the person to pick the right result.
+function searchSpotifySongs_(query) {
+  const token = getSpotifyToken_();
+  const url = "https://api.spotify.com/v1/search?type=track&market=IN&limit=10&q=" + encodeURIComponent(query);
+  const response = UrlFetchApp.fetch(url, {
+    headers: { "Authorization": "Bearer " + token },
+    muteHttpExceptions: true
+  });
+  if (response.getResponseCode() !== 200) {
+    throw new Error("Spotify search HTTP " + response.getResponseCode() + ": " + response.getContentText().slice(0, 200));
+  }
+  const data = JSON.parse(response.getContentText());
+  const tracks = (data.tracks && data.tracks.items) || [];
+  return tracks.map(t => ({
+    title: t.name,
+    // Indian film soundtrack albums on Spotify are almost always named
+    // after the film itself, and the album cover is very often literally
+    // the movie poster — this doubles as a poster source, not just a
+    // movie-name guess (see SongPosterHint in doPost).
+    movie: (t.album && t.album.name) || "",
+    year: (t.album && t.album.release_date) ? t.album.release_date.slice(0, 4) : "",
+    artists: (t.artists || []).map(a => a.name).join(", "),
+    poster: (t.album && t.album.images && t.album.images[0]) ? t.album.images[0].url : "",
+    spotifyUrl: (t.external_urls && t.external_urls.spotify) || ""
+  }));
+}
+
+function addSongEntry_(songTitle, movieHint, posterHint) {
   if (!songTitle) return;
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
   if (!sheet) {
@@ -1988,6 +2059,12 @@ function addSongEntry_(songTitle, movieHint) {
     return;
   }
 
+  // Real film poster (TMDB) preferred when it's actually found; otherwise
+  // fall back to the Spotify album art carried through from the
+  // suggestions dropdown, which for a film soundtrack is very often
+  // literally the movie poster anyway.
+  const poster = tmdbPosterForMovie_(review.movie, review.year) || posterHint || "";
+
   const newRow = sheet.getLastRow() + 1;
   sheet.getRange(newRow, 1, 1, 10).setValues([[
     review.title || songTitle,
@@ -1999,7 +2076,7 @@ function addSongEntry_(songTitle, movieHint) {
     Number(review.score).toFixed(1),
     stripCitationMarkers_(review.whyHit || ""),
     new Date(),
-    tmdbPosterForMovie_(review.movie, review.year)
+    poster
   ]]);
 }
 
@@ -2444,10 +2521,28 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Identify (not score) a song for the Add-a-Song confirm step — lets
-  // someone see which real song/movie was matched before committing to the
-  // full ~30s scored review, the same way the movie search dropdown shows
-  // TMDB candidates before "Fetch & Add Movie" actually runs.
+  // Real, searchable song suggestions (Spotify) for the Add-a-Song
+  // dropdown — several candidates for a few typed letters, the same way
+  // action=search backs the Add-Movie dropdown via TMDB. Primary path;
+  // identifySong below is the fallback for anything not on Spotify.
+  if (e && e.parameter && e.parameter.action === "searchSongs" && e.parameter.q) {
+    try {
+      const results = searchSpotifySongs_(String(e.parameter.q).trim());
+      return ContentService
+        .createTextOutput(JSON.stringify(results))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      Logger.log("searchSongs failed for '" + e.parameter.q + "': " + err);
+      return ContentService
+        .createTextOutput("[]")
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  // Identify (not score) a song for the Add-a-Song confirm step — fallback
+  // for when Spotify's search (above) comes up empty: lets Gemini try to
+  // recognize it from memory before falling all the way through to
+  // "Add It Anyway" with no confirmation at all.
   if (e && e.parameter && e.parameter.action === "identifySong" && e.parameter.q) {
     try {
       const result = identifyGeminiSong_(String(e.parameter.q).trim());
