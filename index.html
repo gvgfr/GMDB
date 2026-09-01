@@ -376,14 +376,24 @@ footer span{color:var(--red);}
 .meta-block-value{font-size:14px;color:var(--text);line-height:1.5;}
 .songs-value{font-size:13px;color:var(--red);font-weight:500;}
 .songs-wrap{display:flex;flex-direction:column;gap:8px;}
-.song-card{background:rgba(29,185,84,0.06);border:1px solid rgba(29,185,84,0.25);border-radius:10px;padding:10px 14px;transition:border-color 0.2s;}
+.song-card{display:flex;gap:12px;background:rgba(29,185,84,0.06);border:1px solid rgba(29,185,84,0.25);border-radius:10px;padding:10px 14px;transition:border-color 0.2s;cursor:pointer;}
 .song-card:hover{border-color:rgba(29,185,84,0.5);}
-.song-link{display:inline-flex;align-items:center;gap:4px;font-size:14px;color:#1DB954;font-weight:700;text-decoration:none;}
-.song-link:hover{text-decoration:underline;}
+.song-poster{width:52px;height:74px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--bg3);}
+.song-poster-placeholder{display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text3);}
+.song-card-body{flex:1;min-width:0;}
+.song-title{font-size:14px;color:var(--text);font-weight:700;}
 .song-singers{font-size:12px;color:var(--text3);margin-top:2px;}
 .song-why{font-size:13px;color:var(--text2);line-height:1.5;margin-top:5px;}
 .song-why b{color:var(--text);font-weight:600;}
-.song-score{font-size:12px;color:#1DB954;font-weight:700;margin-top:4px;}
+.song-score{font-size:12px;color:#1DB954;font-weight:700;}
+.song-card-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.song-spotify-badge{display:inline-flex;align-items:center;gap:5px;background:#1DB954;color:#04231d;font-size:11px;font-weight:800;padding:5px 10px;border-radius:20px;text-decoration:none;flex-shrink:0;}
+.song-spotify-badge:hover{background:#1ED760;}
+.song-detail-modal{max-width:420px;margin:1rem auto;padding:2rem;text-align:center;}
+.song-detail-poster{width:160px;height:230px;border-radius:10px;object-fit:cover;margin:0 auto 1rem;display:block;box-shadow:0 8px 24px rgba(0,0,0,0.5);}
+.song-detail-title{font-size:1.4rem;margin:0 0 4px;}
+.song-detail-meta{font-size:13px;color:var(--text2);margin:2px 0;}
+.song-detail-links{display:flex;flex-direction:column;gap:10px;margin-top:1.25rem;}
 .add-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid var(--red);border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;display:flex;align-items:center;gap:10px;max-width:90vw;}
 /* BUG FIX: without pointer-events:none above, a "dismissed" toast (opacity:0,
    only translated 100px — not actually off-screen, especially the taller
@@ -832,10 +842,20 @@ footer span{color:var(--red);}
   </div>
 </div>
 
+<!-- Song Detail Modal — poster, Spotify + YouTube links -->
+<div class="modal-overlay" id="songDetailModal" onclick="closeModalOverlay(event,'songDetailModal')">
+  <div class="about-modal song-detail-modal">
+    <button class="modal-close" style="position:absolute;top:12px;right:12px;" onclick="document.getElementById('songDetailModal').classList.remove('open')">✕</button>
+    <div id="songDetailContent"></div>
+  </div>
+</div>
+
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbz9ngvixIyBdUhi5caTheX74ppJyQtjFB_rvBbIfs4OS3nLJ-sY8vRLUDmSEZYbaEp2/exec";
 let allMovies = [];
 let allSongsStandalone = [];
+let _renderedSongsCache = []; // parallel to the last renderSongsList() output, for openSongDetail(i)
+const SPOTIFY_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="flex-shrink:0;"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38C8.64 5.94 15.6 6.24 19.681 8.64c.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z"/></svg>';
 let currentFilter = "all";
 // Separate from currentFilter — this refines WITHIN whatever's currently
 // showing (e.g. New on Streaming) rather than replacing it. Set by clicking
@@ -1096,7 +1116,7 @@ function getAllSongs() {
       if (!d || !d.title || !(Number(d.score) > 0)) return;
       fromMovies.push({
         Title: d.title, WhyHit: d.whyHit || "", Score: Number(d.score), Singers: d.singers || "",
-        Movie: m.Title || "", Year: m.Year || "", MusicDirector: m.MusicDirector || ""
+        Movie: m.Title || "", Year: m.Year || "", MusicDirector: m.MusicDirector || "", PosterURL: m.PosterURL || ""
       });
     });
   });
@@ -1105,7 +1125,7 @@ function getAllSongs() {
     .filter(s => s.Title && Number(s.Score) > 0 && !seen.has(norm(s.Title)))
     .map(s => ({
       Title: s.Title, WhyHit: s.WhyHit || "", Score: Number(s.Score), Singers: s.Singers || "",
-      Movie: s.Movie || "", Year: s.Year || "", MusicDirector: s.MusicDirector || ""
+      Movie: s.Movie || "", Year: s.Year || "", MusicDirector: s.MusicDirector || "", PosterURL: s.PosterURL || ""
     }));
   return [...fromMovies, ...fromStandalone].sort((a,b) => b.Score - a.Score);
 }
@@ -1143,22 +1163,61 @@ function renderSongsList() {
     return;
   }
 
-  wrap.innerHTML = filtered.map(s => {
+  _renderedSongsCache = filtered;
+  wrap.innerHTML = filtered.map((s, i) => {
     const query = encodeURIComponent(s.Title + " " + (s.Movie||""));
+    const poster = s.PosterURL
+      ? `<img class="song-poster" src="${s.PosterURL}" alt=""/>`
+      : `<div class="song-poster song-poster-placeholder">🎵</div>`;
     const movieLine = s.Movie
       ? `<div style="font-size:12px;color:var(--text3);margin-top:2px;">${s.Movie}${s.Year ? " ("+s.Year+")" : ""}</div>` : "";
     const singers = s.Singers ? `<div class="song-singers">${s.Singers}</div>` : "";
     const musicDirector = s.MusicDirector ? `<div class="song-singers">Music: ${s.MusicDirector}</div>` : "";
     const why = s.WhyHit ? `<div class="song-why"><b>Why it's a hit:</b> ${s.WhyHit}</div>` : "";
-    return `<div class="song-card">
-      <a href="https://open.spotify.com/search/${query}" target="_blank" class="song-link">♪ ${s.Title}</a>
-      ${movieLine}
-      ${singers}
-      ${musicDirector}
-      ${why}
-      <div class="song-score">Masala Meter Song Score: ${s.Score.toFixed(1)}/10</div>
+    return `<div class="song-card" onclick="openSongDetail(${i})">
+      ${poster}
+      <div class="song-card-body">
+        <div class="song-title">♪ ${s.Title}</div>
+        ${movieLine}
+        ${singers}
+        ${musicDirector}
+        ${why}
+        <div class="song-card-footer">
+          <div class="song-score">Masala Meter Song Score: ${s.Score.toFixed(1)}/10</div>
+          <a href="https://open.spotify.com/search/${query}" target="_blank" class="song-spotify-badge" onclick="event.stopPropagation()">${SPOTIFY_ICON} Spotify</a>
+        </div>
+      </div>
     </div>`;
   }).join("");
+}
+
+// Full-detail view for one song — poster, Spotify and YouTube links —
+// opened by tapping anywhere on a song card (the Spotify badge itself stops
+// propagation so it launches directly without also opening this).
+function openSongDetail(i) {
+  const s = _renderedSongsCache[i];
+  if (!s) return;
+  const query = encodeURIComponent(s.Title + " " + (s.Movie||""));
+  const poster = s.PosterURL
+    ? `<img class="song-detail-poster" src="${s.PosterURL}" alt=""/>`
+    : `<div class="song-detail-poster song-poster-placeholder">🎵</div>`;
+  const movieLine = s.Movie
+    ? `<p class="song-detail-meta">${s.Movie}${s.Year ? " ("+s.Year+")" : ""}</p>` : "";
+  const singers = s.Singers ? `<p class="song-detail-meta">Sung by ${s.Singers}</p>` : "";
+  const musicDirector = s.MusicDirector ? `<p class="song-detail-meta">Music by ${s.MusicDirector}</p>` : "";
+  const why = s.WhyHit ? `<div class="modal-section"><div class="modal-section-label">Why it's a hit</div><div class="modal-section-value">${s.WhyHit}</div></div>` : "";
+  document.getElementById("songDetailContent").innerHTML = `
+    ${poster}
+    <h2 class="song-detail-title">${s.Title}</h2>
+    ${movieLine}${singers}${musicDirector}
+    <div class="gmdb-badge" style="margin:0.75rem 0;"><span class="gmdb-badge-label">SONG SCORE</span> ${s.Score.toFixed(1)}/10</div>
+    ${why}
+    <div class="song-detail-links">
+      <a class="modal-btn modal-btn-primary" style="background:#1DB954;" href="https://open.spotify.com/search/${query}" target="_blank">${SPOTIFY_ICON}&nbsp; Listen on Spotify</a>
+      <a class="modal-btn modal-btn-secondary" href="https://www.youtube.com/results?search_query=${query}%20song" target="_blank">▶ Watch on YouTube</a>
+    </div>`;
+  document.getElementById("songDetailModal").classList.add("open");
+  history.pushState({modal:true}, "", "");
 }
 
 // "Get It Reviewed" fallback — for a song that isn't in the catalog under
@@ -1218,10 +1277,15 @@ async function searchSongIdentity() {
         result.musicDirector ? "Music by " + result.musicDirector : ""
       ].filter(Boolean).join(" · ");
       const safeTitle = jsAttrEscape(result.title);
-      box.innerHTML = `<div style="background:rgba(29,185,84,0.08);border:1px solid rgba(29,185,84,0.3);border-radius:8px;padding:10px 12px;">
-        <div style="font-weight:700;color:#1DB954;font-size:14px;">♪ ${result.title}</div>
-        <div style="font-size:12px;color:var(--text2);margin-top:2px;">${meta}</div>
-        <button class="btn btn-primary" style="margin-top:8px;width:100%;padding:8px;" onclick="confirmSongIdentity('${safeTitle}')">✓ Yes, this is it — Review It</button>
+      const posterImg = result.poster
+        ? `<img src="${result.poster}" alt="" style="width:40px;height:58px;border-radius:5px;object-fit:cover;flex-shrink:0;"/>` : "";
+      box.innerHTML = `<div style="background:rgba(29,185,84,0.08);border:1px solid rgba(29,185,84,0.3);border-radius:8px;padding:10px 12px;display:flex;gap:10px;">
+        ${posterImg}
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;color:#1DB954;font-size:14px;">♪ ${result.title}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px;">${meta}</div>
+          <button class="btn btn-primary" style="margin-top:8px;width:100%;padding:8px;" onclick="confirmSongIdentity('${safeTitle}')">✓ Yes, this is it — Review It</button>
+        </div>
       </div>`;
     } catch (err) {
       box.style.display = "none";
@@ -2993,17 +3057,17 @@ function jumpToMovie(title) {
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){
     if(document.getElementById("detailModal").classList.contains("open")){ closeDetail(); }
-    ["addModal","aboutModal","songsModal","addSongModal"].forEach(id=>document.getElementById(id).classList.remove("open"));
+    ["addModal","aboutModal","songsModal","addSongModal","songDetailModal"].forEach(id=>document.getElementById(id).classList.remove("open"));
   }
 });
 
 // Back button closes modal instead of leaving site
 window.addEventListener("popstate", () => {
-  const anyOpen = ["detailModal","addModal","aboutModal","songsModal","addSongModal"].some(id =>
+  const anyOpen = ["detailModal","addModal","aboutModal","songsModal","addSongModal","songDetailModal"].some(id =>
     document.getElementById(id).classList.contains("open")
   );
   if (anyOpen) {
-    ["detailModal","addModal","aboutModal","songsModal","addSongModal"].forEach(id =>
+    ["detailModal","addModal","aboutModal","songsModal","addSongModal","songDetailModal"].forEach(id =>
       document.getElementById(id).classList.remove("open")
     );
   }
