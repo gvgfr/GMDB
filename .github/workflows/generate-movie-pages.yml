@@ -20,13 +20,15 @@ jobs:
 
       - run: node scripts/generate-movie-pages.js
 
+      - run: node scripts/generate-song-pages.js
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add m/
+          git add m/ s/
           if ! git diff --cached --quiet; then
-            git commit -m "Regenerate per-movie share pages"
+            git commit -m "Regenerate per-movie and per-song share pages"
             git push
           else
             echo "No changes to commit"
