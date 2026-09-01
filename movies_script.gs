@@ -2142,7 +2142,15 @@ If found, return ONLY valid JSON, no markdown, no backticks:
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
     tools: [{ google_search: {} }],
-    generationConfig: { temperature: 0.3 }
+    // thinkingBudget:0 — this is meant to be the FAST live-preview lookup
+    // (the frontend calls it on every keystroke), but 2.5 Flash's default
+    // extended "thinking" adds several extra seconds on top of the Google
+    // Search round-trip regardless, which was the actual cause of the
+    // identify step reliably taking 20s+ and looking hung. The full scored
+    // review (getGeminiSongReview_) intentionally keeps its default
+    // thinking budget — that one already sets a ~30s expectation and
+    // benefits from more careful reasoning for the score itself.
+    generationConfig: { temperature: 0.3, thinkingConfig: { thinkingBudget: 0 } }
   };
 
   const response = UrlFetchApp.fetch(url, {

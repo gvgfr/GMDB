@@ -1339,11 +1339,19 @@ async function searchSongIdentity() {
   box.style.display = "block";
   box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Identifying...</div>`;
 
-  // Explicit fallback message shown once identify times out or errors — an
-  // unattended Gemini call can hang well past what a "loading" spinner
-  // should sit through, and previously any failure just hid the box with no
-  // feedback at all, making it look like the song silently wasn't found.
-  const giveUpMsg = `<div style="font-size:13px;color:var(--text2);padding:8px 0;">Taking too long to identify — you can still tap <b>"Review This Song"</b> below to add it anyway.</div>`;
+  // Shared "no confirmed match" card — same "Can't find X?" phrasing and
+  // pattern as the Songs search's not-found CTA, with its own "+" add
+  // button right there instead of just pointing down at the (easy-to-miss
+  // under a spinner) "Review This Song" button below. Used both when
+  // identify comes back inconclusive and when it times out — from the
+  // user's point of view those are the same situation: no confirmed match,
+  // here's how to add it anyway.
+  function cantFindBox(title) {
+    return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center;">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:8px;">Can't find "<b>${title}</b>"?</div>
+      <button class="btn btn-primary" style="width:100%;padding:8px;" onclick="submitSong()">➕ Add It Anyway</button>
+    </div>`;
+  }
 
   songIdentifyTimer = setTimeout(async () => {
     const requestedFor = q;
@@ -1351,11 +1359,11 @@ async function searchSongIdentity() {
     // Gemini with search grounding routinely takes several seconds.
     const reassureTimer = setTimeout(() => {
       if (input.value.trim() !== requestedFor) return;
-      box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Still identifying… this can take up to 20s.</div>`;
+      box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Still identifying… this can take up to 30s.</div>`;
     }, 4000);
 
     const controller = new AbortController();
-    const abortTimer = setTimeout(() => controller.abort(), 20000);
+    const abortTimer = setTimeout(() => controller.abort(), 30000);
     try {
       const res = await fetch(API_URL + "?action=identifySong&q=" + encodeURIComponent(q), { signal: controller.signal });
       const result = await res.json();
@@ -1366,7 +1374,7 @@ async function searchSongIdentity() {
       if (input.value.trim() !== requestedFor) return;
 
       if (!result || !result.found) {
-        box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;">Couldn't confidently identify this song — try adding the movie name, or hit "Review This Song" below to try anyway.</div>`;
+        box.innerHTML = cantFindBox(q);
         return;
       }
       const meta = [
@@ -1389,7 +1397,7 @@ async function searchSongIdentity() {
       clearTimeout(reassureTimer);
       clearTimeout(abortTimer);
       if (input.value.trim() !== requestedFor) return;
-      box.innerHTML = giveUpMsg;
+      box.innerHTML = cantFindBox(q);
     }
   }, 500);
 }
