@@ -1443,6 +1443,9 @@ function confirmSongIdentity(title, movie) {
 }
 
 let activeAddSongTitle = "";
+// Snapshot of how many standalone songs existed right before this submit —
+// see findRecentlyAddedSong() for why.
+let activeAddSongBaselineCount = 0;
 async function submitSong() {
   const input = document.getElementById("songTitleInput");
   const title = input.value.trim();
@@ -1452,6 +1455,8 @@ async function submitSong() {
     alert("Adult content isn't allowed on Masala Meter.");
     return;
   }
+
+  activeAddSongBaselineCount = (allSongsStandalone || []).length;
 
   // Fire the request — same fire-and-forget no-cors POST pattern as
   // submitMovie(), just routed to the SongTitle branch in doPost instead.
@@ -1476,10 +1481,25 @@ async function submitSong() {
   }, 30000);
 }
 
+// BUG FIX: what someone types often isn't the song's actual canonical
+// title — typing "Swades" (the movie) resolves to the real song "Yeh Jo
+// Des Hai Tera", typing a partial lyric resolves to the official title,
+// etc. Matching by name here meant a perfectly successful review (right
+// there in the sheet, poster and all) got reported as "couldn't confirm"
+// just because the typed text didn't match what Gemini actually named it.
+// Try the name match first (right most of the time), but if a new row
+// clearly appeared in the Songs sheet since this submission regardless of
+// its title, treat THAT as the result — a wrong displayed title beats a
+// false failure for a review that actually worked.
 function findRecentlyAddedSong(title) {
   const norm = s => String(s||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"");
   const wanted = norm(title);
-  return (allSongsStandalone||[]).find(s => norm(s.Title) === wanted) || null;
+  const byName = (allSongsStandalone||[]).find(s => norm(s.Title) === wanted);
+  if (byName) return byName;
+  if ((allSongsStandalone||[]).length > activeAddSongBaselineCount) {
+    return allSongsStandalone[allSongsStandalone.length - 1];
+  }
+  return null;
 }
 
 // Same persistent-toast pattern as the movie Add flow (showAddToast/
