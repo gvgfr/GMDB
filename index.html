@@ -1339,11 +1339,28 @@ async function searchSongIdentity() {
   box.style.display = "block";
   box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Identifying...</div>`;
 
+  // Explicit fallback message shown once identify times out or errors — an
+  // unattended Gemini call can hang well past what a "loading" spinner
+  // should sit through, and previously any failure just hid the box with no
+  // feedback at all, making it look like the song silently wasn't found.
+  const giveUpMsg = `<div style="font-size:13px;color:var(--text2);padding:8px 0;">Taking too long to identify — you can still tap <b>"Review This Song"</b> below to add it anyway.</div>`;
+
   songIdentifyTimer = setTimeout(async () => {
     const requestedFor = q;
+    // Reassure after a few seconds that it's still working, not frozen —
+    // Gemini with search grounding routinely takes several seconds.
+    const reassureTimer = setTimeout(() => {
+      if (input.value.trim() !== requestedFor) return;
+      box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Still identifying… this can take up to 20s.</div>`;
+    }, 4000);
+
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), 20000);
     try {
-      const res = await fetch(API_URL + "?action=identifySong&q=" + encodeURIComponent(q));
+      const res = await fetch(API_URL + "?action=identifySong&q=" + encodeURIComponent(q), { signal: controller.signal });
       const result = await res.json();
+      clearTimeout(reassureTimer);
+      clearTimeout(abortTimer);
       // A slower response landing after the person kept typing shouldn't
       // clobber whatever's now showing for their newer input.
       if (input.value.trim() !== requestedFor) return;
@@ -1369,7 +1386,10 @@ async function searchSongIdentity() {
         </div>
       </div>`;
     } catch (err) {
-      box.style.display = "none";
+      clearTimeout(reassureTimer);
+      clearTimeout(abortTimer);
+      if (input.value.trim() !== requestedFor) return;
+      box.innerHTML = giveUpMsg;
     }
   }, 500);
 }
