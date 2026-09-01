@@ -1148,11 +1148,13 @@ function renderSongsList() {
     const movieLine = s.Movie
       ? `<div style="font-size:12px;color:var(--text3);margin-top:2px;">${s.Movie}${s.Year ? " ("+s.Year+")" : ""}</div>` : "";
     const singers = s.Singers ? `<div class="song-singers">${s.Singers}</div>` : "";
+    const musicDirector = s.MusicDirector ? `<div class="song-singers">Music: ${s.MusicDirector}</div>` : "";
     const why = s.WhyHit ? `<div class="song-why"><b>Why it's a hit:</b> ${s.WhyHit}</div>` : "";
     return `<div class="song-card">
       <a href="https://open.spotify.com/search/${query}" target="_blank" class="song-link">♪ ${s.Title}</a>
       ${movieLine}
       ${singers}
+      ${musicDirector}
       ${why}
       <div class="song-score">Masala Meter Song Score: ${s.Score.toFixed(1)}/10</div>
     </div>`;
@@ -1308,7 +1310,7 @@ async function updateAddSongToast(title, attempt) {
   toast.className = "add-toast show ready";
   const eyebrow = target ? "✅ Reviewed" : "⏳ Couldn't confirm it";
   const body = target
-    ? `<div class="add-toast-title">${target.Title}${target.Movie ? " — " + target.Movie : ""}</div><button class="add-toast-view-btn" onclick="dismissAddSongToast();renderSongsList();">View in Songs</button>`
+    ? `<div class="add-toast-title">${target.Title}${target.Movie ? " — " + target.Movie : ""}</div><button class="add-toast-view-btn" onclick="dismissAddSongToast();document.getElementById('songsModal').classList.add('open');renderSongsList();">View in Songs</button>`
     : `<span style="font-size:12px;color:var(--text2);">Couldn't confidently identify this as a real Indian film song. Try the exact song title.</span>`;
   toast.innerHTML = `
     <button class="add-toast-close" onclick="dismissAddSongToast()" aria-label="Dismiss">✕</button>
