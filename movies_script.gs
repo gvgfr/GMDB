@@ -1815,6 +1815,16 @@ function doPost(e) {
   Logger.log(raw);
 
   const data = JSON.parse(raw);
+
+  // Song-add request (from the Songs section's "Add a Song" fallback) —
+  // routed separately from the movie-add flow below since a bare song
+  // title can't be resolved via TMDB search at all (TMDB only indexes
+  // films), so it needs its own Gemini-only identification pipeline.
+  if (data.SongTitle) {
+    addSongEntry_(String(data.SongTitle).trim());
+    return ContentService.createTextOutput("OK");
+  }
+
   const title = String(data.Title || "").trim();
   if (!title) {
     return ContentService.createTextOutput("Missing Title");
@@ -1845,6 +1855,105 @@ function doPost(e) {
   fillMovieData({ range: sheet.getRange(rowIndex, 1) });
 
   return ContentService.createTextOutput("OK");
+}
+
+// =============================================
+// SONGS — standalone song reviews, independent of the movie needing to
+// already be in the Movies sheet. Lives in its own "Songs" tab (columns:
+// Title | Movie | Year | MusicDirector | Language | Score | WhyHit |
+// DateAdded) since a bare song title can't be resolved via TMDB (it only
+// indexes films) — this uses a dedicated Gemini-only identification +
+// scoring pipeline instead of reusing fillMovieData's TMDB-based flow.
+// =============================================
+function addSongEntry_(songTitle) {
+  if (!songTitle) return;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
+  if (!sheet) {
+    Logger.log("No 'Songs' sheet tab found — skipping song add for '" + songTitle + "'.");
+    return;
+  }
+
+  const lastRow = sheet.getLastRow();
+  const existingTitles = lastRow >= 2
+    ? sheet.getRange(2, 1, lastRow - 1, 1).getValues().map(r => String(r[0]).trim().toLowerCase())
+    : [];
+  if (existingTitles.indexOf(songTitle.toLowerCase()) !== -1) return; // already have it
+
+  let review;
+  try {
+    review = getGeminiSongReview_(songTitle);
+  } catch (err) {
+    Logger.log("Song review failed for '" + songTitle + "': " + err);
+    return;
+  }
+  // Only write a row when Gemini could confidently identify a real film
+  // song with a real score — an inconclusive result silently produces
+  // nothing rather than a broken/empty entry, same philosophy as a
+  // below-threshold movie candidate getting dropped instead of kept.
+  if (!review || !review.found || !(Number(review.score) > 0)) {
+    Logger.log("Song review inconclusive for '" + songTitle + "': " + JSON.stringify(review));
+    return;
+  }
+
+  const newRow = sheet.getLastRow() + 1;
+  sheet.getRange(newRow, 1, 1, 8).setValues([[
+    review.title || songTitle,
+    review.movie || "",
+    review.year || "",
+    review.musicDirector || "",
+    review.language || "",
+    Number(review.score).toFixed(1),
+    stripCitationMarkers_(review.whyHit || ""),
+    new Date()
+  ]]);
+}
+
+// Lightweight, dedicated Gemini call for a standalone song review — same
+// weighted scoring methodology as hitSongsDetails in getGeminiMovieReview
+// (melody 40%, vocals 25%, lyrics 20%, replay value 15%), but resolves the
+// song's own movie/album via live search first instead of assuming one's
+// already known, since this is invoked with just a bare song title.
+function getGeminiSongReview_(songTitle) {
+  const prompt = `Using Google Search, identify the real Indian film song titled "${songTitle}" and review it.
+
+STRICT RULES:
+- Only proceed if you can confidently identify a REAL song from an Indian film (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Punjabi, etc.) — not a generic/non-Indian song, not a guess.
+- If you cannot confidently identify it, return exactly {"found": false} and nothing else.
+
+If found, return ONLY valid JSON, no markdown, no backticks:
+{
+  "found": true,
+  "title": "official song title",
+  "movie": "the film it's from",
+  "year": "YYYY",
+  "musicDirector": "composer/music director name",
+  "language": "Tamil/Telugu/Hindi/Malayalam/Kannada/Bengali/Marathi/Punjabi/etc.",
+  "score": "a single number 0.0-10.0 with one decimal place, computed as a weighted blend of melody (40%), vocals (25%), lyrics (20%), and replay value (15%) — judge each dimension using whatever's actually known about the song (chart/streaming performance, critic or audience commentary, its role in the film)",
+  "whyHit": "ONE sentence, MAXIMUM 20 WORDS, explaining this song's specific appeal — be specific to THIS song, not a generic 'catchy tune, great vibes' description"
+}`;
+
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    tools: [{ google_search: {} }],
+    generationConfig: { temperature: 0.3 }
+  };
+
+  const response = UrlFetchApp.fetch(url, {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  const code = response.getResponseCode();
+  const bodyText = response.getContentText();
+  if (code !== 200) throw new Error("Gemini song review HTTP " + code + ": " + bodyText.slice(0, 200));
+  const data = JSON.parse(bodyText);
+  const cand = data.candidates && data.candidates[0];
+  if (!cand || !cand.content || !cand.content.parts || !cand.content.parts[0]) {
+    throw new Error("Gemini song review: empty/filtered response for '" + songTitle + "'");
+  }
+  return parseGeminiJsonObject_(cand.content.parts[0].text || "");
 }
 
 
@@ -2002,6 +2111,27 @@ function doGet(e) {
     }).filter(m => m.Title);
     return ContentService
       .createTextOutput(JSON.stringify(movies))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Return standalone song reviews as JSON for the website's Songs section.
+  // Lives in its own "Songs" sheet tab — separate from Movies since a song
+  // isn't tied to any movie already being in the catalog. Tab may not exist
+  // yet on a fresh copy of the sheet, so tolerate that and return [].
+  if (e && e.parameter && e.parameter.action === "songs") {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
+    if (!sheet) {
+      return ContentService.createTextOutput("[]").setMimeType(ContentService.MimeType.JSON);
+    }
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const songs = data.slice(1).map(row => {
+      const song = {};
+      headers.forEach((h, i) => { song[h] = row[i]; });
+      return song;
+    }).filter(s => s.Title);
+    return ContentService
+      .createTextOutput(JSON.stringify(songs))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
