@@ -1867,11 +1867,31 @@ function doPost(e) {
 // SONGS — standalone song reviews, independent of the movie needing to
 // already be in the Movies sheet. Lives in its own "Songs" tab (columns:
 // Title | Movie | Year | MusicDirector | Singers | Language | Score |
-// WhyHit | DateAdded) since a bare song title can't be resolved via TMDB
-// (it only indexes films) — this uses a dedicated Gemini-only
+// WhyHit | DateAdded | PosterURL) since a bare song title can't be resolved
+// via TMDB (it only indexes films) — this uses a dedicated Gemini-only
 // identification + scoring pipeline instead of reusing fillMovieData's
-// TMDB-based flow.
+// TMDB-based flow. The poster is fetched separately via a plain TMDB title
+// search once Gemini has resolved which film the song is from.
 // =============================================
+
+// Best-effort poster lookup for a song's parent film — a plain TMDB title
+// search (not an exact-ID lookup like the main movie-add flow, since all we
+// have here is Gemini's free-text movie/year guess). Returns "" on any miss
+// so a poster-less song still gets its review saved rather than being lost.
+function tmdbPosterForMovie_(title, year) {
+  if (!title) return "";
+  try {
+    let url = "https://api.themoviedb.org/3/search/movie?api_key=" + TMDB_API_KEY +
+      "&query=" + encodeURIComponent(title) + "&include_adult=false";
+    if (year) url += "&year=" + encodeURIComponent(year);
+    const json = JSON.parse(UrlFetchApp.fetch(url).getContentText());
+    const match = (json.results || [])[0];
+    return match && match.poster_path ? "https://image.tmdb.org/t/p/w500" + match.poster_path : "";
+  } catch (err) {
+    return "";
+  }
+}
+
 function addSongEntry_(songTitle) {
   if (!songTitle) return;
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
@@ -1903,7 +1923,7 @@ function addSongEntry_(songTitle) {
   }
 
   const newRow = sheet.getLastRow() + 1;
-  sheet.getRange(newRow, 1, 1, 9).setValues([[
+  sheet.getRange(newRow, 1, 1, 10).setValues([[
     review.title || songTitle,
     review.movie || "",
     review.year || "",
@@ -1912,7 +1932,8 @@ function addSongEntry_(songTitle) {
     review.language || "",
     Number(review.score).toFixed(1),
     stripCitationMarkers_(review.whyHit || ""),
-    new Date()
+    new Date(),
+    tmdbPosterForMovie_(review.movie, review.year)
   ]]);
 }
 
@@ -2199,6 +2220,9 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.action === "identifySong" && e.parameter.q) {
     try {
       const result = identifyGeminiSong_(String(e.parameter.q).trim());
+      if (result && result.found) {
+        result.poster = tmdbPosterForMovie_(result.movie, result.year);
+      }
       return ContentService
         .createTextOutput(JSON.stringify(result || { found: false }))
         .setMimeType(ContentService.MimeType.JSON);
