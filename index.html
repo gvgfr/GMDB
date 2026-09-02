@@ -1424,8 +1424,15 @@ async function searchSongSuggestions() {
       }).join("");
       box.classList.add("show");
     } catch (err) {
+      if (input.value.trim() !== requestedFor) return;
       box.classList.remove("show");
       box.innerHTML = "";
+      // Spotify search itself failing (network hiccup, or Apps Script still
+      // busy running a just-submitted review) used to leave this blank with
+      // no feedback at all — fall back the same way a real zero-results
+      // search does, so there's always either a match or a "Can't find"
+      // card, never a dead-looking box.
+      searchSongIdentity();
     }
   }, 350);
 }
