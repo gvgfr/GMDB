@@ -1556,6 +1556,9 @@ let activeAddSongTitle = "";
 // Snapshot of how many standalone songs existed right before this submit —
 // see findRecentlyAddedSong() for why.
 let activeAddSongBaselineCount = 0;
+// The song object the toast's "View Song" button should open — set whenever
+// the toast resolves a target, read by jumpToAddedSong() below.
+let _lastAddedSongTarget = null;
 async function submitSong() {
   const input = document.getElementById("songTitleInput");
   const title = input.value.trim();
@@ -1635,6 +1638,7 @@ async function updateAddSongToast(title, attempt) {
   const toast = document.getElementById("addSongToast");
   if (!toast) return;
   const target = findRecentlyAddedSong(title);
+  _lastAddedSongTarget = target;
 
   const MAX_ATTEMPTS = 3;
   if (!target && attempt < MAX_ATTEMPTS) {
@@ -1651,7 +1655,7 @@ async function updateAddSongToast(title, attempt) {
   toast.className = "add-toast show ready";
   const eyebrow = target ? "✅ Reviewed" : "⏳ Couldn't confirm it";
   const body = target
-    ? `<div class="add-toast-title">${target.Title}${target.Movie ? " — " + target.Movie : ""}</div><button class="add-toast-view-btn" onclick="dismissAddSongToast();document.getElementById('songsModal').classList.add('open');renderSongsList();">View in Songs</button>`
+    ? `<div class="add-toast-title">${target.Title}${target.Movie ? " — " + target.Movie : ""}</div><button class="add-toast-view-btn" onclick="jumpToAddedSong()">View Song →</button>`
     : `<span style="font-size:12px;color:var(--text2);">Couldn't confidently identify this as a real Indian film song. Try the exact song title.</span>`;
   toast.innerHTML = `
     <button class="add-toast-close" onclick="dismissAddSongToast()" aria-label="Dismiss">✕</button>
@@ -1665,6 +1669,22 @@ async function updateAddSongToast(title, attempt) {
 function dismissAddSongToast() {
   const toast = document.getElementById("addSongToast");
   if (toast) toast.classList.remove("show");
+}
+
+// "View Song" on the add-song toast — was previously just opening the
+// Songs list (renderSongsList) with no way to land on the actual new
+// entry, unlike jumpToMovie() for movies. Opens the Songs modal and then
+// the song's own detail view directly, same as a shared ?song= link does.
+function jumpToAddedSong() {
+  dismissAddSongToast();
+  const target = _lastAddedSongTarget;
+  if (!target) return;
+  const norm = s => String(s||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"");
+  const all = getAllSongs();
+  const merged = all.find(s => norm(s.Title) === norm(target.Title)) || target;
+  document.getElementById("songsModal").classList.add("open");
+  _renderedSongsCache = all;
+  setTimeout(() => openSongDetailObj(merged), 400);
 }
 
 function buildStoryline(text) {
