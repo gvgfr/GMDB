@@ -778,7 +778,7 @@ footer span{color:var(--red);}
       <p style="font-size:15px;color:var(--text);line-height:1.7;">The narrower subset of New Releases with a <b>confirmed US theatrical release</b> — checked directly against real ticketing sites and distributors, not just a recent release date. A film that only released in India (or elsewhere) stays under New Releases until it's actually confirmed playing in US theaters.</p>
     </div>
 
-    <div class="about-section">
+    <div class="about-section" id="about-hit-songs">
       <p class="about-section-label">♪ Hit Songs</p>
       <p style="font-size:15px;color:var(--text);line-height:1.7;">A separate score from the film's own Masala Meter — this one's just about the song. Each Masala Meter Song Score out of 10 is a weighted blend of <b>melody (40%)</b>, <b>vocals (25%)</b>, <b>lyrics (20%)</b>, and <b>replay value (15%)</b>, alongside a one-line note on what specifically makes it work.</p>
     </div>
@@ -1152,7 +1152,8 @@ function getAllSongs() {
       if (!d || !d.title || !(Number(d.score) > 0)) return;
       fromMovies.push({
         Title: d.title, WhyHit: d.whyHit || "", Score: Number(d.score), Singers: d.singers || "",
-        Movie: m.Title || "", Year: m.Year || "", MusicDirector: m.MusicDirector || "", PosterURL: m.PosterURL || ""
+        Movie: m.Title || "", Year: m.Year || "", MusicDirector: m.MusicDirector || "", PosterURL: m.PosterURL || "",
+        Raaga: d.raaga || "", Trivia: d.trivia || ""
       });
     });
   });
@@ -1166,11 +1167,14 @@ function getAllSongs() {
       if (!existing.PosterURL && s.PosterURL) existing.PosterURL = s.PosterURL;
       if (!existing.Singers && s.Singers) existing.Singers = s.Singers;
       if (!existing.MusicDirector && s.MusicDirector) existing.MusicDirector = s.MusicDirector;
+      if (!existing.Raaga && s.Raaga) existing.Raaga = s.Raaga;
+      if (!existing.Trivia && s.Trivia) existing.Trivia = s.Trivia;
       return;
     }
     fromStandalone.push({
       Title: s.Title, WhyHit: s.WhyHit || "", Score: Number(s.Score), Singers: s.Singers || "",
-      Movie: s.Movie || "", Year: s.Year || "", MusicDirector: s.MusicDirector || "", PosterURL: s.PosterURL || ""
+      Movie: s.Movie || "", Year: s.Year || "", MusicDirector: s.MusicDirector || "", PosterURL: s.PosterURL || "",
+      Raaga: s.Raaga || "", Trivia: s.Trivia || ""
     });
   });
   return [...fromMovies, ...fromStandalone].sort((a,b) => b.Score - a.Score);
@@ -1259,13 +1263,16 @@ function openSongDetailObj(s) {
     ? `<p class="song-detail-meta">${s.Movie}${s.Year ? " ("+s.Year+")" : ""}</p>` : "";
   const singers = s.Singers ? `<p class="song-detail-meta">Sung by ${s.Singers}</p>` : "";
   const musicDirector = s.MusicDirector ? `<p class="song-detail-meta">Music by ${s.MusicDirector}</p>` : "";
+  const raaga = s.Raaga ? `<p class="song-detail-meta">Raaga: ${s.Raaga}</p>` : "";
   const why = s.WhyHit ? `<div class="modal-section"><div class="modal-section-label">Why it's a hit</div><div class="modal-section-value">${s.WhyHit}</div></div>` : "";
   document.getElementById("songDetailContent").innerHTML = `
     ${poster}
     <h2 class="song-detail-title">${s.Title}</h2>
-    ${movieLine}${singers}${musicDirector}
+    ${movieLine}${singers}${musicDirector}${raaga}
     <div class="gmdb-badge" style="margin:0.75rem 0;"><span class="gmdb-badge-label">SONG SCORE</span> ${s.Score.toFixed(1)}/10</div>
+    <button class="story-toggle" style="margin:-0.5rem 0 0.75rem;" onclick="openSongScoringInfo()">How is this scored? ▸</button>
     ${why}
+    ${buildSongTrivia(s)}
     <div class="song-detail-links">
       <a class="modal-btn modal-btn-primary" style="background:#1DB954;" href="https://open.spotify.com/search/${query}" target="_blank">${SPOTIFY_ICON}&nbsp; Listen on Spotify</a>
       <a class="modal-btn modal-btn-secondary" href="https://www.youtube.com/results?search_query=${query}%20song" target="_blank">▶ Watch on YouTube</a>
@@ -1729,6 +1736,17 @@ function buildTrivia(m) {
   const raw = (m.Trivia || "").trim();
   if (!raw) return "";
   // Split on pipe (preferred) or fall back to newlines
+  const facts = raw.split("|").map(f => f.trim()).filter(Boolean);
+  if (!facts.length) return "";
+  const items = facts.map(f => `<li class="trivia-item">${f}</li>`).join("");
+  return `<div class="modal-section"><div class="modal-section-label">Trivia</div><ul class="trivia-list">${items}</ul></div>`;
+}
+
+// Same pipe-separated trivia pattern as buildTrivia() above, for a song's
+// own Trivia field instead of a movie's.
+function buildSongTrivia(s) {
+  const raw = (s.Trivia || "").trim();
+  if (!raw) return "";
   const facts = raw.split("|").map(f => f.trim()).filter(Boolean);
   if (!facts.length) return "";
   const items = facts.map(f => `<li class="trivia-item">${f}</li>`).join("");
@@ -3198,6 +3216,16 @@ function openAddModal(prefillTitle){
 }
 
 function openAbout(){document.getElementById("aboutModal").classList.add("open");}
+
+// "How is this scored?" link on a song detail — opens About and jumps
+// straight to the Hit Songs methodology instead of leaving someone to
+// scroll through the whole page to find it.
+function openSongScoringInfo() {
+  openAbout();
+  setTimeout(() => {
+    document.getElementById("about-hit-songs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 200);
+}
 
 let tmdbSearchTimer = null;
 function searchTMDBSuggestions() {
