@@ -94,7 +94,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .hint-add-link:hover{color:#FFDD66;}
 .search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;border:none;padding:6px;border-radius:8px;transition:background 0.2s;}
 .search-icon:hover{background:rgba(229,32,32,0.15);}
-.suggestions{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;max-height:340px;overflow-y:auto;display:none;box-shadow:0 12px 32px rgba(0,0,0,0.7);z-index:300;}
+.suggestions{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;max-height:min(60vh,480px);overflow-y:auto;display:none;box-shadow:0 12px 32px rgba(0,0,0,0.7);z-index:300;}
 .suggestions.show{display:block;}
 .suggestion-item{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;transition:background 0.15s;border-bottom:1px solid var(--border);}
 .suggestion-item:last-child{border-bottom:none;}
@@ -298,6 +298,15 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 /* ADD MODAL */
 .add-modal{background:var(--bg2);border-radius:16px;border:1px solid var(--border);width:100%;max-width:480px;padding:2rem;transform:translateY(20px);transition:transform 0.2s;}
 .modal-overlay.open .add-modal{transform:translateY(0);}
+/* Same scroll fix as #aboutModal/#songsModal/#songDetailModal — without
+   it, the overlay only centers with no scroll of its own, so on mobile
+   the on-screen keyboard (which can eat close to half the viewport) left
+   the suggestions dropdown below the input partly or fully hidden behind
+   it, with no way to scroll down and reach it. */
+#addModal{align-items:flex-start;overflow-y:auto;padding:2rem 1rem;}
+#addModal .add-modal{margin:1rem auto;}
+#addSongModal{align-items:flex-start;overflow-y:auto;padding:2rem 1rem;}
+#addSongModal .add-modal{margin:1rem auto;}
 .add-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:0.5rem;}
 .add-desc{font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;}
 .add-input{width:100%;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.2s;margin-bottom:0.75rem;scroll-margin-top:76px;}

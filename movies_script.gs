@@ -2052,9 +2052,9 @@ function backfillStandaloneSongsRaagaTrivia_(budget) {
   for (let k = 0; k < eligible.length && updated < budget; k++) {
     const i = eligible[k];
     const row = i + 2;
-    const title = data[i][0], movie = data[i][1], raaga = data[i][10];
+    const title = data[i][0], movie = data[i][1], raaga = data[i][10], existingWhyHit = data[i][7];
     try {
-      const review = getGeminiSongReview_(String(title), movie ? String(movie) : "");
+      const review = getGeminiSongReview_(String(title), movie ? String(movie) : "", existingWhyHit ? String(existingWhyHit) : "");
       if (review && review.found) {
         if (!raaga && review.raaga) sheet.getRange(row, 11).setValue(review.raaga);
         // A real song's trivia/arrangement coming back genuinely empty is
@@ -2111,7 +2111,7 @@ function backfillMovieHitSongsRaagaTrivia_(budget) {
     const d = parsed[rowIdx][songIdx];
     const movieTitle = titles[rowIdx][0];
     try {
-      const review = getGeminiSongReview_(String(d.title), String(movieTitle));
+      const review = getGeminiSongReview_(String(d.title), String(movieTitle), d.whyHit ? String(d.whyHit) : "");
       if (review && review.found) {
         if (!d.raaga && review.raaga) d.raaga = review.raaga;
         if (review.trivia) d.trivia = stripCitationMarkers_(review.trivia);
@@ -2175,7 +2175,7 @@ function refreshSongExtras_(title, movieHint) {
         const raaga = data[i][10], trivia = data[i][11], arrangement = data[i][12];
         if (trivia && arrangement) return { found: true, raaga: raaga || "", trivia, arrangement };
         const movie = data[i][1] ? String(data[i][1]) : (movieHint || "");
-        const review = getGeminiSongExtras_(String(data[i][0]), movie);
+        const review = getGeminiSongExtras_(String(data[i][0]), movie, data[i][7] ? String(data[i][7]) : "");
         if (!review || !review.found) return { found: false };
         const newTrivia = trivia || stripCitationMarkers_(review.trivia || "");
         const newArrangement = arrangement || stripCitationMarkers_(review.arrangement || "");
@@ -2203,7 +2203,7 @@ function refreshSongExtras_(title, movieHint) {
           if (!d || norm(d.title) !== wanted) continue;
           if (d.trivia && d.arrangement) return { found: true, raaga: d.raaga || "", trivia: d.trivia, arrangement: d.arrangement };
           const movieTitle = String(titles[i][0]);
-          const review = getGeminiSongExtras_(String(d.title), movieTitle);
+          const review = getGeminiSongExtras_(String(d.title), movieTitle, d.whyHit ? String(d.whyHit) : "");
           if (!review || !review.found) return { found: false };
           if (!d.raaga && review.raaga) d.raaga = review.raaga;
           if (!d.trivia && review.trivia) d.trivia = stripCitationMarkers_(review.trivia);
@@ -2539,9 +2539,18 @@ function rescoreOneSong() {
 // this GROUNDED call then can't independently verify on a bare, ambiguous
 // title — passing along which film identify found narrows the search onto
 // the same song instead of leaving this call to re-search cold.
-function getGeminiSongReview_(songTitle, movieHint) {
+function getGeminiSongReview_(songTitle, movieHint, existingWhyHit) {
   const hintClause = movieHint ? ` (likely from the film "${movieHint}")` : "";
-  const prompt = `Using Google Search, identify the real Indian film song titled "${songTitle}"${hintClause} and review it.
+  // Only passed by the raaga/trivia/arrangement backfill re-running this
+  // on an ALREADY-reviewed song — a fresh call here can otherwise name a
+  // different raga than what the song's existing "why it's a hit" already
+  // mentioned in passing, producing a visible contradiction on the same
+  // page. A brand-new song has no existing text to be consistent with, so
+  // this is empty for that case.
+  const consistencyClause = existingWhyHit
+    ? `\n\nFor context, here is what was already established about this song: "${existingWhyHit}"\nIf that already names a specific raga, use EXACTLY that same name for raaga below — do not contradict it with a different one. If it doesn't mention one, only name a raga if you are independently confident.`
+    : "";
+  const prompt = `Using Google Search, identify the real Indian film song titled "${songTitle}"${hintClause} and review it.${consistencyClause}
 
 STRICT RULES:
 - Only proceed if you can confidently identify a REAL song from an Indian film (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Punjabi, etc.) — not a generic/non-Indian song, not a guess.
@@ -2655,9 +2664,21 @@ If found, return ONLY valid JSON, no markdown, no backticks:
 // blocking the review itself — the batch backfill (which DOES use the
 // full grounded review, since nothing there is time-sensitive) still
 // eventually fills in anything this misses.
-function getGeminiSongExtras_(songTitle, movieHint) {
+function getGeminiSongExtras_(songTitle, movieHint, existingWhyHit) {
   const hintClause = movieHint ? ` (from the film "${movieHint}")` : "";
-  const prompt = `Using only what you already know (no search), give background details on the real Indian film song "${songTitle}"${hintClause}.
+  // This song was already reviewed once — that earlier pass (a separate
+  // Gemini call, possibly grounded, possibly a while ago) may have already
+  // named a raga or instrument in passing as part of its "why it's a hit"
+  // line. Without seeing that, this call has no way to know it and can
+  // independently guess a DIFFERENT raga for the same song — exactly the
+  // kind of visible contradiction ("Mohanam" in one place, "Kalyani" in
+  // another) that undermines trust in the whole page. Passing it as
+  // context and requiring consistency, rather than a fresh independent
+  // guess, is cheap insurance against that.
+  const consistencyClause = existingWhyHit
+    ? `\n\nFor context, here is what was already established about this song: "${existingWhyHit}"\nIf that already names a specific raga, use EXACTLY that same name for raaga below — do not contradict it with a different one. If it doesn't mention one, only name a raga if you are independently confident.`
+    : "";
+  const prompt = `Using only what you already know (no search), give background details on the real Indian film song "${songTitle}"${hintClause}.${consistencyClause}
 
 STRICT RULES:
 - Only answer if you're confident you know this specific song from memory. If you're not confident, or the title is ambiguous, return exactly {"found": false} and nothing else.
