@@ -678,7 +678,9 @@ function fillMovieData(e) {
           title: String(d.title).trim(),
           singers: stripCitationMarkers_(d.singers),
           whyHit: stripCitationMarkers_(d.whyHit),
-          score: (scoreNum > 0 && scoreNum <= 10) ? scoreNum.toFixed(1) : ""
+          score: (scoreNum > 0 && scoreNum <= 10) ? scoreNum.toFixed(1) : "",
+          raaga: String(d.raaga || "").trim(),
+          trivia: stripCitationMarkers_(d.trivia || "")
         };
       });
   }
@@ -1182,7 +1184,7 @@ separate field (musicDirector) — don't duplicate that here.
 
 hitSongsDetails: A short per-song analysis for EVERY song listed in hitSongs
 above (same titles, same order), as a JSON array of objects:
-[{"title": "", "singers": "", "whyHit": "", "score": ""}]
+[{"title": "", "singers": "", "whyHit": "", "score": "", "raaga": "", "trivia": ""}]
 - title: must exactly match one of the song titles in hitSongs.
 - singers: the actual playback singer(s) who performed this specific song —
   not the music director/composer (that's already captured separately in
@@ -1199,6 +1201,14 @@ above (same titles, same order), as a JSON array of objects:
   known about the song (chart/streaming performance, critic or audience
   commentary, its role in the film) — don't default to a flat number for
   every song.
+- raaga: the specific Carnatic or Hindustani raga this song is genuinely
+  composed in or based on, ONLY if actually documented/known. Leave blank
+  ("") if the song isn't known to be based on a specific named raga — do
+  NOT guess one just because the song sounds classical.
+- trivia: 2-4 short, factual, interesting facts about THIS specific song,
+  separated by " | " (pipe) — recording, chart performance, awards,
+  notable covers/remixes, picturization, or cultural impact. Leave blank
+  ("") rather than inventing facts you aren't confident about.
 If hitSongs is empty (film has no notable songs), return an empty array
 ([]) here too.
 
@@ -2081,7 +2091,7 @@ function addSongEntry_(songTitle, movieHint, posterHint) {
   const poster = (isRealMovieTitle_(review.movie) ? tmdbPosterForMovie_(review.movie, review.year) : "") || posterHint || "";
 
   const newRow = sheet.getLastRow() + 1;
-  sheet.getRange(newRow, 1, 1, 10).setValues([[
+  sheet.getRange(newRow, 1, 1, 12).setValues([[
     review.title || songTitle,
     review.movie || "",
     review.year || "",
@@ -2091,7 +2101,9 @@ function addSongEntry_(songTitle, movieHint, posterHint) {
     Number(review.score).toFixed(1),
     stripCitationMarkers_(review.whyHit || ""),
     new Date(),
-    poster
+    poster,
+    review.raaga || "",
+    stripCitationMarkers_(review.trivia || "")
   ]]);
 }
 
@@ -2179,7 +2191,11 @@ function fillSongData(e) {
     return;
   }
 
-  sheet.getRange(row, 1, 1, 10).setValues([[
+  // Same placeholder-movie guard as addSongEntry_ — searching TMDB for a
+  // movie literally titled "N/A" can return a wrong, unrelated poster.
+  const poster = isRealMovieTitle_(review.movie) ? tmdbPosterForMovie_(review.movie, review.year) : "";
+
+  sheet.getRange(row, 1, 1, 12).setValues([[
     review.title || title,
     review.movie || "",
     review.year || "",
@@ -2189,7 +2205,9 @@ function fillSongData(e) {
     Number(review.score).toFixed(1),
     stripCitationMarkers_(review.whyHit || ""),
     new Date(),
-    tmdbPosterForMovie_(review.movie, review.year)
+    poster,
+    review.raaga || "",
+    stripCitationMarkers_(review.trivia || "")
   ]]);
 }
 
@@ -2275,7 +2293,9 @@ If found, return ONLY valid JSON, no markdown, no backticks:
   "singers": "the actual playback singer(s) who performed it, comma-separated if more than one — not the music director and not the on-screen actor unless they genuinely sang it themselves. Leave blank if you genuinely can't find this, don't guess.",
   "language": "Tamil/Telugu/Hindi/Malayalam/Kannada/Bengali/Marathi/Punjabi/etc.",
   "score": "a single number 0.0-10.0 with one decimal place, computed as a weighted blend of melody (40%), vocals (25%), lyrics (20%), and replay value (15%) — judge each dimension using whatever's actually known about the song (chart/streaming performance, critic or audience commentary, its role in the film)",
-  "whyHit": "ONE sentence, MAXIMUM 20 WORDS, explaining this song's specific appeal — be specific to THIS song, not a generic 'catchy tune, great vibes' description"
+  "whyHit": "ONE sentence, MAXIMUM 20 WORDS, explaining this song's specific appeal — be specific to THIS song, not a generic 'catchy tune, great vibes' description",
+  "raaga": "the specific Carnatic or Hindustani raga this song is genuinely composed in or based on, if one is actually documented/known (common for Tamil, Telugu, Kannada, and classical-influenced Hindi film music) — e.g. 'Shanmukhapriya', 'Kalyani', 'Yaman'. Leave completely blank if the song isn't known to be based on a specific named raga — do NOT guess or name one just because the song sounds classical.",
+  "trivia": "2-4 short, factual, interesting facts about THIS song specifically, separated by ' | ' (pipe) — e.g. its recording, chart performance, awards, notable covers/remixes, picturization, or cultural impact. Only include facts you're reasonably confident are true; give fewer facts (or leave blank) rather than inventing any."
 }`;
 
   const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
