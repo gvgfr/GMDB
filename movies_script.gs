@@ -1890,6 +1890,19 @@ function doPost(e) {
 // search once Gemini has resolved which film the song is from.
 // =============================================
 
+// Gemini fills the Movie field with a placeholder like "N/A" for a song
+// that genuinely isn't from any film (a standalone instrumental album
+// track, say) — searching TMDB for a movie literally titled "N/A" can
+// spuriously match some unrelated real film and hand back a completely
+// wrong poster. Treat these placeholders as "no movie" rather than a
+// searchable title.
+function isRealMovieTitle_(movie) {
+  const m = String(movie || "").trim();
+  if (!m) return false;
+  const stripped = m.toLowerCase().replace(/[^a-z]/g, "");
+  return ["na", "none", "unknown", "null", "nomovie", "notapplicable"].indexOf(stripped) === -1;
+}
+
 // Best-effort poster lookup for a song's parent film — a plain TMDB title
 // search (not an exact-ID lookup like the main movie-add flow, since all we
 // have here is Gemini's free-text movie/year guess). Returns "" on any miss
@@ -1953,7 +1966,7 @@ function backfillSongPosters() {
   let updated = 0;
   for (let i = 0; i < data.length; i++) {
     const title = data[i][0], movie = data[i][1], year = data[i][2], posterUrl = data[i][9];
-    if (!title || posterUrl) continue;
+    if (!title || posterUrl || !isRealMovieTitle_(movie)) continue;
     const poster = tmdbPosterForMovie_(movie, year);
     if (poster) {
       sheet.getRange(i + 2, 10).setValue(poster);
@@ -2062,8 +2075,10 @@ function addSongEntry_(songTitle, movieHint, posterHint) {
   // Real film poster (TMDB) preferred when it's actually found; otherwise
   // fall back to the Spotify album art carried through from the
   // suggestions dropdown, which for a film soundtrack is very often
-  // literally the movie poster anyway.
-  const poster = tmdbPosterForMovie_(review.movie, review.year) || posterHint || "";
+  // literally the movie poster anyway. Skip the TMDB lookup entirely when
+  // there's no real movie to search for (see isRealMovieTitle_) — searching
+  // for "N/A" can return an unrelated film's poster instead of nothing.
+  const poster = (isRealMovieTitle_(review.movie) ? tmdbPosterForMovie_(review.movie, review.year) : "") || posterHint || "";
 
   const newRow = sheet.getLastRow() + 1;
   sheet.getRange(newRow, 1, 1, 10).setValues([[
