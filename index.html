@@ -315,7 +315,13 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 /* About modal specifically scrolls like a normal page (whole overlay
    scrolls), instead of being boxed into its own small internal scrollbar
    like before — much less cramped for a content-heavy modal like this. */
-#aboutModal{align-items:flex-start;overflow-y:auto;padding:2rem 1rem;}
+/* Explicit z-index, not just DOM order — About can be opened from inside
+   another already-open modal (movie detail's score badges, song detail's
+   "How is this scored?"), and relying on DOM order for stacking meant it
+   only actually landed on top when it happened to come later in the HTML
+   than whatever opened it — true for #detailModal, false for
+   #songDetailModal, so that one opened About completely hidden behind it. */
+#aboutModal{align-items:flex-start;overflow-y:auto;padding:2rem 1rem;z-index:210;}
 #aboutModal .about-modal{margin:1rem auto;}
 .modal-overlay.open .about-modal{transform:translateY(0);}
 #songsModal{align-items:flex-start;overflow-y:auto;padding:2rem 1rem;}
