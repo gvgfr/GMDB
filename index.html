@@ -3410,19 +3410,29 @@ function jumpToMovie(title) {
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){
     if(document.getElementById("detailModal").classList.contains("open")){ closeDetail(); }
+    // songDetailModal nests INSIDE songsModal (opened from a song card
+    // without closing the list underneath it) — closing it should reveal
+    // the Songs list, not drop straight through to the movie homepage.
+    if (document.getElementById("songDetailModal").classList.contains("open")) {
+      document.getElementById("songDetailModal").classList.remove("open");
+      return;
+    }
     ["addModal","aboutModal","songsModal","addSongModal","songDetailModal"].forEach(id=>document.getElementById(id).classList.remove("open"));
   }
 });
 
 // Back button closes modal instead of leaving site
 window.addEventListener("popstate", () => {
-  const anyOpen = ["detailModal","addModal","aboutModal","songsModal","addSongModal","songDetailModal"].some(id =>
-    document.getElementById(id).classList.contains("open")
-  );
+  // Same nesting as above: pop just the song detail view if that's what's
+  // on top, so the Songs list it was opened from stays open underneath.
+  if (document.getElementById("songDetailModal").classList.contains("open")) {
+    document.getElementById("songDetailModal").classList.remove("open");
+    return;
+  }
+  const ids = ["detailModal","addModal","aboutModal","songsModal","addSongModal"];
+  const anyOpen = ids.some(id => document.getElementById(id).classList.contains("open"));
   if (anyOpen) {
-    ["detailModal","addModal","aboutModal","songsModal","addSongModal","songDetailModal"].forEach(id =>
-      document.getElementById(id).classList.remove("open")
-    );
+    ids.forEach(id => document.getElementById(id).classList.remove("open"));
   }
 });
 
