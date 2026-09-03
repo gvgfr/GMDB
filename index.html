@@ -838,9 +838,16 @@ footer span{color:var(--red);}
       <div id="songSuggestions" class="suggestions"></div>
     </div>
     <div id="songIdentifyResult" style="display:none;"></div>
+    <!-- No standalone "Review This Song" button — it was always visible
+    and clickable even while suggestions were still loading, letting
+    someone submit an incomplete/wrong title before the real match had a
+    chance to show up. Every real path submits from its own contextual
+    button once it's actually ready: tapping a Spotify suggestion
+    (pickSongSuggestion), confirming a Gemini match (confirmSongIdentity),
+    or "Add It Anyway" once nothing was found (cantFindBox). Enter still
+    force-submits for anyone who wants to skip waiting. -->
     <div class="add-actions">
       <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('addSongModal').classList.remove('open')">Cancel</button>
-      <button class="btn btn-primary" style="flex:2" id="addSongBtn" onclick="submitSong()">Review This Song</button>
     </div>
   </div>
 </div>
@@ -1349,8 +1356,6 @@ function openAddSongModal() {
   const q = document.getElementById("songSearchInput")?.value || "";
   document.getElementById("songTitleInput").value = q;
   document.getElementById("addSongStatus").style.display = "none";
-  document.getElementById("addSongBtn").disabled = false;
-  document.getElementById("addSongBtn").textContent = "Review This Song";
   const identifyBox = document.getElementById("songIdentifyResult");
   identifyBox.style.display = "none";
   identifyBox.innerHTML = "";
