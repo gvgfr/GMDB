@@ -1097,8 +1097,12 @@ function buildHitSongs(m) {
     const score = scoreNum > 0
       ? `<div class="song-score">Masala Meter Song Score: ${scoreNum.toFixed(1)}/10</div>` : "";
     return `<div class="song-card">
-      <a href="https://open.spotify.com/search/${query}" target="_blank" class="song-link">♪ ${song}</a>
-      ${singers}${why}${score}
+      <div class="song-title">♪ ${song}</div>
+      ${singers}${why}
+      <div class="song-card-footer">
+        ${score}
+        <a href="https://open.spotify.com/search/${query}" target="_blank" class="song-spotify-badge">${SPOTIFY_ICON} Spotify</a>
+      </div>
     </div>`;
   }).join("");
   return `<div class="modal-section"><div class="modal-section-label">Hit Songs</div><div class="songs-wrap">${songCards}</div></div>`;
