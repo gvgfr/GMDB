@@ -1296,8 +1296,11 @@ function renderSongDetailContent(s, loadingExtras) {
     ? `<p class="song-detail-meta">${s.Movie}${s.Year ? " ("+s.Year+")" : ""}</p>` : "";
   const singers = s.Singers ? `<p class="song-detail-meta">Sung by ${s.Singers}</p>` : "";
   const musicDirector = s.MusicDirector ? `<p class="song-detail-meta">Music by ${s.MusicDirector}</p>` : "";
-  const raaga = s.Raaga ? `<p class="song-detail-meta">Raaga: ${s.Raaga}</p>` : "";
   const why = s.WhyHit ? `<div class="modal-section"><div class="modal-section-label">Why it's a hit</div><div class="modal-section-value">${s.WhyHit}</div></div>` : "";
+  // Same gold modal-section-label treatment as Why It's a Hit/Arrangement —
+  // as a plain .song-detail-meta line it read as just another metadata
+  // row (movie, singers, music director) and didn't stand out at all.
+  const raaga = s.Raaga ? `<div class="modal-section"><div class="modal-section-label">Raaga</div><div class="modal-section-value">${s.Raaga}</div></div>` : "";
   const arrangement = s.Arrangement ? `<div class="modal-section"><div class="modal-section-label">The Arrangement</div><div class="modal-section-value">${s.Arrangement}</div></div>` : "";
   const extrasLoading = (loadingExtras && !s.Trivia && !s.Arrangement)
     ? `<div style="display:flex;align-items:center;gap:8px;justify-content:center;padding:10px 0;font-size:12px;color:var(--text2);"><span class="toast-spinner" style="width:12px;height:12px;"></span> Looking up more details for this song…</div>`
@@ -1305,10 +1308,11 @@ function renderSongDetailContent(s, loadingExtras) {
   document.getElementById("songDetailContent").innerHTML = `
     ${poster}
     <h2 class="song-detail-title">${s.Title}</h2>
-    ${movieLine}${singers}${musicDirector}${raaga}
+    ${movieLine}${singers}${musicDirector}
     <div class="gmdb-badge" style="margin:0.75rem 0;"><span class="gmdb-badge-label">SONG SCORE</span> ${s.Score.toFixed(1)}/10</div>
     <button class="story-toggle" style="margin:-0.5rem 0 0.75rem;" onclick="openSongScoringInfo()">How is this scored? ▸</button>
     ${why}
+    ${raaga}
     ${arrangement}
     ${buildSongTrivia(s)}
     ${extrasLoading}
