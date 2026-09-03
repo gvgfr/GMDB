@@ -1591,6 +1591,7 @@ function onOpen() {
     .addItem("♪ Fill next blank song (one)", "refreshOneBlankSong")
     .addItem("♪ Re-score selected song (click a row first)", "rescoreOneSong")
     .addItem("♪ Backfill song posters", "backfillSongPosters")
+    .addItem("♪ Backfill song raaga & trivia", "backfillSongRaagaTrivia")
     .addToUi();
 }
 
@@ -1985,6 +1986,66 @@ function backfillSongPosters() {
   }
   Logger.log("Backfilled posters for " + updated + " song(s).");
   SpreadsheetApp.getActive().toast("Backfilled posters for " + updated + " song(s).", "GMDB", 6);
+}
+
+// Backfill Raaga + Trivia for songs added before those columns existed.
+// Unlike backfillSongPosters() (a cheap TMDB title search), this re-runs
+// the full grounded Gemini review per song — much slower, so it's capped
+// per run to stay well under Apps Script's execution time limit. Re-run
+// the menu item to keep going; it always picks up where it left off.
+//
+// Trivia (not "raaga && trivia") is what marks a row as already handled —
+// a real raaga is genuinely rare (most film songs aren't based on one), so
+// gating on both fields would re-run Gemini forever on every song that
+// legitimately has no raaga. Trivia almost always comes back with
+// something for a real song, so it's the more reliable "already tried"
+// signal.
+function backfillSongRaagaTrivia() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert("No 'Songs' sheet tab found.");
+    return;
+  }
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    SpreadsheetApp.getActive().toast("No songs to backfill.", "GMDB", 5);
+    return;
+  }
+  const MAX_PER_RUN = 15;
+  const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues(); // Title..Trivia
+  const eligible = [];
+  data.forEach((row, i) => {
+    const title = row[0], score = row[6], trivia = row[11];
+    if (title && score && !trivia) eligible.push(i);
+  });
+
+  let updated = 0;
+  for (let k = 0; k < eligible.length && updated < MAX_PER_RUN; k++) {
+    const i = eligible[k];
+    const row = i + 2;
+    const title = data[i][0], movie = data[i][1], raaga = data[i][10];
+    try {
+      const review = getGeminiSongReview_(String(title), movie ? String(movie) : "");
+      if (review && review.found) {
+        if (!raaga && review.raaga) sheet.getRange(row, 11).setValue(review.raaga);
+        // A real song's trivia coming back genuinely empty is rare enough
+        // that leaving the cell blank (and letting a future run retry it)
+        // is a better tradeoff than writing a placeholder value into a
+        // field the site displays verbatim.
+        if (review.trivia) sheet.getRange(row, 12).setValue(stripCitationMarkers_(review.trivia));
+        updated++;
+      }
+    } catch (err) {
+      Logger.log("Raaga/trivia backfill failed for '" + title + "': " + err);
+    }
+    Utilities.sleep(500);
+  }
+
+  const remaining = eligible.length - updated;
+  const msg = remaining > 0
+    ? "Filled raaga/trivia for " + updated + " song(s). " + remaining + " more remain — run this again to continue."
+    : "Filled raaga/trivia for " + updated + " song(s). All songs now have this data.";
+  SpreadsheetApp.getActive().toast(msg, "GMDB", 8);
 }
 
 // =============================================
