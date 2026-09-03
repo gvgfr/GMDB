@@ -1205,10 +1205,11 @@ above (same titles, same order), as a JSON array of objects:
   composed in or based on, ONLY if actually documented/known. Leave blank
   ("") if the song isn't known to be based on a specific named raga — do
   NOT guess one just because the song sounds classical.
-- trivia: 2-4 short, factual, interesting facts about THIS specific song,
-  separated by " | " (pipe) — recording, chart performance, awards,
-  notable covers/remixes, picturization, or cultural impact. Leave blank
-  ("") rather than inventing facts you aren't confident about.
+- trivia: 1-2 short, factual, interesting facts about THIS specific song —
+  ONE short sentence each, under 15 words — separated by " | " (pipe).
+  Pick the single most interesting angle: recording, chart performance,
+  awards, notable covers/remixes, picturization, or cultural impact. Leave
+  blank ("") rather than inventing facts you aren't confident about.
 If hitSongs is empty (film has no notable songs), return an empty array
 ([]) here too.
 
@@ -2471,7 +2472,7 @@ If found, return ONLY valid JSON, no markdown, no backticks:
   "score": "a single number 0.0-10.0 with one decimal place, computed as a weighted blend of melody (40%), vocals (25%), lyrics (20%), and replay value (15%) — judge each dimension using whatever's actually known about the song (chart/streaming performance, critic or audience commentary, its role in the film)",
   "whyHit": "ONE sentence, MAXIMUM 20 WORDS, explaining this song's specific appeal — be specific to THIS song, not a generic 'catchy tune, great vibes' description",
   "raaga": "the specific Carnatic or Hindustani raga this song is genuinely composed in or based on, if one is actually documented/known (common for Tamil, Telugu, Kannada, and classical-influenced Hindi film music) — e.g. 'Shanmukhapriya', 'Kalyani', 'Yaman'. Leave completely blank if the song isn't known to be based on a specific named raga — do NOT guess or name one just because the song sounds classical.",
-  "trivia": "2-4 short, factual, interesting facts about THIS song specifically, separated by ' | ' (pipe) — e.g. its recording, chart performance, awards, notable covers/remixes, picturization, or cultural impact. Only include facts you're reasonably confident are true; give fewer facts (or leave blank) rather than inventing any."
+  "trivia": "1-2 short, factual, interesting facts about THIS song specifically — ONE short sentence each, under 15 words — separated by ' | ' (pipe). Pick the single most interesting angle: recording, chart performance, awards, notable covers/remixes, picturization, or cultural impact. Only include facts you're reasonably confident are true; leave blank rather than inventing any."
 }`;
 
   const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
