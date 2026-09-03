@@ -1267,6 +1267,18 @@ function openSongDetail(i) {
 function openSongDetailObj(s) {
   if (!s) return;
   _currentSongDetail = s;
+  renderSongDetailContent(s);
+  document.getElementById("songDetailModal").classList.add("open");
+  history.pushState({modal:true}, "", "");
+  maybeRefreshSongExtras(s);
+}
+
+// Pure render — no history.pushState (would push a duplicate entry every
+// time this re-renders after a background refresh below) and no fetch
+// trigger of its own, so it's safe to call again to patch in newly
+// fetched Raaga/Trivia/Arrangement without disturbing the browser-back
+// stack or re-requesting anything.
+function renderSongDetailContent(s) {
   const query = encodeURIComponent(s.Title + " " + (s.Movie||""));
   const poster = s.PosterURL
     ? `<img class="song-detail-poster" src="${s.PosterURL}" alt=""/>`
@@ -1292,8 +1304,31 @@ function openSongDetailObj(s) {
       <a class="modal-btn modal-btn-secondary" href="https://www.youtube.com/results?search_query=${query}%20song" target="_blank">▶ Watch on YouTube</a>
       <button class="modal-btn modal-btn-share" onclick="shareSong()">↗ Share This Song</button>
     </div>`;
-  document.getElementById("songDetailModal").classList.add("open");
-  history.pushState({modal:true}, "", "");
+}
+
+// Raaga/Trivia/Arrangement only exist for songs reviewed after those
+// fields were added — an older song can still be missing them. Rather
+// than making someone wait for the batch backfill (🎬 GMDB menu) to
+// eventually reach this specific song, ask the backend for just this one
+// the moment its detail page actually opens. Trivia+Arrangement both
+// present is treated as "already done", same signal the backfill itself
+// uses, so this never re-fires for a song that's already fully filled in.
+let _songExtrasRequestId = 0;
+async function maybeRefreshSongExtras(s) {
+  if (s.Trivia && s.Arrangement) return;
+  const myRequestId = ++_songExtrasRequestId;
+  try {
+    const res = await fetch(API_URL + "?action=refreshSongExtras&title=" + encodeURIComponent(s.Title) + "&movie=" + encodeURIComponent(s.Movie || ""));
+    const result = await res.json();
+    // A newer song detail was opened (or this one reopened) while this was
+    // in flight — don't let a stale response overwrite whatever's current.
+    if (myRequestId !== _songExtrasRequestId) return;
+    if (!result || !result.found) return;
+    if (!s.Raaga && result.raaga) s.Raaga = result.raaga;
+    if (!s.Trivia && result.trivia) s.Trivia = result.trivia;
+    if (!s.Arrangement && result.arrangement) s.Arrangement = result.arrangement;
+    if (_currentSongDetail === s) renderSongDetailContent(s);
+  } catch (err) { /* best-effort — the song just keeps showing without these fields */ }
 }
 
 // Same Web Share API / clipboard-copy pattern as shareMovie() — and, like

@@ -2149,6 +2149,75 @@ function countEligibleMovieHitSongs_() {
   return count;
 }
 
+// On-demand single-song version of the two backfill halves above — finds
+// ONE song by title (Songs sheet first, then every movie's HitSongsDetails)
+// and fills in whatever's still blank via a single Gemini call, instead of
+// waiting for the batch job's turn. Called from the frontend the moment a
+// song detail page opens and notices it's missing this data (see
+// openSongDetailObj() / patchSongExtras() in index.html).
+//
+// Already-complete (raaga isn't required — it's often legitimately blank)
+// returns immediately with no API call. A song not found anywhere, or one
+// Gemini can't confidently re-identify, returns {found:false}.
+function refreshSongExtras_(title, movieHint) {
+  if (!title) return { found: false };
+  const norm = s => String(s || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const wanted = norm(title);
+
+  const songsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
+  if (songsSheet) {
+    const lastRow = songsSheet.getLastRow();
+    if (lastRow >= 2) {
+      const data = songsSheet.getRange(2, 1, lastRow - 1, 13).getValues();
+      for (let i = 0; i < data.length; i++) {
+        if (norm(data[i][0]) !== wanted) continue;
+        const row = i + 2;
+        const raaga = data[i][10], trivia = data[i][11], arrangement = data[i][12];
+        if (trivia && arrangement) return { found: true, raaga: raaga || "", trivia, arrangement };
+        const movie = data[i][1] ? String(data[i][1]) : (movieHint || "");
+        const review = getGeminiSongReview_(String(data[i][0]), movie);
+        if (!review || !review.found) return { found: false };
+        const newTrivia = trivia || stripCitationMarkers_(review.trivia || "");
+        const newArrangement = arrangement || stripCitationMarkers_(review.arrangement || "");
+        const newRaaga = raaga || review.raaga || "";
+        if (!raaga && newRaaga) songsSheet.getRange(row, 11).setValue(newRaaga);
+        if (!trivia && newTrivia) songsSheet.getRange(row, 12).setValue(newTrivia);
+        if (!arrangement && newArrangement) songsSheet.getRange(row, 13).setValue(newArrangement);
+        return { found: true, raaga: newRaaga, trivia: newTrivia, arrangement: newArrangement };
+      }
+    }
+  }
+
+  const moviesSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
+  if (moviesSheet) {
+    const lastRow = moviesSheet.getLastRow();
+    if (lastRow >= 2) {
+      const titles = moviesSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      const hitSongsRaw = moviesSheet.getRange(2, 42, lastRow - 1, 1).getValues();
+      for (let i = 0; i < titles.length; i++) {
+        let details;
+        try { details = JSON.parse(hitSongsRaw[i][0] || "[]"); } catch (e) { continue; }
+        if (!Array.isArray(details)) continue;
+        for (let j = 0; j < details.length; j++) {
+          const d = details[j];
+          if (!d || norm(d.title) !== wanted) continue;
+          if (d.trivia && d.arrangement) return { found: true, raaga: d.raaga || "", trivia: d.trivia, arrangement: d.arrangement };
+          const movieTitle = String(titles[i][0]);
+          const review = getGeminiSongReview_(String(d.title), movieTitle);
+          if (!review || !review.found) return { found: false };
+          if (!d.raaga && review.raaga) d.raaga = review.raaga;
+          if (!d.trivia && review.trivia) d.trivia = stripCitationMarkers_(review.trivia);
+          if (!d.arrangement && review.arrangement) d.arrangement = stripCitationMarkers_(review.arrangement);
+          moviesSheet.getRange(i + 2, 42).setValue(JSON.stringify(details));
+          return { found: true, raaga: d.raaga || "", trivia: d.trivia || "", arrangement: d.arrangement || "" };
+        }
+      }
+    }
+  }
+
+  return { found: false };
+}
+
 const AUTO_BACKFILL_TRIGGER_HANDLER = "autoBackfillSongRaagaTriviaTick_";
 
 // One-click way to backfill EVERY existing song instead of manually
@@ -2785,6 +2854,24 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     } catch (err) {
       Logger.log("identifySong failed for '" + e.parameter.q + "': " + err);
+      return ContentService
+        .createTextOutput(JSON.stringify({ found: false }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  // On-demand raaga/trivia/arrangement lookup for a song already in the
+  // catalog — called when the song detail page opens and those fields are
+  // still blank, instead of making someone wait for the batch backfill to
+  // eventually reach that particular song. See refreshSongExtras_ below.
+  if (e && e.parameter && e.parameter.action === "refreshSongExtras" && e.parameter.title) {
+    try {
+      const result = refreshSongExtras_(String(e.parameter.title).trim(), e.parameter.movie ? String(e.parameter.movie).trim() : "");
+      return ContentService
+        .createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      Logger.log("refreshSongExtras failed for '" + e.parameter.title + "': " + err);
       return ContentService
         .createTextOutput(JSON.stringify({ found: false }))
         .setMimeType(ContentService.MimeType.JSON);
