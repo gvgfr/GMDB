@@ -1598,6 +1598,13 @@ async function submitSong() {
 
   document.getElementById("addSongModal").classList.remove("open");
   document.getElementById("songsModal").classList.add("open");
+  // Clear whatever was typed into the Songs search box before this — left
+  // alone, it still shows "Can't find [title]? Get It Reviewed" for the
+  // very song the toast below says is already being reviewed, which reads
+  // as if nothing happened and invites a second, redundant submission.
+  const songSearch = document.getElementById("songSearchInput");
+  if (songSearch) songSearch.value = "";
+  renderSongsList();
   showAddSongToast(title);
   setTimeout(async () => {
     await loadSongs();
