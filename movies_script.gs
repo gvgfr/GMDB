@@ -1187,6 +1187,15 @@ hitSongsDetails: A short per-song analysis for EVERY song listed in hitSongs
 above (same titles, same order), as a JSON array of objects:
 [{"title": "", "singers": "", "whyHit": "", "score": "", "raaga": "", "trivia": "", "arrangement": ""}]
 - title: must exactly match one of the song titles in hitSongs.
+- IMPORTANT for raaga/trivia/arrangement specifically: many Carnatic-influenced
+  film songs share a title, or a near-identical title, with an older,
+  unrelated traditional composition (a kriti, varnam, or devotional piece by
+  a classical composer like Swathi Thirunal, Tyagaraja, etc.) that has
+  nothing to do with this film. Those three fields must describe THIS
+  SPECIFIC FILM SONG only — never a composer attribution, raga claim, or
+  fact that actually belongs to that other, older piece just because the
+  title is similar. If you can't clearly separate the two, leave the field
+  blank rather than mixing them.
 - singers: the actual playback singer(s) who performed this specific song —
   not the music director/composer (that's already captured separately in
   musicDirector) and not the on-screen actor unless they genuinely sang it
@@ -2555,6 +2564,7 @@ function getGeminiSongReview_(songTitle, movieHint, existingWhyHit) {
 STRICT RULES:
 - Only proceed if you can confidently identify a REAL song from an Indian film (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Punjabi, etc.) — not a generic/non-Indian song, not a guess.
 - If you cannot confidently identify it, return exactly {"found": false} and nothing else.
+- Many Carnatic-influenced film songs share a title, or a near-identical title, with an older, unrelated traditional composition (a kriti, varnam, or devotional piece by a classical composer like Swathi Thirunal, Tyagaraja, etc.) that has nothing to do with this film. Every field below must describe THIS SPECIFIC FILM SONG — never a composer attribution, raga claim, or fact that actually belongs to that other, older piece just because the title is similar. If you can't clearly separate the two, leave the relevant field (especially raaga and trivia) blank rather than mixing them.
 
 If found, return ONLY valid JSON, no markdown, no backticks:
 {
@@ -2682,12 +2692,13 @@ function getGeminiSongExtras_(songTitle, movieHint, existingWhyHit) {
 
 STRICT RULES:
 - Only answer if you're confident you know this specific song from memory. If you're not confident, or the title is ambiguous, return exactly {"found": false} and nothing else.
+- Many Carnatic-influenced film songs share a title, or a near-identical title, with an older, unrelated traditional composition (a kriti, varnam, or devotional piece by a classical composer like Swathi Thirunal, Tyagaraja, etc.) that is NOT connected to this film at all. Every field below must describe THIS SPECIFIC FILM SONG — its actual recording, singers, and use in this film — never facts, composer attributions, or raga claims that actually belong to that other, older piece just because the title is similar. If you cannot clearly separate the two, leave the relevant field blank rather than mixing them.
 
 If found, return ONLY valid JSON, no markdown, no backticks:
 {
   "found": true,
-  "raaga": "the specific Carnatic or Hindustani raga this song is genuinely composed in or based on, if one is actually documented/known — e.g. 'Shanmukhapriya', 'Kalyani', 'Yaman'. Leave completely blank if the song isn't known to be based on a specific named raga — do NOT guess or name one just because the song sounds classical.",
-  "trivia": "1-2 short, factual, interesting facts about THIS song specifically — ONE short sentence each, under 15 words — separated by ' | ' (pipe). Pick the single most interesting angle: recording, chart performance, awards, notable covers/remixes, picturization, or cultural impact. Only include facts you're reasonably confident are true; leave blank rather than inventing any.",
+  "raaga": "the specific Carnatic or Hindustani raga this FILM song is genuinely composed in or based on, if one is actually documented/known — e.g. 'Shanmukhapriya', 'Kalyani', 'Yaman'. Leave completely blank if the song isn't known to be based on a specific named raga, or if you're not certain this is the film song's raga rather than an unrelated classical piece's — do NOT guess.",
+  "trivia": "1-2 short, factual, interesting facts about THIS FILM SONG specifically (its recording, chart performance, awards, notable covers/remixes, picturization, or cultural impact) — ONE short sentence each, under 15 words — separated by ' | ' (pipe). Never state a composer or origin that belongs to a different, older classical composition sharing a similar title. Only include facts you're reasonably confident are true of THIS song; leave blank rather than inventing or borrowing any.",
   "arrangement": "2 sentences, MAXIMUM 40 WORDS TOTAL, describing THIS song's actual musical arrangement and sound — the specific instruments audibly featured (e.g. mridangam, santoor, electric guitar, synth strings, tabla), the genre/production style, and rhythm or tempo character. Be specific to what's actually in THIS song, not a generic 'lush orchestration' description. Leave blank if you're not confident about the actual instrumentation rather than guessing."
 }`;
 
