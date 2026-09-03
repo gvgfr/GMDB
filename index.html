@@ -817,7 +817,7 @@ footer span{color:var(--red);}
     </div>
     <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;line-height:1.6;">Every song already scored across the catalog, in one place — search for a song directly without needing to find its movie first. Can't find one? You can get it reviewed and added.</p>
     <div style="position:relative;">
-      <input class="search-input" type="text" id="songSearchInput" placeholder="Search for a song..." oninput="renderSongsList()" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+      <input class="search-input" type="text" id="songSearchInput" placeholder="Search for a song..." oninput="renderSongsList()" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" name="song-search-field"/>
     </div>
     <div id="songsListWrap" class="songs-wrap" style="margin-top:1rem;max-height:50vh;overflow-y:auto;"></div>
     <div id="songNotFoundWrap" style="display:none;text-align:center;margin-top:1rem;padding:1rem;background:var(--bg3);border-radius:10px;">
