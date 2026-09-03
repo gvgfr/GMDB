@@ -1611,6 +1611,7 @@ function onOpen() {
     .addItem("♪ Backfill raaga & trivia (one batch, ~15 songs)", "backfillSongRaagaTrivia")
     .addItem("♪ Backfill raaga & trivia (ALL songs, runs in background)", "startAutoBackfillSongRaagaTrivia")
     .addItem("♪ Stop background raaga/trivia backfill", "stopAutoBackfillSongRaagaTrivia")
+    .addItem("♪ Audit raaga/trivia for contamination (one batch)", "auditSongRaagaTriviaConsistency")
     .addToUi();
 }
 
@@ -2156,6 +2157,142 @@ function countEligibleMovieHitSongs_() {
     } catch (e) { /* skip unparsable */ }
   });
   return count;
+}
+
+// Flags songs whose Raaga/Trivia LOOK like they may have been
+// contaminated by an unrelated, similarly-titled classical composition —
+// the exact failure mode confirmed on "Ninnukori Varnam" (Raaga said
+// "Kalyani" while its own Why It's a Hit said "Mohanam raga" in passing,
+// and Trivia falsely credited it to Swathi Thirunal, an unrelated
+// composer). Doesn't touch or overwrite any existing data — a cheap
+// ungrounded Gemini call per song checks for an internal contradiction or
+// an implausible attribution, and anything flagged gets written to a
+// "Raaga Audit" sheet tab (created if missing) for a human to review and
+// correct by hand, since there's no reliable way to know which of two
+// conflicting claims (if either) is actually right from here.
+//
+// Both clean and flagged results get logged to that tab so a song is
+// never re-checked twice — run the menu item again to keep working
+// through whatever's left (capped per run since these are individually
+// fast/cheap, but the catalog can still be large).
+function auditSongRaagaTriviaConsistency() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let auditSheet = ss.getSheetByName("Raaga Audit");
+  if (!auditSheet) {
+    auditSheet = ss.insertSheet("Raaga Audit");
+    auditSheet.getRange(1, 1, 1, 6).setValues([["Title", "Movie", "Raaga", "Trivia", "Status", "Reason"]]);
+  }
+  const auditLastRow = auditSheet.getLastRow();
+  const alreadyChecked = new Set();
+  if (auditLastRow >= 2) {
+    const norm = s => String(s || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+    auditSheet.getRange(2, 1, auditLastRow - 1, 1).getValues().forEach(r => alreadyChecked.add(norm(r[0])));
+  }
+  const norm = s => String(s || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+  const candidates = []; // {title, movie, whyHit, raaga, trivia}
+  const songsSheet = ss.getSheetByName("Songs");
+  if (songsSheet) {
+    const lastRow = songsSheet.getLastRow();
+    if (lastRow >= 2) {
+      songsSheet.getRange(2, 1, lastRow - 1, 13).getValues().forEach(row => {
+        const title = row[0], movie = row[1], whyHit = row[7], raaga = row[10], trivia = row[11];
+        if (title && whyHit && (raaga || trivia) && !alreadyChecked.has(norm(title))) {
+          candidates.push({ title: String(title), movie: movie ? String(movie) : "", whyHit: String(whyHit), raaga: raaga ? String(raaga) : "", trivia: trivia ? String(trivia) : "" });
+        }
+      });
+    }
+  }
+  const moviesSheet = ss.getSheetByName("Movies");
+  if (moviesSheet) {
+    const lastRow = moviesSheet.getLastRow();
+    if (lastRow >= 2) {
+      const titles = moviesSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      const hitSongsRaw = moviesSheet.getRange(2, 42, lastRow - 1, 1).getValues();
+      titles.forEach((t, i) => {
+        let details;
+        try { details = JSON.parse(hitSongsRaw[i][0] || "[]"); } catch (e) { return; }
+        if (!Array.isArray(details)) return;
+        details.forEach(d => {
+          if (d && d.title && d.whyHit && (d.raaga || d.trivia) && !alreadyChecked.has(norm(d.title))) {
+            candidates.push({ title: String(d.title), movie: String(t[0] || ""), whyHit: String(d.whyHit), raaga: d.raaga ? String(d.raaga) : "", trivia: d.trivia ? String(d.trivia) : "" });
+          }
+        });
+      });
+    }
+  }
+
+  const MAX_PER_RUN = 30;
+  const rowsToAppend = [];
+  let flagged = 0, checked = 0;
+  for (let i = 0; i < candidates.length && checked < MAX_PER_RUN; i++) {
+    const c = candidates[i];
+    let result;
+    try {
+      result = checkSongDataConsistency_(c.title, c.movie, c.whyHit, c.raaga, c.trivia);
+    } catch (err) {
+      Logger.log("Consistency check failed for '" + c.title + "': " + err);
+      continue;
+    }
+    checked++;
+    const suspicious = !!(result && result.suspicious);
+    if (suspicious) flagged++;
+    rowsToAppend.push([c.title, c.movie, c.raaga, c.trivia, suspicious ? "FLAGGED" : "clean", suspicious ? (result.reason || "") : ""]);
+  }
+
+  if (rowsToAppend.length) {
+    auditSheet.getRange(auditSheet.getLastRow() + 1, 1, rowsToAppend.length, 6).setValues(rowsToAppend);
+  }
+
+  const remaining = candidates.length - checked;
+  const msg = remaining > 0
+    ? "Checked " + checked + " song(s), flagged " + flagged + ". " + remaining + " more remain — run this again to continue. See the 'Raaga Audit' tab."
+    : "Checked " + checked + " song(s), flagged " + flagged + ". Every song with a raaga/trivia has now been audited — see the 'Raaga Audit' tab.";
+  SpreadsheetApp.getActive().toast(msg, "GMDB", 10);
+}
+
+// Cheap, ungrounded consistency check for one song's already-written
+// Raaga/Trivia against its own Why It's a Hit text — used only by the
+// audit above, never to generate or overwrite data itself.
+function checkSongDataConsistency_(title, movie, whyHit, raaga, trivia) {
+  const movieClause = movie ? ` (from the film "${movie}")` : "";
+  const prompt = `You are fact-checking data already written about the real Indian film song "${title}"${movieClause} for internal contradictions or contamination from a DIFFERENT, unrelated composition that happens to share a similar title (common with Carnatic-influenced film songs, which can share a title with an older classical kriti/varnam/devotional piece by someone like Swathi Thirunal or Tyagaraja).
+
+Why it's a hit (already established): "${whyHit}"
+Raaga on file: "${raaga || "(none)"}"
+Trivia on file: "${trivia || "(none)"}"
+
+Check for:
+- The Raaga on file contradicting a different raga name mentioned in the "Why it's a hit" text.
+- The Trivia making a claim (composer, era, origin) that sounds like it belongs to an unrelated older classical piece rather than this specific film song.
+- Any other obvious internal contradiction between these fields.
+
+Return ONLY valid JSON, no markdown, no backticks:
+{
+  "suspicious": true or false,
+  "reason": "if suspicious, ONE short sentence naming the specific contradiction. Empty string if not suspicious."
+}`;
+
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.1, thinkingConfig: { thinkingBudget: 0 } }
+  };
+  const response = UrlFetchApp.fetch(url, {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  const code = response.getResponseCode();
+  const bodyText = response.getContentText();
+  if (code !== 200) throw new Error("Consistency check HTTP " + code + ": " + bodyText.slice(0, 200));
+  const data = JSON.parse(bodyText);
+  const cand = data.candidates && data.candidates[0];
+  if (!cand || !cand.content || !cand.content.parts || !cand.content.parts[0]) {
+    throw new Error("Consistency check: empty/filtered response for '" + title + "'");
+  }
+  return parseGeminiJsonObject_(cand.content.parts[0].text || "");
 }
 
 // On-demand single-song version of the two backfill halves above — finds
