@@ -1990,35 +1990,45 @@ function backfillSongPosters() {
   SpreadsheetApp.getActive().toast("Backfilled posters for " + updated + " song(s).", "GMDB", 6);
 }
 
-// Backfill Raaga + Trivia for songs added before those columns existed.
-// Unlike backfillSongPosters() (a cheap TMDB title search), this re-runs
-// the full grounded Gemini review per song — much slower, so it's capped
-// per run to stay well under Apps Script's execution time limit. Re-run
-// the menu item to keep going; it always picks up where it left off.
+// Backfill Raaga + Trivia for songs added before those columns existed —
+// covers BOTH places a song lives: standalone rows on the Songs sheet, and
+// the HitSongsDetails JSON embedded in each Movies row (songs Gemini
+// discovered as part of reviewing the film itself, never added to Songs
+// separately). Unlike backfillSongPosters() (a cheap TMDB title search),
+// this re-runs the full grounded Gemini review per song — much slower, so
+// the two sources share one combined per-run budget to stay well under
+// Apps Script's execution time limit. Re-run the menu item (or let the
+// auto-backfill trigger below keep going) to pick up where it left off.
 //
-// Trivia (not "raaga && trivia") is what marks a row as already handled —
-// a real raaga is genuinely rare (most film songs aren't based on one), so
-// gating on both fields would re-run Gemini forever on every song that
-// legitimately has no raaga. Trivia almost always comes back with
-// something for a real song, so it's the more reliable "already tried"
-// signal.
+// Trivia (not "raaga && trivia") is what marks a song as already handled
+// in both sources — a real raaga is genuinely rare (most film songs aren't
+// based on one), so gating on both fields would re-run Gemini forever on
+// every song that legitimately has no raaga. Trivia almost always comes
+// back with something for a real song, so it's the more reliable
+// "already tried" signal.
 function backfillSongRaagaTrivia() {
-  // Runs both from the menu (has a UI) and from the auto-backfill trigger
-  // below (no UI — SpreadsheetApp.getUi() would throw there), so these
-  // early exits use toast, not alert, and explicitly return 0 ("nothing
-  // left to do") rather than undefined, which the trigger's "remaining <=
-  // 0" stop check would otherwise treat as "never stop".
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
-  if (!sheet) {
-    SpreadsheetApp.getActive().toast("No 'Songs' sheet tab found.", "GMDB", 6);
-    return 0;
-  }
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
-    SpreadsheetApp.getActive().toast("No songs to backfill.", "GMDB", 5);
-    return 0;
-  }
   const MAX_PER_RUN = 15;
+  const standalone = backfillStandaloneSongsRaagaTrivia_(MAX_PER_RUN);
+  const movieLinked = backfillMovieHitSongsRaagaTrivia_(MAX_PER_RUN - standalone.used);
+
+  const updated = standalone.used + movieLinked.used;
+  const remaining = standalone.remaining + movieLinked.remaining;
+  const msg = remaining > 0
+    ? "Filled raaga/trivia for " + updated + " song(s) (" + standalone.used + " standalone, " + movieLinked.used + " movie-linked). " + remaining + " more remain — run this again to continue."
+    : "Filled raaga/trivia for " + updated + " song(s). Every song — standalone and movie-linked — now has this data.";
+  SpreadsheetApp.getActive().toast(msg, "GMDB", 8);
+  return remaining; // used by the auto-backfill trigger below to know when to stop
+}
+
+// Standalone-song half of backfillSongRaagaTrivia() — the Songs sheet.
+// Processes at most `budget` songs; returns how many it actually updated
+// and how many (across the whole sheet, not just this run) still remain.
+function backfillStandaloneSongsRaagaTrivia_(budget) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
+  if (!sheet) return { used: 0, remaining: 0 };
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { used: 0, remaining: 0 };
+
   const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues(); // Title..Trivia
   const eligible = [];
   data.forEach((row, i) => {
@@ -2027,7 +2037,7 @@ function backfillSongRaagaTrivia() {
   });
 
   let updated = 0;
-  for (let k = 0; k < eligible.length && updated < MAX_PER_RUN; k++) {
+  for (let k = 0; k < eligible.length && updated < budget; k++) {
     const i = eligible[k];
     const row = i + 2;
     const title = data[i][0], movie = data[i][1], raaga = data[i][10];
@@ -2047,13 +2057,79 @@ function backfillSongRaagaTrivia() {
     }
     Utilities.sleep(500);
   }
+  return { used: updated, remaining: eligible.length - updated };
+}
 
-  const remaining = eligible.length - updated;
-  const msg = remaining > 0
-    ? "Filled raaga/trivia for " + updated + " song(s). " + remaining + " more remain — run this again to continue."
-    : "Filled raaga/trivia for " + updated + " song(s). All songs now have this data.";
-  SpreadsheetApp.getActive().toast(msg, "GMDB", 8);
-  return remaining; // used by the auto-backfill trigger below to know when to stop
+// Movie-linked half of backfillSongRaagaTrivia() — songs that only exist
+// inside a movie's own HitSongsDetails JSON (column 42), never added to
+// the Songs sheet separately. Same budget/eligibility pattern as the
+// standalone half above, just reading/writing a JSON blob per row instead
+// of dedicated columns.
+function backfillMovieHitSongsRaagaTrivia_(budget) {
+  if (budget <= 0) return { used: 0, remaining: countEligibleMovieHitSongs_() };
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
+  if (!sheet) return { used: 0, remaining: 0 };
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { used: 0, remaining: 0 };
+
+  const titles = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  const hitSongsRaw = sheet.getRange(2, 42, lastRow - 1, 1).getValues();
+  const parsed = hitSongsRaw.map(r => {
+    try {
+      const arr = JSON.parse(r[0] || "[]");
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  });
+
+  const eligible = [];
+  parsed.forEach((details, rowIdx) => {
+    details.forEach((d, songIdx) => {
+      if (d && d.title && !d.trivia) eligible.push({ rowIdx, songIdx });
+    });
+  });
+
+  let updated = 0;
+  const touchedRows = new Set();
+  for (let k = 0; k < eligible.length && updated < budget; k++) {
+    const { rowIdx, songIdx } = eligible[k];
+    const d = parsed[rowIdx][songIdx];
+    const movieTitle = titles[rowIdx][0];
+    try {
+      const review = getGeminiSongReview_(String(d.title), String(movieTitle));
+      if (review && review.found) {
+        if (!d.raaga && review.raaga) d.raaga = review.raaga;
+        if (review.trivia) d.trivia = stripCitationMarkers_(review.trivia);
+        touchedRows.add(rowIdx);
+        updated++;
+      }
+    } catch (err) {
+      Logger.log("Movie hit-song raaga/trivia backfill failed for '" + d.title + "' (" + movieTitle + "): " + err);
+    }
+    Utilities.sleep(500);
+  }
+  touchedRows.forEach(rowIdx => {
+    sheet.getRange(rowIdx + 2, 42).setValue(JSON.stringify(parsed[rowIdx]));
+  });
+  return { used: updated, remaining: eligible.length - updated };
+}
+
+// Cheap count-only pass (no API calls) used when the standalone backfill
+// already used up the whole per-run budget — still need an accurate
+// "remaining" total so the auto-backfill trigger doesn't stop early.
+function countEligibleMovieHitSongs_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
+  if (!sheet) return 0;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 0;
+  const hitSongsRaw = sheet.getRange(2, 42, lastRow - 1, 1).getValues();
+  let count = 0;
+  hitSongsRaw.forEach(r => {
+    try {
+      const arr = JSON.parse(r[0] || "[]");
+      if (Array.isArray(arr)) count += arr.filter(d => d && d.title && !d.trivia).length;
+    } catch (e) { /* skip unparsable */ }
+  });
+  return count;
 }
 
 const AUTO_BACKFILL_TRIGGER_HANDLER = "autoBackfillSongRaagaTriviaTick_";
