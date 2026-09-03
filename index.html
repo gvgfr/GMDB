@@ -1160,7 +1160,7 @@ function getAllSongs() {
       fromMovies.push({
         Title: d.title, WhyHit: d.whyHit || "", Score: Number(d.score), Singers: d.singers || "",
         Movie: m.Title || "", Year: m.Year || "", MusicDirector: m.MusicDirector || "", PosterURL: m.PosterURL || "",
-        Raaga: d.raaga || "", Trivia: d.trivia || ""
+        Raaga: d.raaga || "", Trivia: d.trivia || "", Arrangement: d.arrangement || ""
       });
     });
   });
@@ -1176,12 +1176,13 @@ function getAllSongs() {
       if (!existing.MusicDirector && s.MusicDirector) existing.MusicDirector = s.MusicDirector;
       if (!existing.Raaga && s.Raaga) existing.Raaga = s.Raaga;
       if (!existing.Trivia && s.Trivia) existing.Trivia = s.Trivia;
+      if (!existing.Arrangement && s.Arrangement) existing.Arrangement = s.Arrangement;
       return;
     }
     fromStandalone.push({
       Title: s.Title, WhyHit: s.WhyHit || "", Score: Number(s.Score), Singers: s.Singers || "",
       Movie: s.Movie || "", Year: s.Year || "", MusicDirector: s.MusicDirector || "", PosterURL: s.PosterURL || "",
-      Raaga: s.Raaga || "", Trivia: s.Trivia || ""
+      Raaga: s.Raaga || "", Trivia: s.Trivia || "", Arrangement: s.Arrangement || ""
     });
   });
   return [...fromMovies, ...fromStandalone].sort((a,b) => b.Score - a.Score);
@@ -1272,6 +1273,7 @@ function openSongDetailObj(s) {
   const musicDirector = s.MusicDirector ? `<p class="song-detail-meta">Music by ${s.MusicDirector}</p>` : "";
   const raaga = s.Raaga ? `<p class="song-detail-meta">Raaga: ${s.Raaga}</p>` : "";
   const why = s.WhyHit ? `<div class="modal-section"><div class="modal-section-label">Why it's a hit</div><div class="modal-section-value">${s.WhyHit}</div></div>` : "";
+  const arrangement = s.Arrangement ? `<div class="modal-section"><div class="modal-section-label">The Arrangement</div><div class="modal-section-value">${s.Arrangement}</div></div>` : "";
   document.getElementById("songDetailContent").innerHTML = `
     ${poster}
     <h2 class="song-detail-title">${s.Title}</h2>
@@ -1279,6 +1281,7 @@ function openSongDetailObj(s) {
     <div class="gmdb-badge" style="margin:0.75rem 0;"><span class="gmdb-badge-label">SONG SCORE</span> ${s.Score.toFixed(1)}/10</div>
     <button class="story-toggle" style="margin:-0.5rem 0 0.75rem;" onclick="openSongScoringInfo()">How is this scored? ▸</button>
     ${why}
+    ${arrangement}
     ${buildSongTrivia(s)}
     <div class="song-detail-links">
       <a class="modal-btn modal-btn-primary" style="background:#1DB954;" href="https://open.spotify.com/search/${query}" target="_blank">${SPOTIFY_ICON}&nbsp; Listen on Spotify</a>

@@ -680,7 +680,8 @@ function fillMovieData(e) {
           whyHit: stripCitationMarkers_(d.whyHit),
           score: (scoreNum > 0 && scoreNum <= 10) ? scoreNum.toFixed(1) : "",
           raaga: String(d.raaga || "").trim(),
-          trivia: stripCitationMarkers_(d.trivia || "")
+          trivia: stripCitationMarkers_(d.trivia || ""),
+          arrangement: stripCitationMarkers_(d.arrangement || "")
         };
       });
   }
@@ -1184,7 +1185,7 @@ separate field (musicDirector) — don't duplicate that here.
 
 hitSongsDetails: A short per-song analysis for EVERY song listed in hitSongs
 above (same titles, same order), as a JSON array of objects:
-[{"title": "", "singers": "", "whyHit": "", "score": "", "raaga": "", "trivia": ""}]
+[{"title": "", "singers": "", "whyHit": "", "score": "", "raaga": "", "trivia": "", "arrangement": ""}]
 - title: must exactly match one of the song titles in hitSongs.
 - singers: the actual playback singer(s) who performed this specific song —
   not the music director/composer (that's already captured separately in
@@ -1210,6 +1211,12 @@ above (same titles, same order), as a JSON array of objects:
   Pick the single most interesting angle: recording, chart performance,
   awards, notable covers/remixes, picturization, or cultural impact. Leave
   blank ("") rather than inventing facts you aren't confident about.
+- arrangement: 2 sentences, MAXIMUM 40 WORDS TOTAL, describing THIS song's
+  actual musical arrangement and sound — the specific instruments audibly
+  featured (e.g. mridangam, santoor, electric guitar, synth strings,
+  tabla), the genre/production style, and rhythm or tempo character. Be
+  specific to what's actually in THIS song. Leave blank ("") if you're not
+  confident about the actual instrumentation rather than guessing.
 If hitSongs is empty (film has no notable songs), return an empty array
 ([]) here too.
 
@@ -2030,11 +2037,15 @@ function backfillStandaloneSongsRaagaTrivia_(budget) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return { used: 0, remaining: 0 };
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues(); // Title..Trivia
+  const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues(); // Title..Arrangement
   const eligible = [];
   data.forEach((row, i) => {
-    const title = row[0], score = row[6], trivia = row[11];
-    if (title && score && !trivia) eligible.push(i);
+    const title = row[0], score = row[6], trivia = row[11], arrangement = row[12];
+    // Both fields present = fully done. A song with trivia but no
+    // arrangement (added before this field existed) is still eligible, so
+    // it gets picked up on the next run — which also refreshes its trivia
+    // to the shorter 1-2 fact version as a side effect.
+    if (title && score && !(trivia && arrangement)) eligible.push(i);
   });
 
   let updated = 0;
@@ -2046,11 +2057,12 @@ function backfillStandaloneSongsRaagaTrivia_(budget) {
       const review = getGeminiSongReview_(String(title), movie ? String(movie) : "");
       if (review && review.found) {
         if (!raaga && review.raaga) sheet.getRange(row, 11).setValue(review.raaga);
-        // A real song's trivia coming back genuinely empty is rare enough
-        // that leaving the cell blank (and letting a future run retry it)
-        // is a better tradeoff than writing a placeholder value into a
-        // field the site displays verbatim.
+        // A real song's trivia/arrangement coming back genuinely empty is
+        // rare enough that leaving the cell blank (and letting a future
+        // run retry it) is a better tradeoff than writing a placeholder
+        // value into a field the site displays verbatim.
         if (review.trivia) sheet.getRange(row, 12).setValue(stripCitationMarkers_(review.trivia));
+        if (review.arrangement) sheet.getRange(row, 13).setValue(stripCitationMarkers_(review.arrangement));
         updated++;
       }
     } catch (err) {
@@ -2085,7 +2097,10 @@ function backfillMovieHitSongsRaagaTrivia_(budget) {
   const eligible = [];
   parsed.forEach((details, rowIdx) => {
     details.forEach((d, songIdx) => {
-      if (d && d.title && !d.trivia) eligible.push({ rowIdx, songIdx });
+      // Same "both fields present = done" rule as the standalone half —
+      // a song with trivia but no arrangement (added before that field
+      // existed) is still eligible.
+      if (d && d.title && !(d.trivia && d.arrangement)) eligible.push({ rowIdx, songIdx });
     });
   });
 
@@ -2100,6 +2115,7 @@ function backfillMovieHitSongsRaagaTrivia_(budget) {
       if (review && review.found) {
         if (!d.raaga && review.raaga) d.raaga = review.raaga;
         if (review.trivia) d.trivia = stripCitationMarkers_(review.trivia);
+        if (review.arrangement) d.arrangement = stripCitationMarkers_(review.arrangement);
         touchedRows.add(rowIdx);
         updated++;
       }
@@ -2127,7 +2143,7 @@ function countEligibleMovieHitSongs_() {
   hitSongsRaw.forEach(r => {
     try {
       const arr = JSON.parse(r[0] || "[]");
-      if (Array.isArray(arr)) count += arr.filter(d => d && d.title && !d.trivia).length;
+      if (Array.isArray(arr)) count += arr.filter(d => d && d.title && !(d.trivia && d.arrangement)).length;
     } catch (e) { /* skip unparsable */ }
   });
   return count;
@@ -2268,7 +2284,7 @@ function addSongEntry_(songTitle, movieHint, posterHint) {
   const poster = (isRealMovieTitle_(review.movie) ? tmdbPosterForMovie_(review.movie, review.year) : "") || posterHint || "";
 
   const newRow = sheet.getLastRow() + 1;
-  sheet.getRange(newRow, 1, 1, 12).setValues([[
+  sheet.getRange(newRow, 1, 1, 13).setValues([[
     review.title || songTitle,
     review.movie || "",
     review.year || "",
@@ -2280,7 +2296,8 @@ function addSongEntry_(songTitle, movieHint, posterHint) {
     new Date(),
     poster,
     review.raaga || "",
-    stripCitationMarkers_(review.trivia || "")
+    stripCitationMarkers_(review.trivia || ""),
+    stripCitationMarkers_(review.arrangement || "")
   ]]);
 }
 
@@ -2372,7 +2389,7 @@ function fillSongData(e) {
   // movie literally titled "N/A" can return a wrong, unrelated poster.
   const poster = isRealMovieTitle_(review.movie) ? tmdbPosterForMovie_(review.movie, review.year) : "";
 
-  sheet.getRange(row, 1, 1, 12).setValues([[
+  sheet.getRange(row, 1, 1, 13).setValues([[
     review.title || title,
     review.movie || "",
     review.year || "",
@@ -2384,7 +2401,8 @@ function fillSongData(e) {
     new Date(),
     poster,
     review.raaga || "",
-    stripCitationMarkers_(review.trivia || "")
+    stripCitationMarkers_(review.trivia || ""),
+    stripCitationMarkers_(review.arrangement || "")
   ]]);
 }
 
@@ -2472,7 +2490,8 @@ If found, return ONLY valid JSON, no markdown, no backticks:
   "score": "a single number 0.0-10.0 with one decimal place, computed as a weighted blend of melody (40%), vocals (25%), lyrics (20%), and replay value (15%) — judge each dimension using whatever's actually known about the song (chart/streaming performance, critic or audience commentary, its role in the film)",
   "whyHit": "ONE sentence, MAXIMUM 20 WORDS, explaining this song's specific appeal — be specific to THIS song, not a generic 'catchy tune, great vibes' description",
   "raaga": "the specific Carnatic or Hindustani raga this song is genuinely composed in or based on, if one is actually documented/known (common for Tamil, Telugu, Kannada, and classical-influenced Hindi film music) — e.g. 'Shanmukhapriya', 'Kalyani', 'Yaman'. Leave completely blank if the song isn't known to be based on a specific named raga — do NOT guess or name one just because the song sounds classical.",
-  "trivia": "1-2 short, factual, interesting facts about THIS song specifically — ONE short sentence each, under 15 words — separated by ' | ' (pipe). Pick the single most interesting angle: recording, chart performance, awards, notable covers/remixes, picturization, or cultural impact. Only include facts you're reasonably confident are true; leave blank rather than inventing any."
+  "trivia": "1-2 short, factual, interesting facts about THIS song specifically — ONE short sentence each, under 15 words — separated by ' | ' (pipe). Pick the single most interesting angle: recording, chart performance, awards, notable covers/remixes, picturization, or cultural impact. Only include facts you're reasonably confident are true; leave blank rather than inventing any.",
+  "arrangement": "2 sentences, MAXIMUM 40 WORDS TOTAL, describing THIS song's actual musical arrangement and sound — the specific instruments audibly featured (e.g. mridangam, santoor, electric guitar, synth strings, tabla), the genre/production style, and rhythm or tempo character. Be specific to what's actually in THIS song, not a generic 'lush orchestration' description. Leave blank if you're not confident about the actual instrumentation rather than guessing."
 }`;
 
   const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
