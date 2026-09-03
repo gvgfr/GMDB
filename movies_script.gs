@@ -2175,7 +2175,7 @@ function refreshSongExtras_(title, movieHint) {
         const raaga = data[i][10], trivia = data[i][11], arrangement = data[i][12];
         if (trivia && arrangement) return { found: true, raaga: raaga || "", trivia, arrangement };
         const movie = data[i][1] ? String(data[i][1]) : (movieHint || "");
-        const review = getGeminiSongReview_(String(data[i][0]), movie);
+        const review = getGeminiSongExtras_(String(data[i][0]), movie);
         if (!review || !review.found) return { found: false };
         const newTrivia = trivia || stripCitationMarkers_(review.trivia || "");
         const newArrangement = arrangement || stripCitationMarkers_(review.arrangement || "");
@@ -2203,7 +2203,7 @@ function refreshSongExtras_(title, movieHint) {
           if (!d || norm(d.title) !== wanted) continue;
           if (d.trivia && d.arrangement) return { found: true, raaga: d.raaga || "", trivia: d.trivia, arrangement: d.arrangement };
           const movieTitle = String(titles[i][0]);
-          const review = getGeminiSongReview_(String(d.title), movieTitle);
+          const review = getGeminiSongExtras_(String(d.title), movieTitle);
           if (!review || !review.found) return { found: false };
           if (!d.raaga && review.raaga) d.raaga = review.raaga;
           if (!d.trivia && review.trivia) d.trivia = stripCitationMarkers_(review.trivia);
@@ -2638,6 +2638,57 @@ If found, return ONLY valid JSON, no markdown, no backticks:
   const cand = data.candidates && data.candidates[0];
   if (!cand || !cand.content || !cand.content.parts || !cand.content.parts[0]) {
     throw new Error("Gemini song identify: empty/filtered response for '" + songTitle + "'");
+  }
+  return parseGeminiJsonObject_(cand.content.parts[0].text || "");
+}
+
+// Lightweight raaga/trivia/arrangement-only counterpart to
+// getGeminiSongReview_, for refreshSongExtras_'s on-demand lookup — a
+// song already has its score/singers/etc, so re-running the full grounded
+// review (search grounding is what makes that call reliably take 10-30s,
+// same lesson as identifyGeminiSong_ above) just to fetch 3 extra fields
+// was pure waste. Answers from the model's own knowledge instead — a few
+// seconds at most — accepting the same tradeoff identify does: it can
+// come back empty for something too obscure or recent for the model to
+// know off the top of its head. That's fine here specifically because
+// it's opportunistic UI polish for an already-scored song, not something
+// blocking the review itself — the batch backfill (which DOES use the
+// full grounded review, since nothing there is time-sensitive) still
+// eventually fills in anything this misses.
+function getGeminiSongExtras_(songTitle, movieHint) {
+  const hintClause = movieHint ? ` (from the film "${movieHint}")` : "";
+  const prompt = `Using only what you already know (no search), give background details on the real Indian film song "${songTitle}"${hintClause}.
+
+STRICT RULES:
+- Only answer if you're confident you know this specific song from memory. If you're not confident, or the title is ambiguous, return exactly {"found": false} and nothing else.
+
+If found, return ONLY valid JSON, no markdown, no backticks:
+{
+  "found": true,
+  "raaga": "the specific Carnatic or Hindustani raga this song is genuinely composed in or based on, if one is actually documented/known — e.g. 'Shanmukhapriya', 'Kalyani', 'Yaman'. Leave completely blank if the song isn't known to be based on a specific named raga — do NOT guess or name one just because the song sounds classical.",
+  "trivia": "1-2 short, factual, interesting facts about THIS song specifically — ONE short sentence each, under 15 words — separated by ' | ' (pipe). Pick the single most interesting angle: recording, chart performance, awards, notable covers/remixes, picturization, or cultural impact. Only include facts you're reasonably confident are true; leave blank rather than inventing any.",
+  "arrangement": "2 sentences, MAXIMUM 40 WORDS TOTAL, describing THIS song's actual musical arrangement and sound — the specific instruments audibly featured (e.g. mridangam, santoor, electric guitar, synth strings, tabla), the genre/production style, and rhythm or tempo character. Be specific to what's actually in THIS song, not a generic 'lush orchestration' description. Leave blank if you're not confident about the actual instrumentation rather than guessing."
+}`;
+
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.3, thinkingConfig: { thinkingBudget: 0 } }
+  };
+
+  const response = UrlFetchApp.fetch(url, {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  const code = response.getResponseCode();
+  const bodyText = response.getContentText();
+  if (code !== 200) throw new Error("Gemini song extras HTTP " + code + ": " + bodyText.slice(0, 200));
+  const data = JSON.parse(bodyText);
+  const cand = data.candidates && data.candidates[0];
+  if (!cand || !cand.content || !cand.content.parts || !cand.content.parts[0]) {
+    throw new Error("Gemini song extras: empty/filtered response for '" + songTitle + "'");
   }
   return parseGeminiJsonObject_(cand.content.parts[0].text || "");
 }
