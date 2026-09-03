@@ -1437,10 +1437,12 @@ async function searchSongSuggestions() {
   }, 350);
 }
 
-// Picking a suggestion just fills the input (+ carries the movie/poster
-// hints through to submitSong()) — same as pickAddSuggestion() for movies,
-// which doesn't auto-submit either. The person still confirms with
-// "Review This Song".
+// Picking a suggestion submits it immediately — unlike a movie or a bare
+// typed title, this is a specific track Spotify already confirmed exists,
+// so there's nothing left to double-check by making someone tap a second
+// "Review This Song" button. Carries the movie/poster hints through to
+// submitSong() the same way confirmSongIdentity() (the Gemini fallback's
+// own one-tap confirm) already does.
 function pickSongSuggestion(i) {
   const r = songSuggestionsCache[i];
   if (!r) return;
@@ -1450,6 +1452,7 @@ function pickSongSuggestion(i) {
   const box = document.getElementById("songSuggestions");
   box.classList.remove("show");
   box.innerHTML = "";
+  submitSong();
 }
 
 // Quick "which song is this?" lookup as someone types — fallback for when
