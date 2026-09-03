@@ -1267,7 +1267,7 @@ function openSongDetail(i) {
 function openSongDetailObj(s) {
   if (!s) return;
   _currentSongDetail = s;
-  renderSongDetailContent(s);
+  renderSongDetailContent(s, !(s.Trivia && s.Arrangement));
   document.getElementById("songDetailModal").classList.add("open");
   history.pushState({modal:true}, "", "");
   maybeRefreshSongExtras(s);
@@ -1277,8 +1277,11 @@ function openSongDetailObj(s) {
 // time this re-renders after a background refresh below) and no fetch
 // trigger of its own, so it's safe to call again to patch in newly
 // fetched Raaga/Trivia/Arrangement without disturbing the browser-back
-// stack or re-requesting anything.
-function renderSongDetailContent(s) {
+// stack or re-requesting anything. `loadingExtras` shows a small spinner
+// in place of Trivia/Arrangement while maybeRefreshSongExtras() below is
+// still waiting on its (real, grounded, ~10-30s) Gemini lookup — without
+// it, the wait looked like nothing was happening.
+function renderSongDetailContent(s, loadingExtras) {
   const query = encodeURIComponent(s.Title + " " + (s.Movie||""));
   const poster = s.PosterURL
     ? `<img class="song-detail-poster" src="${s.PosterURL}" alt=""/>`
@@ -1290,6 +1293,9 @@ function renderSongDetailContent(s) {
   const raaga = s.Raaga ? `<p class="song-detail-meta">Raaga: ${s.Raaga}</p>` : "";
   const why = s.WhyHit ? `<div class="modal-section"><div class="modal-section-label">Why it's a hit</div><div class="modal-section-value">${s.WhyHit}</div></div>` : "";
   const arrangement = s.Arrangement ? `<div class="modal-section"><div class="modal-section-label">The Arrangement</div><div class="modal-section-value">${s.Arrangement}</div></div>` : "";
+  const extrasLoading = (loadingExtras && !s.Trivia && !s.Arrangement)
+    ? `<div style="display:flex;align-items:center;gap:8px;justify-content:center;padding:10px 0;font-size:12px;color:var(--text2);"><span class="toast-spinner" style="width:12px;height:12px;"></span> Looking up more details for this song…</div>`
+    : "";
   document.getElementById("songDetailContent").innerHTML = `
     ${poster}
     <h2 class="song-detail-title">${s.Title}</h2>
@@ -1299,6 +1305,7 @@ function renderSongDetailContent(s) {
     ${why}
     ${arrangement}
     ${buildSongTrivia(s)}
+    ${extrasLoading}
     <div class="song-detail-links">
       <a class="modal-btn modal-btn-primary" style="background:#1DB954;" href="https://open.spotify.com/search/${query}" target="_blank">${SPOTIFY_ICON}&nbsp; Listen on Spotify</a>
       <a class="modal-btn modal-btn-secondary" href="https://www.youtube.com/results?search_query=${query}%20song" target="_blank">▶ Watch on YouTube</a>
@@ -1323,12 +1330,18 @@ async function maybeRefreshSongExtras(s) {
     // A newer song detail was opened (or this one reopened) while this was
     // in flight — don't let a stale response overwrite whatever's current.
     if (myRequestId !== _songExtrasRequestId) return;
-    if (!result || !result.found) return;
-    if (!s.Raaga && result.raaga) s.Raaga = result.raaga;
-    if (!s.Trivia && result.trivia) s.Trivia = result.trivia;
-    if (!s.Arrangement && result.arrangement) s.Arrangement = result.arrangement;
-    if (_currentSongDetail === s) renderSongDetailContent(s);
-  } catch (err) { /* best-effort — the song just keeps showing without these fields */ }
+    if (result && result.found) {
+      if (!s.Raaga && result.raaga) s.Raaga = result.raaga;
+      if (!s.Trivia && result.trivia) s.Trivia = result.trivia;
+      if (!s.Arrangement && result.arrangement) s.Arrangement = result.arrangement;
+    }
+  } catch (err) {
+    if (myRequestId !== _songExtrasRequestId) return;
+    // best-effort — the song just keeps showing without these fields
+  }
+  // Always re-render (even on a miss/error) so the "Looking up…" spinner
+  // above clears instead of spinning forever.
+  if (_currentSongDetail === s) renderSongDetailContent(s);
 }
 
 // Same Web Share API / clipboard-copy pattern as shareMovie() — and, like
