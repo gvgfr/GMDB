@@ -1591,7 +1591,9 @@ function onOpen() {
     .addItem("♪ Fill next blank song (one)", "refreshOneBlankSong")
     .addItem("♪ Re-score selected song (click a row first)", "rescoreOneSong")
     .addItem("♪ Backfill song posters", "backfillSongPosters")
-    .addItem("♪ Backfill song raaga & trivia", "backfillSongRaagaTrivia")
+    .addItem("♪ Backfill raaga & trivia (one batch, ~15 songs)", "backfillSongRaagaTrivia")
+    .addItem("♪ Backfill raaga & trivia (ALL songs, runs in background)", "startAutoBackfillSongRaagaTrivia")
+    .addItem("♪ Stop background raaga/trivia backfill", "stopAutoBackfillSongRaagaTrivia")
     .addToUi();
 }
 
@@ -2001,15 +2003,20 @@ function backfillSongPosters() {
 // something for a real song, so it's the more reliable "already tried"
 // signal.
 function backfillSongRaagaTrivia() {
+  // Runs both from the menu (has a UI) and from the auto-backfill trigger
+  // below (no UI — SpreadsheetApp.getUi() would throw there), so these
+  // early exits use toast, not alert, and explicitly return 0 ("nothing
+  // left to do") rather than undefined, which the trigger's "remaining <=
+  // 0" stop check would otherwise treat as "never stop".
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Songs");
   if (!sheet) {
-    SpreadsheetApp.getUi().alert("No 'Songs' sheet tab found.");
-    return;
+    SpreadsheetApp.getActive().toast("No 'Songs' sheet tab found.", "GMDB", 6);
+    return 0;
   }
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) {
     SpreadsheetApp.getActive().toast("No songs to backfill.", "GMDB", 5);
-    return;
+    return 0;
   }
   const MAX_PER_RUN = 15;
   const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues(); // Title..Trivia
@@ -2046,6 +2053,38 @@ function backfillSongRaagaTrivia() {
     ? "Filled raaga/trivia for " + updated + " song(s). " + remaining + " more remain — run this again to continue."
     : "Filled raaga/trivia for " + updated + " song(s). All songs now have this data.";
   SpreadsheetApp.getActive().toast(msg, "GMDB", 8);
+  return remaining; // used by the auto-backfill trigger below to know when to stop
+}
+
+const AUTO_BACKFILL_TRIGGER_HANDLER = "autoBackfillSongRaagaTriviaTick_";
+
+// One-click way to backfill EVERY existing song instead of manually
+// re-clicking "Backfill song raaga & trivia" over and over — sets up a
+// recurring time-based trigger that runs one batch every 10 minutes
+// (spaced out since each batch can itself take a few minutes) until
+// backfillSongRaagaTrivia() reports nothing left, then removes itself.
+// Safe to click again later — it just picks up any newly-added songs.
+function startAutoBackfillSongRaagaTrivia() {
+  stopAutoBackfillSongRaagaTrivia();
+  ScriptApp.newTrigger(AUTO_BACKFILL_TRIGGER_HANDLER).timeBased().everyMinutes(10).create();
+  SpreadsheetApp.getActive().toast("Started — backfilling every song's raaga/trivia in the background, a batch every ~10 min. This will keep making Gemini calls until it's done, so it may take a while for a large catalog. Runs even if you close this sheet.", "GMDB", 10);
+  autoBackfillSongRaagaTriviaTick_(); // kick off the first batch now instead of waiting 10 min
+}
+
+// Removes the recurring trigger without touching any data already filled
+// in — use this to cancel an in-progress auto-backfill early.
+function stopAutoBackfillSongRaagaTrivia() {
+  const triggers = ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === AUTO_BACKFILL_TRIGGER_HANDLER);
+  triggers.forEach(t => ScriptApp.deleteTrigger(t));
+  return triggers.length;
+}
+
+function autoBackfillSongRaagaTriviaTick_() {
+  const remaining = backfillSongRaagaTrivia();
+  if (remaining <= 0) {
+    stopAutoBackfillSongRaagaTrivia();
+    SpreadsheetApp.getActive().toast("Auto-backfill complete — every song now has raaga/trivia data (where available). The background job has stopped itself.", "GMDB", 10);
+  }
 }
 
 // =============================================
