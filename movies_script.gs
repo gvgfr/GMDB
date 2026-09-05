@@ -4259,16 +4259,25 @@ function refreshStreamingStatus() {
       const sinceCell = sheet.getRange(row, 32);
       const prevSince = sinceCell.getValue();
 
-      // Before concluding "this movie left streaming" (TMDB found nothing,
-      // but we previously had data), ask Gemini's lightweight live-search
-      // check as a second opinion. TMDB's provider data (via JustWatch) can
-      // lag several days behind real releases — this catches the case where
-      // a re-score already confirmed via Gemini that it's still streaming,
-      // but TMDB still hasn't synced, which would otherwise cause this
-      // function to incorrectly clear data that fillMovieData just set.
-      // Only triggered for this specific edge case, not every row, so it
-      // doesn't meaningfully slow down the normal sweep.
-      if (!streaming && prevStreaming) {
+      // Needed here (moved up from below) because the widened Gemini
+      // fallback condition right below now depends on it too.
+      const relRaw = sheet.getRange(row, 31).getValue(); // ReleaseDate
+      const relTime = new Date(relRaw).getTime();
+      const isRecent = !isNaN(relTime) && relTime <= Date.now() && relTime >= (Date.now() - 5 * 30 * 24 * 60 * 60 * 1000); // 5 months, matches the website's "New on Streaming" window
+
+      // Ask Gemini's lightweight live-search check as a second opinion
+      // whenever TMDB comes up empty for a movie that's plausibly actually
+      // streaming right now — not just "this movie left streaming"
+      // (prevStreaming set, now gone), but ALSO "this movie never had
+      // streaming data at all yet" for a recent release. TMDB's provider
+      // data (via JustWatch) routinely lags real-world releases by days to
+      // weeks, especially for regional Indian OTT drops — without the
+      // isRecent branch, a brand-new movie TMDB hasn't caught up on yet
+      // just sat blank forever, since this fallback was previously only
+      // reachable for movies that had ALREADY been confirmed streaming at
+      // some point. Bounded to isRecent so this doesn't fire forever on
+      // old catalog titles that are genuinely just not streaming anywhere.
+      if (!streaming && (prevStreaming || isRecent)) {
         const yr = sheet.getRange(row, 2).getValue();
         const lg = sheet.getRange(row, 30).getValue();
         const confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
@@ -4307,15 +4316,8 @@ function refreshStreamingStatus() {
         sheet.getRange(row, 16).setValue("");
       }
 
-      // Is this a recent release (within the last 5 months)? Only those
-      // qualify as "new on streaming" — old catalog titles shouldn't be stamped.
-      // Same bug fix as fillMovieData's copy of this check: also require the
-      // release has actually happened, not just "not older than 5 months" —
-      // otherwise a future-dated ReleaseDate can get stamped as streaming
-      // today the moment TMDB/Gemini reports provider info early.
-      const relRaw = sheet.getRange(row, 31).getValue(); // ReleaseDate
-      const relTime = new Date(relRaw).getTime();
-      const isRecent = !isNaN(relTime) && relTime <= Date.now() && relTime >= (Date.now() - 5 * 30 * 24 * 60 * 60 * 1000); // 5 months, matches the website's "New on Streaming" window
+      // relRaw/relTime/isRecent computed earlier now (needed by the
+      // widened Gemini fallback above) — reused here unchanged.
 
       // STAMP: if there's streaming right now, it's a recent release, and
       // the stamp itself is simply missing — set it. This does NOT require
