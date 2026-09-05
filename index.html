@@ -2493,6 +2493,23 @@ document.addEventListener("click", e => {
   if(!e.target.closest(".search-wrap")) hideSuggestions();
 });
 
+// Keep the search bar visible above the on-screen keyboard on mobile.
+// scroll-margin-top only helps when scrolling up past the sticky header;
+// it does nothing once the keyboard opens and shrinks the visible viewport
+// from below, so we re-scroll the input into view whenever that happens.
+(function () {
+  const input = document.getElementById("searchInput");
+  if (!input) return;
+  function keepSearchInputVisible() {
+    if (document.activeElement !== input) return;
+    input.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  input.addEventListener("focus", () => setTimeout(keepSearchInputVisible, 300));
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", () => setTimeout(keepSearchInputVisible, 50));
+  }
+})();
+
 function filterMovies() {
   const q = document.getElementById("searchInput").value.toLowerCase().trim();
 
