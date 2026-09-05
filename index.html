@@ -3281,7 +3281,14 @@ function closeDetail() {
 }
 
 function openAddModal(prefillTitle){
-  document.getElementById("movieTitleInput").value = prefillTitle || "";
+  // The generic "+ Add a Movie" hero button and "+ Add Movie" hint link
+  // (unlike the query-specific "+Add "X"" button on a no-results page,
+  // which already passes its own prefillTitle) call this with nothing,
+  // discarding whatever was still typed in the main search box — falling
+  // back to that here means every "add" entry point retains it, not just
+  // one of the three.
+  const title = prefillTitle || document.getElementById("searchInput")?.value || "";
+  document.getElementById("movieTitleInput").value = title;
   document.getElementById("addStatus").style.display="none";
   document.getElementById("addBtn").disabled=false;
   document.getElementById("addBtn").textContent="Fetch & Add Movie";
@@ -3292,7 +3299,7 @@ function openAddModal(prefillTitle){
     // would, so the real TMDB suggestion dropdown wouldn't otherwise show
     // up for a pre-filled title — trigger it explicitly so this behaves
     // exactly as if the user had typed it themselves.
-    if (prefillTitle) searchTMDBSuggestions();
+    if (title) searchTMDBSuggestions();
   }, 100);
 }
 
@@ -3350,6 +3357,12 @@ function pickAddSuggestion(title, year) {
   const box = document.getElementById("addSuggestions");
   box.classList.remove("show");
   box.innerHTML = "";
+  // Submits immediately instead of just filling the box — this is a
+  // specific TMDB title (and, when given, an exact year) already
+  // confirmed to exist, not a bare guess, so there's nothing left to
+  // double-check by making someone tap "Fetch & Add Movie" separately.
+  // Same reasoning as picking a Spotify suggestion for songs.
+  submitMovie();
 }
 
 async function submitMovie(){
