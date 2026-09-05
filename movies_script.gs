@@ -4199,6 +4199,23 @@ function refreshStreamingStatus() {
     const title = sheet.getRange(row, 1).getValue();
     if (!title) continue;
 
+    // Skip movies released more than a year ago entirely — no TMDB call,
+    // no Gemini call, nothing. This sweep is a round-robin that resumes
+    // from wherever it left off each run; without this, an ever-growing
+    // catalog means most of each run's limited time budget (and Gemini
+    // quota) goes to re-checking years-old titles whose streaming status
+    // essentially never changes, at the expense of actually getting back
+    // around to the recent releases that matter. A movie with no/unparsable
+    // ReleaseDate is NOT skipped — better to keep checking an ambiguous
+    // date than to silently strand a genuinely-recent row forever.
+    const releaseDateRaw = sheet.getRange(row, 31).getValue();
+    // new Date(null).getTime() is 0 (the Unix epoch), not NaN — an
+    // explicit falsy check here avoids that ever being misread as "a
+    // genuinely ancient release date" if a blank cell were ever read back
+    // as null rather than the empty string getValue() actually returns.
+    const releaseTime = releaseDateRaw ? new Date(releaseDateRaw).getTime() : NaN;
+    if (!isNaN(releaseTime) && releaseTime < (Date.now() - 365 * 24 * 60 * 60 * 1000)) continue;
+
     // Use stored TMDB ID when available; otherwise fall back to title search.
     try {
       let tmdbId = String(sheet.getRange(row, 35).getValue()).trim();
@@ -4259,10 +4276,10 @@ function refreshStreamingStatus() {
       const sinceCell = sheet.getRange(row, 32);
       const prevSince = sinceCell.getValue();
 
-      // Needed here (moved up from below) because the widened Gemini
-      // fallback condition right below now depends on it too.
-      const relRaw = sheet.getRange(row, 31).getValue(); // ReleaseDate
-      const relTime = new Date(relRaw).getTime();
+      // relTime already read above (the 1-year skip) — reused here instead
+      // of re-fetching the same cell. Needed here because the widened
+      // Gemini fallback condition right below depends on it too.
+      const relTime = releaseTime;
       const isRecent = !isNaN(relTime) && relTime <= Date.now() && relTime >= (Date.now() - 5 * 30 * 24 * 60 * 60 * 1000); // 5 months, matches the website's "New on Streaming" window
 
       // Ask Gemini's lightweight live-search check as a second opinion
@@ -4316,8 +4333,8 @@ function refreshStreamingStatus() {
         sheet.getRange(row, 16).setValue("");
       }
 
-      // relRaw/relTime/isRecent computed earlier now (needed by the
-      // widened Gemini fallback above) — reused here unchanged.
+      // relTime/isRecent computed earlier now (needed by the widened
+      // Gemini fallback above) — reused here unchanged.
 
       // STAMP: if there's streaming right now, it's a recent release, and
       // the stamp itself is simply missing — set it. This does NOT require
