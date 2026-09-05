@@ -4192,6 +4192,7 @@ function refreshStreamingStatus() {
   const CUTOFF_MS = 5 * 60 * 1000; // stop before the 6-min Apps Script limit
   let row = startRow;
   let checked = 0, newlyAdded = 0;
+  const newlyAddedTitles = [];
 
   for (; row <= lastRow; row++) {
     if (Date.now() - startTime > CUTOFF_MS) break;
@@ -4346,6 +4347,7 @@ function refreshStreamingStatus() {
       if (streaming && !prevSince && isRecent) {
         sinceCell.setValue(new Date());
         newlyAdded++;
+        newlyAddedTitles.push(String(title) + " (" + streaming + ")");
       }
       // NOTE: deliberately no "clear the stamp if !streaming" branch here
       // anymore. It used to clear col 32 whenever THIS run alone failed to
@@ -4394,11 +4396,14 @@ function refreshStreamingStatus() {
     props.setProperty("STREAM_REFRESH_ROW", (row + 1 > lastRow ? "2" : String(row + 1)));
   }
 
+  const newlyAddedList = newlyAddedTitles.length
+    ? "\n" + newlyAddedTitles.map(t => "• " + t).join("\n")
+    : "";
   SpreadsheetApp.getUi().alert(
     "Streaming refresh done.\n\n" +
     "This run covered rows " + startRow + " to " + (row - 1) + ".\n" +
     "Checked: " + checked + "\n" +
-    "Newly on streaming: " + newlyAdded + "\n\n" +
+    "Newly on streaming: " + newlyAdded + newlyAddedList + "\n\n" +
     "Next run resumes at row " + (row > lastRow ? 2 : row) + " of " + lastRow + " total."
   );
 }
