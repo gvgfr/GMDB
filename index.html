@@ -853,7 +853,7 @@ footer span{color:var(--red);}
 <div class="modal-overlay" id="addSongModal" onclick="closeModalOverlay(event,'addSongModal')">
   <div class="add-modal">
     <h2 class="add-title">Review a Song</h2>
-    <p class="add-desc">Type a song name and we'll identify the film it's from and score it — melody, vocals, lyrics, and replay value.</p>
+    <p class="add-desc">Type a song name — a film song or a devotional/classical piece — and we'll identify it and score it: melody, vocals, lyrics, and replay value.</p>
     <div class="status-msg" id="addSongStatus"></div>
     <div style="position:relative;">
       <input class="add-input" type="text" id="songTitleInput" placeholder="Song name — e.g. Rowdy Baby" autocomplete="new-password" autocapitalize="words" autocorrect="off" spellcheck="false" name="song-add-field" oninput="searchSongSuggestions()" onkeydown="if(event.key==='Enter'){event.preventDefault();submitSong();}"/>
