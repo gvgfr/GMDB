@@ -2481,10 +2481,11 @@ function addSongEntry_(songTitle, movieHint, posterHint) {
     Logger.log("Song review failed for '" + songTitle + "': " + err);
     return;
   }
-  // Only write a row when Gemini could confidently identify a real film
-  // song with a real score — an inconclusive result silently produces
-  // nothing rather than a broken/empty entry, same philosophy as a
-  // below-threshold movie candidate getting dropped instead of kept.
+  // Only write a row when Gemini could confidently identify a real song
+  // (film or devotional/classical) with a real score — an inconclusive
+  // result silently produces nothing rather than a broken/empty entry, same
+  // philosophy as a below-threshold movie candidate getting dropped instead
+  // of kept.
   if (!review || !review.found || !(Number(review.score) > 0)) {
     Logger.log("Song review inconclusive for '" + songTitle + "': " + JSON.stringify(review));
     return;
@@ -2696,23 +2697,23 @@ function getGeminiSongReview_(songTitle, movieHint, existingWhyHit) {
   const consistencyClause = existingWhyHit
     ? `\n\nFor context, here is what was already established about this song: "${existingWhyHit}"\nIf that already names a specific raga, use EXACTLY that same name for raaga below — do not contradict it with a different one. If it doesn't mention one, only name a raga if you are independently confident.`
     : "";
-  const prompt = `Using Google Search, identify the real Indian film song titled "${songTitle}"${hintClause} and review it.${consistencyClause}
+  const prompt = `Using Google Search, identify the real Indian song titled "${songTitle}"${hintClause} and review it. This can be either a film song, OR a well-known Indian devotional/classical composition (a bhajan, kriti, shloka, or Carnatic/Hindustani classical piece) that isn't from any film.${consistencyClause}
 
 STRICT RULES:
-- Only proceed if you can confidently identify a REAL song from an Indian film (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Punjabi, etc.) — not a generic/non-Indian song, not a guess.
+- Only proceed if you can confidently identify a REAL song from an Indian film, OR a real, well-known Indian devotional/classical composition (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Punjabi, Sanskrit, etc.) — not a generic/non-Indian song, not a guess.
 - If you cannot confidently identify it, return exactly {"found": false} and nothing else.
-- Many Carnatic-influenced film songs share a title, or a near-identical title, with an older, unrelated traditional composition (a kriti, varnam, or devotional piece by a classical composer like Swathi Thirunal, Tyagaraja, etc.) that has nothing to do with this film. Every field below must describe THIS SPECIFIC FILM SONG — never a composer attribution, raga claim, or fact that actually belongs to that other, older piece just because the title is similar. If you can't clearly separate the two, leave the relevant field (especially raaga and trivia) blank rather than mixing them.
+- Many Carnatic-influenced film songs share a title, or a near-identical title, with an older, unrelated traditional composition (a kriti, varnam, or devotional piece by a classical composer like Swathi Thirunal, Tyagaraja, etc.) that has nothing to do with the film — and the reverse also happens, where a devotional/classical piece shares a title with an unrelated film song. Every field below must describe THIS SPECIFIC SONG (the one actually named above, film or devotional) — never a composer attribution, raga claim, or fact that actually belongs to that other, similarly-titled piece. If you can't clearly separate the two, leave the relevant field (especially raaga and trivia) blank rather than mixing them.
 
 If found, return ONLY valid JSON, no markdown, no backticks:
 {
   "found": true,
   "title": "official song title",
-  "movie": "the film it's from",
+  "movie": "the film it's from — leave this blank if it's a devotional/classical piece not tied to any film",
   "year": "YYYY",
-  "musicDirector": "composer/music director name",
-  "singers": "the actual playback singer(s) who performed it, comma-separated if more than one — not the music director and not the on-screen actor unless they genuinely sang it themselves. Leave blank if you genuinely can't find this, don't guess.",
-  "language": "Tamil/Telugu/Hindi/Malayalam/Kannada/Bengali/Marathi/Punjabi/etc.",
-  "score": "a single number 0.0-10.0 with one decimal place, computed as a weighted blend of melody (40%), vocals (25%), lyrics (20%), and replay value (15%) — judge each dimension using whatever's actually known about the song (chart/streaming performance, critic or audience commentary, its role in the film)",
+  "musicDirector": "composer/music director name (or the composer of a devotional/classical piece)",
+  "singers": "the actual playback singer(s) or performer(s) who performed it, comma-separated if more than one — not the music director and not the on-screen actor unless they genuinely sang it themselves. Leave blank if you genuinely can't find this, don't guess.",
+  "language": "Tamil/Telugu/Hindi/Malayalam/Kannada/Bengali/Marathi/Punjabi/Sanskrit/etc.",
+  "score": "a single number 0.0-10.0 with one decimal place, computed as a weighted blend of melody (40%), vocals/rendition (25%), lyrics (20%), and replay value (15%) — judge each dimension using whatever's actually known about the song (chart/streaming performance, critic or audience commentary, its role in the film, or its standing as a devotional/classical rendition)",
   "whyHit": "ONE sentence, MAXIMUM 20 WORDS, explaining this song's specific appeal — be specific to THIS song, not a generic 'catchy tune, great vibes' description",
   "raaga": "the specific Carnatic or Hindustani raga this song is genuinely composed in or based on, if one is actually documented/known (common for Tamil, Telugu, Kannada, and classical-influenced Hindi film music) — e.g. 'Shanmukhapriya', 'Kalyani', 'Yaman'. Leave completely blank if the song isn't known to be based on a specific named raga — do NOT guess or name one just because the song sounds classical.",
   "trivia": "1-2 short, factual, interesting facts about THIS song specifically — ONE short sentence each, under 15 words — separated by ' | ' (pipe). Pick the single most interesting angle: recording, chart performance, awards, notable covers/remixes, picturization, or cultural impact. Only include facts you're reasonably confident are true; leave blank rather than inventing any.",
@@ -2755,21 +2756,21 @@ If found, return ONLY valid JSON, no markdown, no backticks:
 // look right?" preview: "Add It Anyway" falls through to the full,
 // still-grounded getGeminiSongReview_, which can still resolve it.
 function identifyGeminiSong_(songTitle) {
-  const prompt = `Identify the real Indian film song titled "${songTitle}", using only what you already know.
+  const prompt = `Identify the real Indian song titled "${songTitle}", using only what you already know. This can be either a film song, OR a well-known Indian devotional/classical composition (a bhajan, kriti, shloka, or Carnatic/Hindustani classical piece) that isn't from any film.
 
 STRICT RULES:
-- Only answer if you're confident you know this specific song from memory — a real song from an Indian film (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Punjabi, etc.), not a generic/non-Indian song, not a guess, not a plausible-sounding fabrication.
+- Only answer if you're confident you know this specific song from memory — a real song from an Indian film, or a real, well-known devotional/classical composition (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Punjabi, Sanskrit, etc.), not a generic/non-Indian song, not a guess, not a plausible-sounding fabrication.
 - If the title is ambiguous, could match multiple different songs, sounds like it might be a recent release you're not certain about, or you're not genuinely confident — return exactly {"found": false} and nothing else. A missed real song is fine here; a wrong or hallucinated match is not — false positives are far worse than saying you don't know.
 
 If found, return ONLY valid JSON, no markdown, no backticks:
 {
   "found": true,
   "title": "official song title",
-  "movie": "the film it's from",
+  "movie": "the film it's from — leave this blank if it's a devotional/classical piece not tied to any film",
   "year": "YYYY",
   "musicDirector": "composer/music director name",
-  "singers": "the actual playback singer(s) who performed it, comma-separated if more than one. Leave blank if you genuinely can't recall this, don't guess.",
-  "language": "Tamil/Telugu/Hindi/Malayalam/Kannada/Bengali/Marathi/Punjabi/etc."
+  "singers": "the actual playback singer(s) or performer(s) who performed it, comma-separated if more than one. Leave blank if you genuinely can't recall this, don't guess.",
+  "language": "Tamil/Telugu/Hindi/Malayalam/Kannada/Bengali/Marathi/Punjabi/Sanskrit/etc."
 }`;
 
   const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
@@ -2825,17 +2826,17 @@ function getGeminiSongExtras_(songTitle, movieHint, existingWhyHit) {
   const consistencyClause = existingWhyHit
     ? `\n\nFor context, here is what was already established about this song: "${existingWhyHit}"\nIf that already names a specific raga, use EXACTLY that same name for raaga below — do not contradict it with a different one. If it doesn't mention one, only name a raga if you are independently confident.`
     : "";
-  const prompt = `Using only what you already know (no search), give background details on the real Indian film song "${songTitle}"${hintClause}.${consistencyClause}
+  const prompt = `Using only what you already know (no search), give background details on the real Indian song "${songTitle}"${hintClause}. This may be either a film song, or a devotional/classical composition not from any film.${consistencyClause}
 
 STRICT RULES:
 - Only answer if you're confident you know this specific song from memory. If you're not confident, or the title is ambiguous, return exactly {"found": false} and nothing else.
-- Many Carnatic-influenced film songs share a title, or a near-identical title, with an older, unrelated traditional composition (a kriti, varnam, or devotional piece by a classical composer like Swathi Thirunal, Tyagaraja, etc.) that is NOT connected to this film at all. Every field below must describe THIS SPECIFIC FILM SONG — its actual recording, singers, and use in this film — never facts, composer attributions, or raga claims that actually belong to that other, older piece just because the title is similar. If you cannot clearly separate the two, leave the relevant field blank rather than mixing them.
+- Many Carnatic-influenced film songs share a title, or a near-identical title, with an older, unrelated traditional composition (a kriti, varnam, or devotional piece by a classical composer like Swathi Thirunal, Tyagaraja, etc.) that is NOT connected to this film at all — and the reverse also happens, where a devotional/classical piece shares a title with an unrelated film song. Every field below must describe THIS SPECIFIC SONG named above (its actual recording/rendition, performers, and context) — never facts, composer attributions, or raga claims that actually belong to that other, similarly-titled piece. If you cannot clearly separate the two, leave the relevant field blank rather than mixing them.
 
 If found, return ONLY valid JSON, no markdown, no backticks:
 {
   "found": true,
-  "raaga": "the specific Carnatic or Hindustani raga this FILM song is genuinely composed in or based on, if one is actually documented/known — e.g. 'Shanmukhapriya', 'Kalyani', 'Yaman'. Leave completely blank if the song isn't known to be based on a specific named raga, or if you're not certain this is the film song's raga rather than an unrelated classical piece's — do NOT guess.",
-  "trivia": "1-2 short, factual, interesting facts about THIS FILM SONG specifically (its recording, chart performance, awards, notable covers/remixes, picturization, or cultural impact) — ONE short sentence each, under 15 words — separated by ' | ' (pipe). Never state a composer or origin that belongs to a different, older classical composition sharing a similar title. Only include facts you're reasonably confident are true of THIS song; leave blank rather than inventing or borrowing any.",
+  "raaga": "the specific Carnatic or Hindustani raga this song is genuinely composed in or based on, if one is actually documented/known — e.g. 'Shanmukhapriya', 'Kalyani', 'Yaman'. Leave completely blank if the song isn't known to be based on a specific named raga, or if you're not certain this is THIS song's raga rather than a different, similarly-titled piece's — do NOT guess.",
+  "trivia": "1-2 short, factual, interesting facts about THIS SPECIFIC SONG (its recording/rendition, chart performance, awards, notable covers/remixes, picturization, or cultural/devotional significance) — ONE short sentence each, under 15 words — separated by ' | ' (pipe). Never state a composer or origin that belongs to a different, similarly-titled piece. Only include facts you're reasonably confident are true of THIS song; leave blank rather than inventing or borrowing any.",
   "arrangement": "2 sentences, MAXIMUM 40 WORDS TOTAL, describing THIS song's actual musical arrangement and sound — the specific instruments audibly featured (e.g. mridangam, santoor, electric guitar, synth strings, tabla), the genre/production style, and rhythm or tempo character. Be specific to what's actually in THIS song, not a generic 'lush orchestration' description. Leave blank if you're not confident about the actual instrumentation rather than guessing."
 }`;
 
