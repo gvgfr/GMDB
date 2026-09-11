@@ -196,9 +196,27 @@ function fillMovieData(e) {
     "&query=" +
     encodeURIComponent(cleanTitle);
 
-  const searchResponse = movie ? { results: [] } : JSON.parse(
-    UrlFetchApp.fetch(searchUrl).getContentText()
-  );
+  // BUG FIX: when a specific year was given (e.g. typing "Sardar 2022"),
+  // this used to run the plain query above and filter the year client-side
+  // further down. TMDB's plain text search sorts by relevance/popularity
+  // and returns only one page of ~20 results — for a short, generic title
+  // shared with an older, more popular film (the 1993 "Sardar" vs the 2022
+  // one), the intended film can be crowded out of that single page
+  // entirely, so the year filter below never even sees it and silently
+  // falls through to ranking the WRONG film by overall popularity instead.
+  // Asking TMDB to filter by primary_release_year server-side first avoids
+  // that. Only fall back to the plain query if the year-scoped search
+  // comes up empty, so a slightly-off year on TMDB's own data doesn't
+  // create a dead end where nothing gets added at all.
+  let searchResponse = { results: [] };
+  if (!movie && forcedYear) {
+    searchResponse = JSON.parse(
+      UrlFetchApp.fetch(searchUrl + "&primary_release_year=" + encodeURIComponent(forcedYear)).getContentText()
+    );
+  }
+  if (!movie && !searchResponse.results.length) {
+    searchResponse = JSON.parse(UrlFetchApp.fetch(searchUrl).getContentText());
+  }
 
   if (!movie && !searchResponse.results.length) return;
 
