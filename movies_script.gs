@@ -4185,38 +4185,49 @@ function refreshStreamingStatus() {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
 
-  const props = PropertiesService.getScriptProperties();
-  let startRow = parseInt(props.getProperty("STREAM_REFRESH_ROW") || "2", 10);
-  if (startRow > lastRow) startRow = 2; // wrap around
-
   const startTime = Date.now();
   const CUTOFF_MS = 5 * 60 * 1000; // stop before the 6-min Apps Script limit
-  let row = startRow;
-  let checked = 0, newlyAdded = 0;
+  let checked = 0, newlyAdded = 0, lastRowSeen = 1;
   const newlyAddedTitles = [];
 
-  for (; row <= lastRow; row++) {
+  // Always re-scan from row 2 on every run instead of resuming from a
+  // persisted row pointer. Skipping an old (>1 year) row below is a single
+  // cheap cell comparison, so walking past the — usually much larger —
+  // older part of the catalog costs virtually nothing. The old round-robin
+  // pointer existed to spread that walk across runs back when EVERY row
+  // got a real API call; with the 1-year skip already doing that job for
+  // free, persisting a pointer only risked leaving a newly-added row
+  // unchecked for an entire lap if the pointer happened to already be past
+  // it — exactly what made a movie that just started streaming look like
+  // this refresh had missed it, when a manual re-score (which always
+  // checks the row it's run on) found it immediately. Starting fresh each
+  // run means a movie added minutes ago gets checked on the very next click.
+  const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
+  const releaseDates = sheet.getRange(2, 31, lastRow - 1, 1).getValues();
+
+  for (let i = 0; i < releaseDates.length; i++) {
     if (Date.now() - startTime > CUTOFF_MS) break;
+    const row = i + 2;
+    lastRowSeen = row;
 
     const title = sheet.getRange(row, 1).getValue();
     if (!title) continue;
 
     // Skip movies released more than a year ago entirely — no TMDB call,
-    // no Gemini call, nothing. This sweep is a round-robin that resumes
-    // from wherever it left off each run; without this, an ever-growing
-    // catalog means most of each run's limited time budget (and Gemini
-    // quota) goes to re-checking years-old titles whose streaming status
-    // essentially never changes, at the expense of actually getting back
-    // around to the recent releases that matter. A movie with no/unparsable
-    // ReleaseDate is NOT skipped — better to keep checking an ambiguous
-    // date than to silently strand a genuinely-recent row forever.
-    const releaseDateRaw = sheet.getRange(row, 31).getValue();
+    // no Gemini call, nothing. Without this, an ever-growing catalog means
+    // most of each run's limited time budget (and Gemini quota) would go
+    // to re-checking years-old titles whose streaming status essentially
+    // never changes, at the expense of the recent releases that matter. A
+    // movie with no/unparsable ReleaseDate is NOT skipped — better to keep
+    // checking an ambiguous date than to silently strand a genuinely-recent
+    // row forever.
+    const releaseDateRaw = releaseDates[i][0];
     // new Date(null).getTime() is 0 (the Unix epoch), not NaN — an
     // explicit falsy check here avoids that ever being misread as "a
     // genuinely ancient release date" if a blank cell were ever read back
     // as null rather than the empty string getValue() actually returns.
     const releaseTime = releaseDateRaw ? new Date(releaseDateRaw).getTime() : NaN;
-    if (!isNaN(releaseTime) && releaseTime < (Date.now() - 365 * 24 * 60 * 60 * 1000)) continue;
+    if (!isNaN(releaseTime) && releaseTime < oneYearAgo) continue;
 
     // Use stored TMDB ID when available; otherwise fall back to title search.
     try {
@@ -4387,25 +4398,21 @@ function refreshStreamingStatus() {
     } catch (err) {
       Logger.log("Refresh failed for '" + title + "' row " + row + ": " + err);
     }
-
-    // Save progress after EVERY row, not just once when the loop exits
-    // cleanly. Google's hard 6-min kill (see CUTOFF_MS above) can strike
-    // between our own timing checks with no warning — without this, a run
-    // that gets force-killed loses its resume position entirely and the
-    // next click restarts from the same old spot, silently re-doing (or
-    // worse, never actually covering) rows it already processed.
-    props.setProperty("STREAM_REFRESH_ROW", (row + 1 > lastRow ? "2" : String(row + 1)));
   }
 
+  // Whether this run made it all the way to the last row before the time
+  // budget ran out — every recent movie got (re)checked either way, unless
+  // this is false, in which case running it again will pick up wherever
+  // this one stopped.
+  const finishedFullSweep = lastRowSeen >= lastRow;
   const newlyAddedList = newlyAddedTitles.length
     ? "\n" + newlyAddedTitles.map(t => "• " + t).join("\n")
     : "";
   SpreadsheetApp.getUi().alert(
     "Streaming refresh done.\n\n" +
-    "This run covered rows " + startRow + " to " + (row - 1) + ".\n" +
-    "Checked: " + checked + "\n" +
-    "Newly on streaming: " + newlyAdded + newlyAddedList + "\n\n" +
-    "Next run resumes at row " + (row > lastRow ? 2 : row) + " of " + lastRow + " total."
+    "Checked: " + checked + " movie(s) released within the last year.\n" +
+    "Newly on streaming: " + newlyAdded + newlyAddedList +
+    (finishedFullSweep ? "" : "\n\nRan out of time before reaching the end of the sheet — run it again to cover the rest.")
   );
 }
 
