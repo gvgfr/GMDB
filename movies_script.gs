@@ -3915,6 +3915,13 @@ Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly
     generationConfig: { temperature: 0.1 }
   };
 
+  // Return contract: a platform name string means confirmed streaming; ""
+  // means Gemini actually answered and confirmed it is NOT streaming
+  // (a real "N/A"); null means the check itself failed (HTTP error, rate
+  // limit, empty/filtered response, network exception) — that's NOT the
+  // same thing as "confirmed not streaming," and callers that care about
+  // the difference (refreshStreamingStatus) use it to avoid silently
+  // treating "couldn't check" as "checked, nothing found."
   try {
     const response = UrlFetchApp.fetch(url, {
       method: "post",
@@ -3924,11 +3931,14 @@ Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly
     });
     const code = response.getResponseCode();
     const bodyText = response.getContentText();
-    if (code !== 200) return ""; // any error — treat as "couldn't confirm," don't block
+    if (code !== 200) {
+      Logger.log("checkStreamingViaGemini_ HTTP " + code + " for '" + title + "': " + bodyText.slice(0, 200));
+      return null;
+    }
     const data = JSON.parse(bodyText);
-    if (!data.candidates || !data.candidates[0]) return "";
+    if (!data.candidates || !data.candidates[0]) return null;
     const cand = data.candidates[0];
-    if (!cand.content || !cand.content.parts || !cand.content.parts[0]) return ""; // empty/filtered response — treat as "couldn't confirm"
+    if (!cand.content || !cand.content.parts || !cand.content.parts[0]) return null; // empty/filtered response
     const text = (data.candidates[0].content.parts[0].text || "").trim();
     if (!text || /^n\/a$/i.test(text)) return "";
     const cleaned = stripCitationMarkers_(text).replace(/["'.]/g, "").trim();
@@ -3942,7 +3952,7 @@ Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly
     return cleaned;
   } catch (err) {
     Logger.log("checkStreamingViaGemini_ failed for " + title + ": " + err);
-    return "";
+    return null;
   }
 }
 
@@ -4189,6 +4199,11 @@ function refreshStreamingStatus() {
   const CUTOFF_MS = 5 * 60 * 1000; // stop before the 6-min Apps Script limit
   let checked = 0, newlyAdded = 0, lastRowSeen = 1;
   const newlyAddedTitles = [];
+  // Rows where a check genuinely failed (network/HTTP error, or Gemini's
+  // fallback errored even after a retry) rather than confirming "not
+  // streaming" — these get called out by name in the summary instead of
+  // silently looking identical to a clean "nothing found" result.
+  const uncertainTitles = [];
 
   // Always re-scan from row 2 on every run instead of resuming from a
   // persisted row pointer. Skipping an old (>1 year) row below is a single
@@ -4310,9 +4325,24 @@ function refreshStreamingStatus() {
       if (!streaming && (prevStreaming || isRecent)) {
         const yr = sheet.getRange(row, 2).getValue();
         const lg = sheet.getRange(row, 30).getValue();
-        const confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
+        let confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
         Utilities.sleep(1000); // pace Gemini calls between rows in this loop
-        if (confirmed) {
+        // null means the check itself failed (rate limit, empty response,
+        // network hiccup) — NOT "confirmed not streaming". A bulk run fires
+        // dozens of these back-to-back and is far more likely to hit a
+        // transient failure than a single one-off re-score ever is, which
+        // is exactly what made this refresh silently disagree with a manual
+        // re-score run moments later on the same movie. One retry clears
+        // most of these; if it still fails, flag the row instead of quietly
+        // writing "not streaming".
+        if (confirmed === null) {
+          Utilities.sleep(2000);
+          confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
+          Utilities.sleep(1000);
+        }
+        if (confirmed === null) {
+          uncertainTitles.push(String(title));
+        } else if (confirmed) {
           streaming = confirmed; // treat as if TMDB had found it — same downstream logic applies
         }
       }
@@ -4397,6 +4427,11 @@ function refreshStreamingStatus() {
       checked++;
     } catch (err) {
       Logger.log("Refresh failed for '" + title + "' row " + row + ": " + err);
+      // A hard failure (network error, TMDB throwing on a rate limit, etc.)
+      // used to just vanish into the execution log — the row was silently
+      // skipped and nothing in the Sheet UI showed it. Surface it in the
+      // summary instead, same as a failed Gemini fallback above.
+      uncertainTitles.push(String(title));
     }
   }
 
@@ -4408,11 +4443,19 @@ function refreshStreamingStatus() {
   const newlyAddedList = newlyAddedTitles.length
     ? "\n" + newlyAddedTitles.map(t => "• " + t).join("\n")
     : "";
+  // Cap the list shown — a bad run of API errors could in principle flag
+  // dozens of rows, and the alert dialog shouldn't turn into a wall of text.
+  const uncertainList = uncertainTitles.length
+    ? "\n\nCouldn't fully confirm (network/API hiccup — re-run to retry): \n" +
+      uncertainTitles.slice(0, 15).map(t => "• " + t).join("\n") +
+      (uncertainTitles.length > 15 ? "\n…and " + (uncertainTitles.length - 15) + " more" : "")
+    : "";
   SpreadsheetApp.getUi().alert(
     "Streaming refresh done.\n\n" +
     "Checked: " + checked + " movie(s) released within the last year.\n" +
     "Newly on streaming: " + newlyAdded + newlyAddedList +
-    (finishedFullSweep ? "" : "\n\nRan out of time before reaching the end of the sheet — run it again to cover the rest.")
+    (finishedFullSweep ? "" : "\n\nRan out of time before reaching the end of the sheet — run it again to cover the rest.") +
+    uncertainList
   );
 }
 
