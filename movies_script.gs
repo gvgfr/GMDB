@@ -1617,6 +1617,8 @@ function onOpen() {
     .addItem("Add upcoming releases (next 7 days, no review yet)", "autoAddUpcomingReleases")
     .addItem("Find NEW movies now streaming (5mo, adds to catalog)", "autoAddNewlyStreaming")
     .addItem("Update streaming info (movies I already have)", "refreshStreamingStatus")
+    .addItem("Start automatic daily streaming refresh", "startAutoRefreshStreamingStatus")
+    .addItem("Stop automatic daily streaming refresh", "stopAutoRefreshStreamingStatus")
     .addSeparator()
     .addItem("Fix stuck auto-fill (clear flag)", "clearBulkRunningFlag")
     .addSeparator()
@@ -4206,7 +4208,8 @@ function tidyAllRows() {
 // REFRESH STREAMING STATUS — change detection for "New on Streaming"
 // Re-checks existing movies' US streaming availability. When a film that had
 // NO streaming gains a provider, stamps col 32 (StreamingSince) with today.
-// Designed to run on a weekly trigger. Batched to respect the 6-min limit.
+// Runs daily via the installable trigger set up by
+// startAutoRefreshStreamingStatus() below. Batched to respect the 6-min limit.
 // =============================================
 function refreshStreamingStatus() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
@@ -4468,13 +4471,39 @@ function refreshStreamingStatus() {
       uncertainTitles.slice(0, 15).map(t => "• " + t).join("\n") +
       (uncertainTitles.length > 15 ? "\n…and " + (uncertainTitles.length - 15) + " more" : "")
     : "";
-  SpreadsheetApp.getUi().alert(
-    "Streaming refresh done.\n\n" +
+  const summary = "Streaming refresh done.\n\n" +
     "Checked: " + checked + " movie(s) released within the last year.\n" +
     "Newly on streaming: " + newlyAdded + newlyAddedList +
     (finishedFullSweep ? "" : "\n\nRan out of time before reaching the end of the sheet — run it again to cover the rest.") +
-    uncertainList
-  );
+    uncertainList;
+  // SpreadsheetApp.getUi() throws when there's no user session to attach a
+  // dialog to — which is exactly the case for the daily trigger below. Fall
+  // back to a Logger entry (visible in Apps Script's execution log) instead
+  // of letting that throw mark every automatic run as a failed execution,
+  // even though every write above this point already completed fine.
+  try {
+    SpreadsheetApp.getUi().alert(summary);
+  } catch (e) {
+    Logger.log(summary);
+  }
+}
+
+// One-time setup: installs a daily trigger so this runs automatically
+// instead of depending on someone remembering to click the menu item.
+// Safe to run again later — clears any existing trigger for this function
+// first so it's never duplicated.
+function startAutoRefreshStreamingStatus() {
+  stopAutoRefreshStreamingStatus();
+  ScriptApp.newTrigger("refreshStreamingStatus").timeBased().everyDays(1).atHour(3).create();
+  SpreadsheetApp.getActive().toast("Streaming info will now refresh automatically once a day (~3am). Existing movies get re-checked for new US/UK streaming availability without anyone needing to click the menu.", "GMDB", 10);
+}
+
+// Removes the daily trigger — streaming info then only refreshes when the
+// menu item is clicked by hand again.
+function stopAutoRefreshStreamingStatus() {
+  const triggers = ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "refreshStreamingStatus");
+  triggers.forEach(t => ScriptApp.deleteTrigger(t));
+  return triggers.length;
 }
 
 // =============================================
