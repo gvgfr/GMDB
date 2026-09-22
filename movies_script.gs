@@ -1920,14 +1920,64 @@ function doPost(e) {
   }
 
   // If not found, add it to a new row
-  if (rowIndex === -1) {
+  const isNewMovie = rowIndex === -1;
+  if (isNewMovie) {
     rowIndex = sheet.getLastRow() + 1;
     sheet.getRange(rowIndex, 1).setValue(title);
   }
 
   fillMovieData({ range: sheet.getRange(rowIndex, 1) });
 
+  // Only a brand-new row needs a share page it doesn't already have — a
+  // re-fill of an existing title (rowIndex already found above) already has
+  // one from a previous run, so don't spend a workflow run on it here.
+  if (isNewMovie) triggerShareGeneration_();
+
   return ContentService.createTextOutput("OK");
+}
+
+// Fires the "Generate movie share pages" GitHub Action (workflow_dispatch)
+// right after a new movie is added, instead of leaving the new title
+// without a shareable poster/thumbnail until the next scheduled run (every
+// 6 hours — see .github/workflows/generate-movie-pages.yml). The workflow
+// itself still takes roughly a minute to check out, run, and push, but that
+// beats waiting up to 6 hours to be able to share the new movie.
+//
+// Requires a GitHub Personal Access Token with permission to trigger
+// workflow runs on this repo (a fine-grained token scoped to gvgfr/GMDB
+// with "Actions: read and write" is enough), stored as a Script Property
+// named GITHUB_PAT (Apps Script editor → Project Settings → Script
+// Properties). Never hardcode the token in this file — Script Properties
+// keep it out of anything that gets copied/shared/committed. If the
+// property isn't set, this just logs and does nothing — adding a movie
+// still works exactly as before, it just falls back to waiting for the
+// next scheduled run.
+function triggerShareGeneration_() {
+  const token = PropertiesService.getScriptProperties().getProperty("GITHUB_PAT");
+  if (!token) {
+    Logger.log("triggerShareGeneration_: no GITHUB_PAT script property set — skipping on-demand share-page generation, will pick up at the next scheduled run instead.");
+    return;
+  }
+  try {
+    const url = "https://api.github.com/repos/gvgfr/GMDB/actions/workflows/generate-movie-pages.yml/dispatches";
+    const res = UrlFetchApp.fetch(url, {
+      method: "post",
+      contentType: "application/json",
+      headers: {
+        Authorization: "Bearer " + token,
+        Accept: "application/vnd.github+json"
+      },
+      payload: JSON.stringify({ ref: "main" }),
+      muteHttpExceptions: true
+    });
+    const code = res.getResponseCode();
+    // GitHub returns 204 No Content on a successful dispatch.
+    if (code !== 204) {
+      Logger.log("triggerShareGeneration_ failed: HTTP " + code + " " + res.getContentText());
+    }
+  } catch (err) {
+    Logger.log("triggerShareGeneration_ error: " + err);
+  }
 }
 
 // =============================================
