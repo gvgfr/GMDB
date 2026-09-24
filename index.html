@@ -598,12 +598,12 @@ footer span{color:var(--red);}
 
 <div class="streaming-carousel-section">
   <p class="streaming-carousel-label"><span class="streaming-carousel-tv-icon">📺</span> New on Streaming</p>
-  <div class="streaming-carousel" id="streamingCarousel"></div>
+  <div class="streaming-carousel" id="streamingCarousel"><div class="carousel-empty">Loading…</div></div>
 </div>
 
 <div class="streaming-carousel-section">
   <p class="streaming-carousel-label"><span class="streaming-carousel-tv-icon">🎬</span> Now in Theaters</p>
-  <div class="streaming-carousel" id="nowInTheatersCarousel"></div>
+  <div class="streaming-carousel" id="nowInTheatersCarousel"><div class="carousel-empty">Loading…</div></div>
 </div>
 
 <div class="hero">
@@ -1132,11 +1132,12 @@ function buildHitSongs(m) {
 // =============================================
 // BUG FIX: a shared song link (?song=X) used to sit on the plain homepage
 // for however long the live fetch took (several seconds, worse on a cold
-// Apps Script start) before popping open — movies never had this problem
-// because loadMovies() renders last session's cached data instantly and
-// refreshes in the background (see MOVIES_CACHE_KEY below). Songs never
-// had an equivalent cache, so every single visit paid the full network
-// wait. Same pattern here closes that gap for returning visitors.
+// Apps Script start) before popping open. Same cached-instant-paint pattern
+// as movies used to use (loadMovies() has since dropped it — showing a
+// stale movie list, even briefly, read as wrong data rather than fast
+// loading) closes that gap here for returning visitors. Kept for songs
+// since there's no "New on Streaming"-style section where a stale answer
+// would look actively incorrect the way it did for movies.
 const SONGS_CACHE_KEY = "gmdb_songs_cache_v1";
 async function loadSongs() {
   try {
@@ -1860,7 +1861,6 @@ function buildScoreBreakdown(m) {
 }
 
 let cameFromSharedLink = false;
-const MOVIES_CACHE_KEY = "gmdb_movies_cache_v1";
 // Tracks the last data actually rendered, so a background/periodic
 // loadMovies() call that finds NOTHING has changed can skip re-rendering
 // entirely — applyMoviesData() restarts the stats-bar count-up animation,
@@ -1947,22 +1947,16 @@ function applyMoviesData(data) {
 }
 
 async function loadMovies() {
-  let renderedFromCache = false;
-  // Render last session's data immediately so the carousel/grid don't sit
-  // blank for the few seconds the Apps Script backend takes to respond,
-  // then let the network fetch below refresh it in place.
-  try {
-    const cached = JSON.parse(localStorage.getItem(MOVIES_CACHE_KEY));
-    if (Array.isArray(cached) && cached.length) {
-      const cachedRaw = JSON.stringify(cached);
-      if (cachedRaw !== lastRenderedMoviesRaw) {
-        applyMoviesData(cached);
-        lastRenderedMoviesRaw = cachedRaw;
-      }
-      renderedFromCache = true;
-    }
-  } catch(err) { /* corrupt/missing cache — fall through to network */ }
-
+  // Always wait for the real network response — no local cache of a
+  // previous visit's data is shown first. That cache used to make the page
+  // feel instant, but it meant every fresh load (and every 3-minute
+  // background refresh) briefly showed whatever movies happened to be
+  // current the LAST time this browser fetched, before silently swapping
+  // to the real current list a moment later — confusing rather than fast,
+  // since "New on Streaming"/"Now in Theaters" are exactly the sections
+  // where showing yesterday's answer for even a few seconds looks wrong.
+  // The static "Loading…"/spinner placeholders already in the HTML cover
+  // the wait instead.
   try {
     const res = await fetch(API_URL + "?action=movies");
     const data = await res.json();
@@ -1971,9 +1965,8 @@ async function loadMovies() {
       applyMoviesData(data);
       lastRenderedMoviesRaw = dataRaw;
     }
-    try { localStorage.setItem(MOVIES_CACHE_KEY, JSON.stringify(data)); } catch(err) { /* storage unavailable/full — non-fatal */ }
   } catch(err) {
-    if (!renderedFromCache) {
+    if (!lastRenderedMoviesRaw) {
       document.getElementById("moviesGrid").innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">⚠️</div><div class="empty-title">Couldn't load movies</div><p>Check your connection and try refreshing.</p></div>`;
     }
   }
