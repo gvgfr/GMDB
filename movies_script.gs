@@ -14,6 +14,21 @@ const SPOTIFY_CLIENT_SECRET =
 const SIMILAR_CACHE_COL = 36;
 const SIMILAR_CACHE_DATE_COL = 37;
 
+// Gemini's streaming-platform prompts (streamingLive/streamingLiveUK in
+// fillMovieData, and checkStreamingViaGemini_'s own dedicated check) are all
+// told to return "N/A" when a film isn't actually confirmed streaming — but
+// an LLM answering a live-search question doesn't always follow that
+// instruction literally. When it finds real news that a film is still
+// theatrical-only, it can report that status itself (e.g. "In Theaters",
+// "Theatrical Release", "Still in Cinemas") instead of the requested "N/A".
+// Every caller that accepts a Gemini "platform name" answer must reject
+// these the same way it already rejects a confirmed India-only platform —
+// otherwise a non-answer like "In Theaters" gets written into the Streaming
+// column as if it were a real provider, which then reads as truthy to every
+// later "is this movie streaming" check (including the StreamingSince
+// stamp), permanently misreporting a still-theatrical film as streaming.
+const NON_PLATFORM_STREAMING_ANSWER = /\b(in |still )?(theaters?|theatres?|theatrical(ly)?|cinemas?)\b|not( yet)? (confirmed|available)|unconfirmed|coming soon|pending( release)?|\btbd\b|\bunknown\b/i;
+
 // Find a movie's row by title (case-insensitive), narrowing by year if given.
 // Returns the row number, or null if not found. Used to cache/read
 // "Discover More" results per movie instead of re-asking Gemini every view.
@@ -569,6 +584,10 @@ function fillMovieData(e) {
     Logger.log("Rejected Gemini streaming claim '" + geminiStreamingRaw + "' for '" + officialTitle + "' — confirmed India-only platform, not trusted as US availability.");
     geminiStreamingRaw = "";
   }
+  if (geminiStreamingRaw && NON_PLATFORM_STREAMING_ANSWER.test(geminiStreamingRaw)) {
+    Logger.log("Rejected Gemini streaming claim '" + geminiStreamingRaw + "' for '" + officialTitle + "' — reports a status (e.g. still theatrical), not an actual platform.");
+    geminiStreamingRaw = "";
+  }
   const geminiStreaming = geminiStreamingRaw;
   const effectiveStreaming = streaming || geminiStreaming;
 
@@ -580,8 +599,12 @@ function fillMovieData(e) {
   // --- UK streaming (col 41): same protect-existing-data pattern as the US
   // column above, with the same TMDB-empty -> Gemini live-search fallback
   // (TMDB/JustWatch provider data can lag real UK announcements too).
-  const geminiStreamingUK = (aiReview.streamingLiveUK && aiReview.streamingLiveUK !== "N/A")
+  let geminiStreamingUK = (aiReview.streamingLiveUK && aiReview.streamingLiveUK !== "N/A")
     ? stripCitationMarkers_(aiReview.streamingLiveUK) : "";
+  if (geminiStreamingUK && NON_PLATFORM_STREAMING_ANSWER.test(geminiStreamingUK)) {
+    Logger.log("Rejected Gemini UK streaming claim '" + geminiStreamingUK + "' for '" + officialTitle + "' — reports a status (e.g. still theatrical), not an actual platform.");
+    geminiStreamingUK = "";
+  }
   const effectiveStreamingUK = streamingUK || geminiStreamingUK;
 
   const existingStreamingUK = sheet.getRange(lastRow, 41).getValue();
@@ -1619,6 +1642,7 @@ function onOpen() {
     .addItem("Update streaming info (movies I already have)", "refreshStreamingStatus")
     .addItem("Start automatic daily streaming refresh", "startAutoRefreshStreamingStatus")
     .addItem("Stop automatic daily streaming refresh", "stopAutoRefreshStreamingStatus")
+    .addItem("Clean up bogus streaming labels (e.g. \"In Theaters\")", "cleanupBogusStreamingLabels")
     .addSeparator()
     .addItem("Fix stuck auto-fill (clear flag)", "clearBulkRunningFlag")
     .addSeparator()
@@ -4019,6 +4043,16 @@ Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly
       Logger.log("checkStreamingViaGemini_ rejected '" + cleaned + "' for '" + title + "' — confirmed India-only platform.");
       return "";
     }
+    // Same non-platform-status guard as fillMovieData's streamingLive field —
+    // this prompt tells Gemini to return "N/A" for a theatrical-only film,
+    // but it doesn't always follow that literally; it can report the status
+    // it actually found (e.g. "In Theaters") instead. That text would
+    // otherwise get written straight into the Streaming column as if it
+    // were a confirmed platform.
+    if (NON_PLATFORM_STREAMING_ANSWER.test(cleaned)) {
+      Logger.log("checkStreamingViaGemini_ rejected '" + cleaned + "' for '" + title + "' — reports a status (e.g. still theatrical), not an actual platform.");
+      return "";
+    }
     return cleaned;
   } catch (err) {
     Logger.log("checkStreamingViaGemini_ failed for " + title + ": " + err);
@@ -4554,6 +4588,78 @@ function stopAutoRefreshStreamingStatus() {
   const triggers = ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "refreshStreamingStatus");
   triggers.forEach(t => ScriptApp.deleteTrigger(t));
   return triggers.length;
+}
+
+// =============================================
+// ONE-OFF CLEANUP: clear bogus "streaming" labels written before the
+// NON_PLATFORM_STREAMING_ANSWER guard existed. Gemini's streamingLive /
+// streamingLiveUK / checkStreamingViaGemini_ answers weren't always a real
+// platform name — for a still-theatrical film it could report that status
+// itself (e.g. "In Theaters") instead of the requested "N/A", which then
+// got written into the Streaming/OTTInfo/StreamingUK columns as if it were
+// a confirmed provider. That bogus non-empty text then read as truthy to
+// every later "is this movie streaming" check, including wrongly stamping
+// StreamingSince. Safe to run repeatedly — only touches cells that still
+// match the bad-answer pattern; a real platform name is never affected.
+// =============================================
+function cleanupBogusStreamingLabels() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+
+  const titles = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  const streamingCol = sheet.getRange(2, 15, lastRow - 1, 1).getValues();
+  const ottInfoCol = sheet.getRange(2, 16, lastRow - 1, 1).getValues();
+  const streamingUKCol = sheet.getRange(2, 41, lastRow - 1, 1).getValues();
+
+  let fixed = 0;
+  const fixedTitles = [];
+
+  for (let i = 0; i < titles.length; i++) {
+    const row = i + 2;
+    const title = titles[i][0];
+    if (!title) continue;
+
+    let rowFixed = false;
+
+    const streamingVal = String(streamingCol[i][0] || "");
+    if (streamingVal && NON_PLATFORM_STREAMING_ANSWER.test(streamingVal)) {
+      sheet.getRange(row, 15).setValue("");
+      // The StreamingSince stamp was only ever set because this bogus,
+      // non-empty text read as "currently streaming" — clear it too so the
+      // next refresh can re-derive it correctly instead of keeping a date
+      // that was never a real streaming debut.
+      sheet.getRange(row, 32).setValue("");
+      rowFixed = true;
+    }
+
+    const ottInfoVal = String(ottInfoCol[i][0] || "");
+    if (ottInfoVal && NON_PLATFORM_STREAMING_ANSWER.test(ottInfoVal)) {
+      sheet.getRange(row, 16).setValue("");
+      rowFixed = true;
+    }
+
+    const streamingUKVal = String(streamingUKCol[i][0] || "");
+    if (streamingUKVal && NON_PLATFORM_STREAMING_ANSWER.test(streamingUKVal)) {
+      sheet.getRange(row, 41).setValue("");
+      rowFixed = true;
+    }
+
+    if (rowFixed) {
+      fixed++;
+      fixedTitles.push(String(title));
+    }
+  }
+
+  const list = fixedTitles.length
+    ? "\n\n" + fixedTitles.slice(0, 25).map(t => "• " + t).join("\n") +
+      (fixedTitles.length > 25 ? "\n…and " + (fixedTitles.length - 25) + " more" : "")
+    : "";
+  SpreadsheetApp.getUi().alert(
+    "Cleared bogus streaming labels on " + fixed + " row(s)." +
+    (fixed ? " Run \"Update streaming info\" afterward to re-derive the real status for these." : "") +
+    list
+  );
 }
 
 // =============================================
