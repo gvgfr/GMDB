@@ -3583,8 +3583,11 @@ Promise.all([loadMovies(), loadSongs()]).then(handleSharedSongLink);
 // visible (no point polling one that's in the background), plus once
 // immediately whenever the tab regains focus after being away — that
 // covers "left it open, came back later" without needing to poll the
-// whole time nobody was looking at it.
-const BACKGROUND_REFRESH_MS = 3 * 60 * 1000; // 3 minutes
+// whole time nobody was looking at it. applyMoviesData() already skips
+// re-rendering when the fetched data is byte-identical to what's already
+// on screen (see lastRenderedMoviesRaw), so polling this often doesn't
+// cause visible flicker on every tick — only an actual change repaints.
+const BACKGROUND_REFRESH_MS = 15 * 1000; // 15 seconds
 setInterval(() => {
   if (document.visibilityState === "visible") loadMovies();
 }, BACKGROUND_REFRESH_MS);
