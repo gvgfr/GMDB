@@ -1925,7 +1925,17 @@ function applyMoviesData(data, fromCache) {
 
   filterMovies();
 
-  if (!sharedLinkHandled) {
+  // Deliberately gated on !fromCache, same reasoning as the carousels above
+  // — opening a SPECIFIC shared movie is the ultimate "tell me this film's
+  // current status right now" request. Opening it from the stale cache
+  // pass would show outdated score/streaming info in the very moment
+  // someone follows a share link, AND — worse — permanently lock out the
+  // real fetch's chance to ever open/refresh it, since sharedLinkHandled
+  // would already be true by the time accurate data arrives. This is
+  // exactly what caused a shared "Modha Rathri" link to open showing a
+  // stale "Likely in Theaters" / score 71 even after the movie had long
+  // since moved to Netflix with an updated score elsewhere on the site.
+  if (!fromCache && !sharedLinkHandled) {
     // If opened via a shared link (?movie=Title), open that movie's review.
     // Match against allMovies, then open by setting the current array so the
     // index lines up (openMovie reads from _currentMovies).
