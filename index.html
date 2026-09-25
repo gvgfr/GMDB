@@ -1133,11 +1133,12 @@ function buildHitSongs(m) {
 // BUG FIX: a shared song link (?song=X) used to sit on the plain homepage
 // for however long the live fetch took (several seconds, worse on a cold
 // Apps Script start) before popping open. Same cached-instant-paint pattern
-// as movies used to use (loadMovies() has since dropped it — showing a
-// stale movie list, even briefly, read as wrong data rather than fast
-// loading) closes that gap here for returning visitors. Kept for songs
-// since there's no "New on Streaming"-style section where a stale answer
-// would look actively incorrect the way it did for movies.
+// loadMovies() uses (see MOVIES_CACHE_KEY / applyMoviesData's fromCache
+// param below) closes that gap here for returning visitors. Songs have no
+// "New on Streaming"-style section carrying a "this is current right now"
+// claim, so unlike movies there's no part of this list that needs to
+// withhold itself from the cache paint — the whole thing can render
+// instantly and just get replaced when the real fetch lands.
 const SONGS_CACHE_KEY = "gmdb_songs_cache_v1";
 async function loadSongs() {
   try {
@@ -1875,7 +1876,15 @@ let lastRenderedMoviesRaw = null;
 let landingDefaultApplied = false;
 let sharedLinkHandled = false;
 
-function applyMoviesData(data) {
+// fromCache: true for the instant local-storage preview render (see
+// loadMovies() below) — skips the two "right now" carousels, which stay on
+// their "Loading…" placeholder until the real network answer arrives. The
+// rest of the page (grid, stats, filters) still paints instantly from
+// cache, since browsing the general catalog doesn't carry the same
+// "is this actually current?" expectation that New on Streaming / Now in
+// Theaters do — those are exactly the sections a stale answer looks wrong
+// in, per the earlier bug report.
+function applyMoviesData(data, fromCache) {
   // Only show fully-processed movies — skip rows that have a title but no
   // score yet (incomplete/stuck entries that would render as blank cards).
   // Coming Soon rows are the one deliberate exception: they never HAVE a
@@ -1885,12 +1894,14 @@ function applyMoviesData(data) {
     (m.GauthamScore !== "" && m.GauthamScore != null) || isComingSoon(m)
   ));
   updateStats();
-  updateNewStreamingBadge();
   updateComingSoonBadge();
   updateNewReleasesBadge();
   populateYears();
-  renderStreamingCarousel();
-  renderNowInTheatersCarousel();
+  if (!fromCache) {
+    updateNewStreamingBadge();
+    renderStreamingCarousel();
+    renderNowInTheatersCarousel();
+  }
 
   if (!landingDefaultApplied) {
     landingDefaultApplied = true;
@@ -1946,17 +1957,38 @@ function applyMoviesData(data) {
   }
 }
 
+const MOVIES_CACHE_KEY = "gmdb_movies_cache_v1";
+
 async function loadMovies() {
-  // Always wait for the real network response — no local cache of a
-  // previous visit's data is shown first. That cache used to make the page
-  // feel instant, but it meant every fresh load (and every 3-minute
-  // background refresh) briefly showed whatever movies happened to be
-  // current the LAST time this browser fetched, before silently swapping
-  // to the real current list a moment later — confusing rather than fast,
-  // since "New on Streaming"/"Now in Theaters" are exactly the sections
-  // where showing yesterday's answer for even a few seconds looks wrong.
-  // The static "Loading…"/spinner placeholders already in the HTML cover
-  // the wait instead.
+  // Paint the grid/stats instantly from last visit's cache (the Apps
+  // Script backend can genuinely take several seconds, worse on a cold
+  // start, and sitting on a bare spinner that whole time read as "too
+  // slow"). The two "right now" carousels deliberately do NOT render from
+  // this cache pass (see applyMoviesData's fromCache param) — those are
+  // exactly the sections where a stale answer, even for a couple seconds,
+  // reads as actively wrong rather than just old. They stay on their
+  // "Loading…" placeholder until the real fetch below lands. Never counts
+  // toward lastRenderedMoviesRaw, so the real fetch is guaranteed to do at
+  // least one full render (carousels included) even if the data happens to
+  // be byte-identical to the cache.
+  // Only on the very first call this page load (lastRenderedMoviesRaw is
+  // still null) — once real data has landed once, the page already has
+  // live content on screen, so the periodic 15s background refresh and the
+  // visibility-regain refresh have no blank state to instant-paint over,
+  // and re-running this every tick would just re-trigger a pointless
+  // re-render (resetting the stats count-up, grid scroll, etc.) on cache
+  // content that's usually identical to what's already showing.
+  let renderedFromCache = false;
+  if (!lastRenderedMoviesRaw) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(MOVIES_CACHE_KEY));
+      if (Array.isArray(cached) && cached.length) {
+        applyMoviesData(cached, true);
+        renderedFromCache = true;
+      }
+    } catch(err) { /* corrupt/missing cache — fall through to network */ }
+  }
+
   try {
     const res = await fetch(API_URL + "?action=movies");
     const data = await res.json();
@@ -1965,8 +1997,9 @@ async function loadMovies() {
       applyMoviesData(data);
       lastRenderedMoviesRaw = dataRaw;
     }
+    try { localStorage.setItem(MOVIES_CACHE_KEY, JSON.stringify(data)); } catch(err) { /* storage unavailable/full — non-fatal */ }
   } catch(err) {
-    if (!lastRenderedMoviesRaw) {
+    if (!renderedFromCache) {
       document.getElementById("moviesGrid").innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">⚠️</div><div class="empty-title">Couldn't load movies</div><p>Check your connection and try refreshing.</p></div>`;
     }
   }
