@@ -3096,6 +3096,42 @@ function doGet(e) {
 
   // Return movies as JSON for the website
   if (e && e.parameter && e.parameter.action === "movies") {
+    // This is the single most-hit endpoint on the site — every page load
+    // AND every 15-second background poll from every open tab rebuild the
+    // exact same JSON from a full Sheet read, even when nothing has
+    // changed. CacheService absorbs that duplicate work for a short window.
+    // 10s is deliberately shorter than the frontend's 15s poll interval, so
+    // a genuine change (a movie added/re-scored) is guaranteed to surface
+    // within one polling cycle rather than sitting on stale cache longer
+    // than the poll itself would have waited anyway. CacheService values
+    // are capped at 100KB each, so the JSON is split across chunk keys
+    // (the full catalog is well over that as one string) and reassembled
+    // on a cache hit. Any cache read/write failure falls straight through
+    // to the original always-live-read behavior — this can only make
+    // responses faster, never less correct.
+    const CACHE_CHUNK_PREFIX = "MOVIES_JSON_";
+    const CACHE_META_KEY = "MOVIES_JSON_META";
+    const CACHE_TTL_SECONDS = 10;
+    const cache = CacheService.getScriptCache();
+
+    try {
+      const metaRaw = cache.get(CACHE_META_KEY);
+      if (metaRaw) {
+        const meta = JSON.parse(metaRaw);
+        const keys = [];
+        for (let i = 0; i < meta.count; i++) keys.push(CACHE_CHUNK_PREFIX + i);
+        const chunks = cache.getAll(keys);
+        if (keys.every(k => chunks[k] != null)) {
+          const cachedJson = keys.map(k => chunks[k]).join("");
+          return ContentService
+            .createTextOutput(cachedJson)
+            .setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+    } catch (cacheErr) {
+      Logger.log("Movies cache read failed, falling back to a live Sheet read: " + cacheErr);
+    }
+
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
@@ -3110,8 +3146,24 @@ function doGet(e) {
       });
       return movie;
     }).filter(m => m.Title);
+    const json = JSON.stringify(movies);
+
+    try {
+      const CHUNK_SIZE = 90000; // margin under CacheService's 100KB-per-value cap
+      const chunkMap = {};
+      let count = 0;
+      for (let i = 0; i < json.length; i += CHUNK_SIZE) {
+        chunkMap[CACHE_CHUNK_PREFIX + count] = json.substring(i, i + CHUNK_SIZE);
+        count++;
+      }
+      cache.putAll(chunkMap, CACHE_TTL_SECONDS);
+      cache.put(CACHE_META_KEY, JSON.stringify({ count: count }), CACHE_TTL_SECONDS);
+    } catch (cacheErr) {
+      Logger.log("Movies cache write failed (non-fatal — this request's own response is unaffected): " + cacheErr);
+    }
+
     return ContentService
-      .createTextOutput(JSON.stringify(movies))
+      .createTextOutput(json)
       .setMimeType(ContentService.MimeType.JSON);
   }
 
