@@ -4607,11 +4607,27 @@ function refreshStreamingStatus() {
       uncertainTitles.slice(0, 15).map(t => "• " + t).join("\n") +
       (uncertainTitles.length > 15 ? "\n…and " + (uncertainTitles.length - 15) + " more" : "")
     : "";
+
+  // Piggyback the standing score-floor sweep onto this same daily run (and
+  // this same manual menu click) rather than needing its own trigger — see
+  // sweepLowScoringMovies_ for why this exists as an ongoing check and not
+  // just a one-time gate.
+  let sweepRemoved = [];
+  try {
+    sweepRemoved = sweepLowScoringMovies_();
+  } catch (sweepErr) {
+    Logger.log("sweepLowScoringMovies_ failed: " + sweepErr);
+  }
+  const sweepList = sweepRemoved.length
+    ? "\n\nRemoved for scoring below " + AUTO_SWEEP_FLOOR + ": \n" +
+      sweepRemoved.map(t => "• " + t.title + " (" + t.score + ")").join("\n")
+    : "";
+
   const summary = "Streaming refresh done.\n\n" +
     "Checked: " + checked + " movie(s) released within the last year.\n" +
     "Newly on streaming: " + newlyAdded + newlyAddedList +
     (finishedFullSweep ? "" : "\n\nRan out of time before reaching the end of the sheet — run it again to cover the rest.") +
-    uncertainList;
+    uncertainList + sweepList;
   // SpreadsheetApp.getUi() throws when there's no user session to attach a
   // dialog to — which is exactly the case for the daily trigger below. Fall
   // back to a Logger entry (visible in Apps Script's execution log) instead
@@ -4624,7 +4640,42 @@ function refreshStreamingStatus() {
   }
 }
 
-// One-time setup: installs a daily trigger so this runs automatically
+// The auto-add bots (autoAddNewReleasesCore / autoAddNewlyStreamingCore)
+// only ever apply their SCORE_THRESHOLD once, at the moment they first
+// discover and score a candidate — it's an entry gate, not a standing rule.
+// A movie that passed at, say, 55 can later drift below that on any
+// subsequent re-score (manual re-score, or Gemini simply landing on a
+// different number as more reviews surface over time) and nothing catches
+// it, since none of the re-score functions (rescoreOneMovie,
+// rescoreFiveMovies, rescoreHighlightedRows) have any floor at all. This is
+// the unattended counterpart to the manual "Remove low-scoring movies"
+// menu item — same sweep logic, but no confirmation dialog (there's no UI
+// session to show one to when this runs from the daily trigger), and a
+// lower floor matching the auto-add bots' own bar rather than the manual
+// tool's more conservative 65. Returns what it removed so the caller can
+// fold it into its own summary/log instead of showing a second dialog.
+const AUTO_SWEEP_FLOOR = 50;
+function sweepLowScoringMovies_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const toRemove = [];
+  for (let row = 2; row <= lastRow; row++) {
+    const title = sheet.getRange(row, 1).getValue();
+    const score = Number(sheet.getRange(row, 10).getValue());
+    if (title && score > 0 && score < AUTO_SWEEP_FLOOR) {
+      toRemove.push({ row: row, title: title, score: score });
+    }
+  }
+  if (!toRemove.length) return [];
+
+  // Delete bottom-up so earlier row numbers stay valid mid-loop.
+  toRemove.sort((a, b) => b.row - a.row).forEach(t => sheet.deleteRow(t.row));
+  Logger.log("sweepLowScoringMovies_ removed " + toRemove.length + " movie(s) below " + AUTO_SWEEP_FLOOR + ": " +
+    toRemove.map(t => t.title + " (" + t.score + ")").join(", "));
+  return toRemove;
+}
 // instead of depending on someone remembering to click the menu item.
 // Safe to run again later — clears any existing trigger for this function
 // first so it's never duplicated.
