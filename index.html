@@ -52,6 +52,8 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .btn-about:hover{background:rgba(22,201,94,0.16);color:#C5F23B;}
 .btn-songs{background:rgba(29,185,84,0.1);color:#1DB954;border:1.5px solid #1DB954;font-weight:700;}
 .btn-songs:hover{background:rgba(29,185,84,0.2);}
+.btn-howto{background:rgba(255,176,32,0.1);color:#FFB020;border:1.5px solid #FFB020;font-weight:700;padding:8px 12px;border-radius:50%;line-height:1;flex-shrink:0;}
+.btn-howto:hover{background:rgba(255,176,32,0.2);}
 
 .hero{padding:2.25rem 1.5rem 1rem;text-align:center;border-bottom:1px solid var(--border);position:relative;}
 .streaming-carousel-section{padding:1.25rem 0 1.5rem;border-bottom:1px solid var(--border);}
@@ -591,6 +593,7 @@ footer span{color:var(--red);}
 <header>
   <div class="logo">Masala Meter<span>Indian Movie Recommendations</span></div>
   <div class="header-actions">
+    <button class="btn btn-howto" onclick="openHowTo()" aria-label="How to use this site" title="How to use this site">❓</button>
     <button class="btn btn-songs" onclick="openSongs()">♪ Songs</button>
     <button class="btn btn-about" onclick="openAbout()">About Masala Meter</button>
   </div>
@@ -826,6 +829,52 @@ footer span{color:var(--red);}
       <div class="about-note" style="border-left-color:#01b4e4;">This product uses the TMDB API but is not endorsed or certified by TMDB. Movie data, posters, and images are provided by <a href="https://www.themoviedb.org/" target="_blank" style="color:#01b4e4;">The Movie Database (TMDB)</a>.</div>
       <div class="about-note">Streaming platform names (Netflix, Amazon Prime Video, Disney+ Hotstar, ZEE5, and others) and Spotify are used only to identify where a film or song may be found, with links to those services' own public pages. This site is not affiliated with, endorsed by, or sponsored by Netflix, Amazon, Spotify, or any other streaming or music platform referenced.</div>
       <div class="about-note">This is a personal, non-commercial project made for friends. No ads, no payments, no data selling. Movie posters remain the property of their respective studios and are shown for identification purposes.</div>
+    </div>
+  </div>
+</div>
+
+<!-- How To Use Modal -->
+<div class="modal-overlay" id="howToModal" onclick="closeModalOverlay(event,'howToModal')">
+  <div class="about-modal">
+    <div class="about-header">
+      <h2 class="about-title" style="font-size:1.8rem;">How to<br/><span>Use This Site</span></h2>
+      <button class="modal-close" style="position:relative;top:auto;right:auto;" onclick="document.getElementById('howToModal').classList.remove('open')">✕</button>
+    </div>
+    <p style="font-size:15px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;">A quick tour of what's on the page — for how scores themselves work, see "About Masala Meter" instead.</p>
+
+    <div class="about-section">
+      <p class="about-section-label">🔍 Search</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">Type a title to jump straight to it — searches every movie in the catalog, not just what's currently showing on screen.</p>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">🎚️ Filters &amp; Sort</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">The button row narrows what's showing — <b>New on Streaming</b>, <b>Now in Theaters</b>, <b>Coming Soon</b>, plus Genre and Language dropdowns. The Sort dropdown changes the order within whatever's currently filtered.</p>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">🔥 Tier Legend</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">Tap a fire-tier (Vera Level, Semma, Paakkalam…) above the grid to show only films at that tier. Tap it again to clear.</p>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">🌍 Region Toggle</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">Switches "Where to Watch" between US and UK streaming availability for whichever movie you're viewing.</p>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">➕ Add a Movie</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">Can't find something? Type its name and this site will look it up, review it, and score it — usually ready within a minute or two.</p>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">↗ Share</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">On any movie, gets you a link with that film's own poster and score attached — so it previews properly when you send it, instead of showing a generic card.</p>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">♪ Songs</p>
+      <p style="font-size:15px;color:var(--text);line-height:1.7;">A separate catalog of song-only reviews — browse or search independently of the movie it's from, and you can request a song be reviewed the same way you'd add a movie.</p>
     </div>
   </div>
 </div>
@@ -3357,6 +3406,7 @@ function openAddModal(prefillTitle){
 }
 
 function openAbout(){document.getElementById("aboutModal").classList.add("open");}
+function openHowTo(){document.getElementById("howToModal").classList.add("open");}
 
 // "How is this scored?" link on a song detail — opens About and jumps
 // straight to the Hit Songs methodology instead of leaving someone to
