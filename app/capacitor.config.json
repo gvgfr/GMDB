@@ -1,0 +1,13 @@
+{
+  "appId": "com.masalameter.app",
+  "appName": "Masala Meter",
+  "webDir": "www",
+  "server": {
+    "url": "https://gvgfr.github.io/GMDB/",
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
