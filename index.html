@@ -594,9 +594,24 @@ footer span{color:var(--red);}
   .filter-divider{display:none;}
   .filter-group-label{width:100%;margin-bottom:2px;}
 }
+
+.tribute-banner{background:linear-gradient(135deg,#1a1510,#0a0a0a);border-bottom:2px solid #FFB020;padding:14px 20px;display:flex;align-items:center;justify-content:center;gap:16px;position:relative;}
+.tribute-banner-text{color:#f0ede6;font-size:14px;line-height:1.5;max-width:720px;text-align:center;}
+.tribute-banner-text b{color:#FFB020;}
+.tribute-banner-close{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#9b9690;font-size:20px;cursor:pointer;padding:4px 8px;line-height:1;}
+.tribute-banner-close:hover{color:#f0ede6;}
+@media (max-width:600px){
+  .tribute-banner{padding:12px 40px 12px 16px;}
+  .tribute-banner-text{font-size:13px;text-align:left;}
+}
 </style>
 </head>
 <body>
+
+<div class="tribute-banner" id="tributeBanner" style="display:none;">
+  <div class="tribute-banner-text"><b>In memory of Nana Patekar (1951–2026).</b> Few actors could switch from menace to mischief in a single scene the way he did — from <i>Parinda</i> and <i>Krantiveer</i> to his turn opposite Rajinikanth in <i>Kaala</i>, dubbing his own Tamil lines. Rest well, Anna.</div>
+  <button class="tribute-banner-close" onclick="dismissTributeBanner()" aria-label="Dismiss">×</button>
+</div>
 
 <header>
   <div class="logo">Masala Meter<span>Indian Movie Recommendations</span></div>
@@ -3673,6 +3688,22 @@ window.addEventListener("popstate", () => {
     ids.forEach(id => document.getElementById(id).classList.remove("open"));
   }
 });
+
+// Tribute banners: each has its own localStorage key so dismissing one
+// never hides a different (future) tribute, and it stays dismissed across
+// visits once closed.
+const TRIBUTE_BANNER_KEY = "gmdb_tribute_dismissed_nana_patekar_2026";
+function dismissTributeBanner(){
+  document.getElementById("tributeBanner").style.display = "none";
+  try { localStorage.setItem(TRIBUTE_BANNER_KEY, "1"); } catch(err) {}
+}
+try {
+  if (!localStorage.getItem(TRIBUTE_BANNER_KEY)) {
+    document.getElementById("tributeBanner").style.display = "flex";
+  }
+} catch(err) {
+  document.getElementById("tributeBanner").style.display = "flex";
+}
 
 Promise.all([loadMovies(), loadSongs()]).then(handleSharedSongLink);
 
