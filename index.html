@@ -3693,16 +3693,17 @@ window.addEventListener("popstate", () => {
 // never hides a different (future) tribute, and it stays dismissed across
 // visits once closed.
 const TRIBUTE_BANNER_KEY = "gmdb_tribute_dismissed_nana_patekar_2026";
+const TRIBUTE_BANNER_EXPIRES = new Date("2026-10-15T00:00:00Z").getTime();
 function dismissTributeBanner(){
   document.getElementById("tributeBanner").style.display = "none";
   try { localStorage.setItem(TRIBUTE_BANNER_KEY, "1"); } catch(err) {}
 }
 try {
-  if (!localStorage.getItem(TRIBUTE_BANNER_KEY)) {
+  if (!localStorage.getItem(TRIBUTE_BANNER_KEY) && Date.now() < TRIBUTE_BANNER_EXPIRES) {
     document.getElementById("tributeBanner").style.display = "flex";
   }
 } catch(err) {
-  document.getElementById("tributeBanner").style.display = "flex";
+  if (Date.now() < TRIBUTE_BANNER_EXPIRES) document.getElementById("tributeBanner").style.display = "flex";
 }
 
 Promise.all([loadMovies(), loadSongs()]).then(handleSharedSongLink);
