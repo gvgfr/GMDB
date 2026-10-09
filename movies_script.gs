@@ -1874,25 +1874,35 @@ function checkStreamingOnlyRecentReleases() {
   const languages = sheet.getRange(2, 30, lastRow - 1, 1).getValues();
   const releaseDates = sheet.getRange(2, 31, lastRow - 1, 1).getValues();
 
-  let checked = 0, found = 0, failed = 0;
-  const foundTitles = [];
-  const failedTitles = [];
-
+  // FIRST PASS (no API calls): figure out the full set of eligible rows up
+  // front, so we know the true total regardless of where the time cutoff
+  // ends up landing. Without this, there was previously NO way to tell
+  // "this row was checked and genuinely came back unconfirmed" apart from
+  // "this row was never reached because the run stopped early" — both
+  // looked identical from the outside (row just stays blank either way).
+  const eligible = [];
   for (let i = 0; i < titles.length; i++) {
-    if (Date.now() - startTime > CUTOFF_MS) break;
-    const row = i + 2;
     const title = titles[i][0];
     if (!title) continue;
     if (streamingVals[i][0]) continue; // already has a Streaming value — not this pass's job
-
     const relTime = new Date(releaseDates[i][0] || "").getTime();
-    // Unparsable or future release date: skip (nothing to check yet, or we
-    // can't tell the window) rather than guessing.
-    if (isNaN(relTime) || relTime > Date.now()) continue;
-    if (Date.now() - relTime > SIX_MONTHS_MS) continue; // older than 6 months — out of scope for this pass
+    if (isNaN(relTime) || relTime > Date.now()) continue; // unparsable/future — skip rather than guess
+    if (Date.now() - relTime > SIX_MONTHS_MS) continue; // older than 6 months — out of scope
+    eligible.push(i);
+  }
+
+  let checked = 0, found = 0, failed = 0;
+  const foundTitles = [];
+  const failedTitles = [];
+  let stoppedEarly = false;
+
+  for (let n = 0; n < eligible.length; n++) {
+    if (Date.now() - startTime > CUTOFF_MS) { stoppedEarly = true; break; }
+    const i = eligible[n];
+    const row = i + 2;
+    const title_s = String(titles[i][0]), year_s = String(years[i][0] || ""), lang_s = String(languages[i][0] || "");
 
     checked++;
-    const title_s = String(title), year_s = String(years[i][0] || ""), lang_s = String(languages[i][0] || "");
     let confirmed = checkStreamingViaGemini_(title_s, year_s, lang_s);
     Utilities.sleep(1000); // pace Gemini calls between rows
     if (confirmed === null) {
@@ -1903,6 +1913,7 @@ function checkStreamingOnlyRecentReleases() {
     if (confirmed === null) {
       failed++;
       failedTitles.push(title_s);
+      Logger.log("checkStreamingOnlyRecentReleases: FAILED (network/API) for '" + title_s + "' (row " + row + ")");
       continue; // genuine check failure — leave the row untouched, don't guess
     }
     if (confirmed) {
@@ -1911,13 +1922,20 @@ function checkStreamingOnlyRecentReleases() {
       if (!String(sinceCell.getValue() || "").trim()) sinceCell.setValue(new Date());
       found++;
       foundTitles.push(title_s + " (" + confirmed + ")");
+      Logger.log("checkStreamingOnlyRecentReleases: FOUND '" + title_s + "' (row " + row + ") -> " + confirmed);
+    } else {
+      // confirmed === "" — genuinely checked, not streaming anywhere right now.
+      Logger.log("checkStreamingOnlyRecentReleases: not confirmed for '" + title_s + "' (row " + row + ")");
     }
-    // confirmed === "" (genuinely checked, not streaming) — nothing to write, row stays blank as it already was.
   }
 
-  let summary = "Checked " + checked + " recent movie(s) with no Streaming value.\n";
+  let summary = "Checked " + checked + " of " + eligible.length + " eligible movie(s) with no Streaming value.\n";
+  if (stoppedEarly) {
+    summary += "STOPPED EARLY (hit the 5-minute time limit) — " + (eligible.length - checked) + " eligible movie(s) not reached this run. Run again to continue through the rest.\n\n";
+  }
   summary += found > 0 ? "Newly found streaming:\n" + foundTitles.join("\n") : "No new streaming found this run.";
   if (failedTitles.length) summary += "\n\nCheck failed (left unchanged) for:\n" + failedTitles.join("\n");
+  summary += "\n\n(Full per-title results, including genuinely-unconfirmed ones, are in Extensions > Apps Script > Executions > this run's log.)";
   try {
     SpreadsheetApp.getUi().alert(summary);
   } catch (err) {
