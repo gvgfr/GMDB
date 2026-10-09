@@ -1648,6 +1648,7 @@ function onOpen() {
     .addItem("Fill next blank movie (one)", "refreshOneBlankMovie")
     .addItem("Re-score selected movie (click a row first)", "rescoreOneMovie")
     .addItem("Check streaming only for selected movie (cheap, click a row first)", "checkStreamingOnlyForSelectedRow")
+    .addItem("Check streaming only — last 6 months, no Streaming yet (cheap batch)", "checkStreamingOnlyRecentReleases")
     .addItem("Re-score next 5 movies (batch)", "rescoreFiveMovies")
     .addItem("Re-score highlighted rows", "rescoreHighlightedRows")
     .addItem("Fill next missing storyline/trivia (one)", "backfillOneStorylineTrivia")
@@ -1842,6 +1843,86 @@ function checkStreamingOnlyForSelectedRow() {
     ? "\"" + title + "\" confirmed streaming on: " + confirmed + (previous && previous !== confirmed ? " (was: \"" + previous + "\")" : "")
     : "\"" + title + "\" — not confirmed streaming anywhere right now." + (previous ? " Cleared previous value: \"" + previous + "\"" : "");
   SpreadsheetApp.getActive().toast(summary, "GMDB", 8);
+}
+
+// Bulk version of checkStreamingOnlyForSelectedRow(): sweeps every movie
+// released in the last 6 months that doesn't have a Streaming value yet,
+// and does ONLY the cheap one-call Gemini streaming check on each — no
+// re-scoring, no review/cast/IMDb/similar-movies regeneration. This is the
+// highest-value window for this check: a film still in its first few weeks
+// of a theatrical run is very unlikely to be streaming yet (see the
+// skepticism guard added to the prompts above), but once it's a few months
+// out — including past its theatrical run entirely — streaming newly
+// becomes likely. Movies that already have a Streaming value are skipped
+// entirely (no API call at all) since this pass exists to catch NEWLY
+// available titles, not to re-confirm/re-verify existing ones — that's
+// refreshStreamingStatus()'s job, which already runs daily.
+// Batched to respect the 6-min Apps Script execution limit, same pattern as
+// refreshStreamingStatus().
+function checkStreamingOnlyRecentReleases() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+
+  const startTime = Date.now();
+  const CUTOFF_MS = 5 * 60 * 1000;
+  const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
+
+  const titles = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  const years = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+  const streamingVals = sheet.getRange(2, 15, lastRow - 1, 1).getValues();
+  const languages = sheet.getRange(2, 30, lastRow - 1, 1).getValues();
+  const releaseDates = sheet.getRange(2, 31, lastRow - 1, 1).getValues();
+
+  let checked = 0, found = 0, failed = 0;
+  const foundTitles = [];
+  const failedTitles = [];
+
+  for (let i = 0; i < titles.length; i++) {
+    if (Date.now() - startTime > CUTOFF_MS) break;
+    const row = i + 2;
+    const title = titles[i][0];
+    if (!title) continue;
+    if (streamingVals[i][0]) continue; // already has a Streaming value — not this pass's job
+
+    const relTime = new Date(releaseDates[i][0] || "").getTime();
+    // Unparsable or future release date: skip (nothing to check yet, or we
+    // can't tell the window) rather than guessing.
+    if (isNaN(relTime) || relTime > Date.now()) continue;
+    if (Date.now() - relTime > SIX_MONTHS_MS) continue; // older than 6 months — out of scope for this pass
+
+    checked++;
+    const title_s = String(title), year_s = String(years[i][0] || ""), lang_s = String(languages[i][0] || "");
+    let confirmed = checkStreamingViaGemini_(title_s, year_s, lang_s);
+    Utilities.sleep(1000); // pace Gemini calls between rows
+    if (confirmed === null) {
+      Utilities.sleep(2000);
+      confirmed = checkStreamingViaGemini_(title_s, year_s, lang_s);
+      Utilities.sleep(1000);
+    }
+    if (confirmed === null) {
+      failed++;
+      failedTitles.push(title_s);
+      continue; // genuine check failure — leave the row untouched, don't guess
+    }
+    if (confirmed) {
+      sheet.getRange(row, 15).setValue(confirmed);
+      const sinceCell = sheet.getRange(row, 32);
+      if (!String(sinceCell.getValue() || "").trim()) sinceCell.setValue(new Date());
+      found++;
+      foundTitles.push(title_s + " (" + confirmed + ")");
+    }
+    // confirmed === "" (genuinely checked, not streaming) — nothing to write, row stays blank as it already was.
+  }
+
+  let summary = "Checked " + checked + " recent movie(s) with no Streaming value.\n";
+  summary += found > 0 ? "Newly found streaming:\n" + foundTitles.join("\n") : "No new streaming found this run.";
+  if (failedTitles.length) summary += "\n\nCheck failed (left unchanged) for:\n" + failedTitles.join("\n");
+  try {
+    SpreadsheetApp.getUi().alert(summary);
+  } catch (err) {
+    Logger.log(summary); // triggerless execution (e.g. scheduled trigger) has no UI to alert
+  }
 }
 
 // Re-score 5 movies: if you HIGHLIGHT multiple rows first, re-scores exactly
