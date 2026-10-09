@@ -1657,6 +1657,7 @@ function onOpen() {
     .addItem("Auto-add new releases now", "autoAddNewReleases")
     .addItem("Add upcoming releases (next 7 days, no review yet)", "autoAddUpcomingReleases")
     .addItem("Find NEW movies now streaming (5mo, adds to catalog)", "autoAddNewlyStreaming")
+    .addItem("Look up streaming only for selected row(s) (no re-score)", "lookupStreamingSelectedRows")
     .addItem("Update streaming info (movies I already have)", "refreshStreamingStatus")
     .addItem("Start automatic daily streaming refresh", "startAutoRefreshStreamingStatus")
     .addItem("Stop automatic daily streaming refresh", "stopAutoRefreshStreamingStatus")
@@ -1917,6 +1918,73 @@ function rescoreHighlightedRows() {
   );
 }
 
+
+// Streaming-ONLY lookup for the clicked/highlighted row(s) — the cheap
+// alternative to "Re-score" when all you want is fresh "where to watch"
+// info. Leaves score, review, storyline, trivia, ratings etc. untouched and
+// skips the big getGeminiMovieReview call entirely: TMDB's free provider
+// data is checked first, and only if that's empty does it fall back to the
+// small checkStreamingViaGemini_ prompt (at most one short Gemini call per
+// row, zero when TMDB already knows). Unlike refreshStreamingStatus this
+// doesn't skip movies older than a year — you picked these rows on purpose.
+function lookupStreamingSelectedRows() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
+  const activeRange = SpreadsheetApp.getActiveRange();
+
+  if (!activeRange || activeRange.getRow() < 2) {
+    SpreadsheetApp.getUi().alert("Click (or highlight) one or more movie rows first, then run this again.");
+    return;
+  }
+
+  const startRow = activeRange.getRow();
+  const numRows = activeRange.getNumRows();
+  const lastRow = sheet.getLastRow();
+  const rows = [];
+  for (let r = startRow; r < startRow + numRows && r <= lastRow; r++) {
+    if (r >= 2 && sheet.getRange(r, 1).getValue()) rows.push(r);
+  }
+
+  if (!rows.length) {
+    SpreadsheetApp.getUi().alert("No movies with a title found in the selected rows.");
+    return;
+  }
+
+  const startTime = Date.now();
+  const MAX_RUNTIME = 4.5 * 60 * 1000; // stop well before the 6-min hard limit
+  const results = [];
+  let stoppedEarly = false;
+
+  for (const row of rows) {
+    if (Date.now() - startTime > MAX_RUNTIME) {
+      stoppedEarly = true;
+      break;
+    }
+    const title = String(sheet.getRange(row, 1).getValue());
+    const releaseDateRaw = sheet.getRange(row, 31).getValue();
+    const releaseTime = releaseDateRaw ? new Date(releaseDateRaw).getTime() : NaN;
+    try {
+      const r = refreshStreamingForRow_(sheet, row, title, releaseTime, { alwaysGeminiFallback: true });
+      if (!r.checked) {
+        results.push(title + " ✗ (not found on TMDB)");
+      } else if (r.uncertain) {
+        results.push(title + " ? (lookup failed — try again later)");
+      } else {
+        const shown = sheet.getRange(row, 16).getValue() || sheet.getRange(row, 15).getValue();
+        results.push(title + " → " + (shown || "not streaming in the US yet") + (r.stamped ? " (new!)" : ""));
+      }
+    } catch (err) {
+      results.push(title + " ✗ (" + err + ")");
+    }
+  }
+
+  const summary = "Streaming lookup done (no re-score):\n\n" + results.join("\n") +
+    (stoppedEarly ? "\n\n(Stopped early to stay under the time limit — re-highlight the rest and run again.)" : "");
+  if (results.length === 1) {
+    SpreadsheetApp.getActive().toast(results[0], "GMDB streaming lookup", 8);
+  } else {
+    SpreadsheetApp.getUi().alert(summary);
+  }
+}
 
 // =============================================
 // WEB APP — POST endpoint (called by the website's "Add Movie" feature)
@@ -4359,6 +4427,211 @@ function tidyAllRows() {
 }
 
 
+// Streaming-only lookup for ONE existing row — the per-row core of
+// refreshStreamingStatus, pulled out so it can also be run on demand for
+// selected rows (lookupStreamingSelectedRows) WITHOUT a full re-score.
+// A full re-score (fillMovieData + getGeminiMovieReview) spends a large
+// Gemini call regenerating the score, review, storyline, trivia etc. just
+// to pick up a new streaming platform; this only touches the streaming
+// columns (15 Streaming, 16 OTTInfo, 41 StreamingUK, 32 StreamingSince)
+// and uses TMDB's free watch/providers data first. Gemini is only asked —
+// via the small checkStreamingViaGemini_ prompt, not the scoring prompt —
+// when TMDB comes up empty.
+//
+// opts.alwaysGeminiFallback: also ask Gemini when TMDB is empty for an
+//   older movie that never had streaming data (refreshStreamingStatus
+//   limits that to recent/previously-streaming rows to keep a whole-sheet
+//   sweep cheap; an explicit per-row lookup asks regardless).
+// opts.checkTheatrical: also re-check the US theatrical flag (col 43) —
+//   another Gemini call, so only the daily sweep does it.
+// Returns { checked, streaming, stamped, uncertain }. Throws on hard
+// TMDB/network failures; callers decide how to report that.
+function refreshStreamingForRow_(sheet, row, title, releaseTime, opts) {
+  opts = opts || {};
+  const result = { checked: false, streaming: "", stamped: false, uncertain: false };
+  // Use stored TMDB ID when available; otherwise fall back to title search.
+  let tmdbId = String(sheet.getRange(row, 35).getValue()).trim();
+  if (!/^\d+$/.test(tmdbId)) {
+    const searchUrl = "https://api.themoviedb.org/3/search/movie?api_key=" +
+      TMDB_API_KEY + "&include_adult=false&query=" + encodeURIComponent(String(title));
+    const sRes = JSON.parse(UrlFetchApp.fetch(searchUrl).getContentText());
+    const hit = (sRes.results || [])[0];
+    if (!hit) return result;
+    tmdbId = String(hit.id);
+  }
+
+  const provUrl = "https://api.themoviedb.org/3/movie/" + tmdbId +
+    "/watch/providers?api_key=" + TMDB_API_KEY;
+  const provData = JSON.parse(UrlFetchApp.fetch(provUrl).getContentText());
+
+  // BUG FIX: this was only checking flatrate/free/ads, silently missing
+  // rent/buy-only availability (e.g. Amazon Video, Google Play, YouTube
+  // rentals) — a common case for newer titles not yet on a subscription
+  // service. fillMovieData already checks all five categories; this
+  // function's separate copy of the same logic didn't match, which is
+  // exactly why a manual re-score could find streaming info that this
+  // refresh function then failed to detect on its own.
+  // streamType tracked the same way as fillMovieData's own provider
+  // detection (ads folds into "free") so the OTTInfo label below reads
+  // identically regardless of which code path found it.
+  let streaming = "";
+  let streamType = "";
+  if (provData.results && provData.results.US) {
+    const us = provData.results.US;
+    if (us.flatrate && us.flatrate.length) { streaming = us.flatrate.map(p => p.provider_name).join(", "); streamType = "stream"; }
+    else if (us.free && us.free.length) { streaming = us.free.map(p => p.provider_name).join(", "); streamType = "free"; }
+    else if (us.ads && us.ads.length) { streaming = us.ads.map(p => p.provider_name).join(", "); streamType = "free"; }
+    else if (us.rent && us.rent.length) { streaming = us.rent.map(p => p.provider_name).join(", "); streamType = "rent"; }
+    else if (us.buy && us.buy.length) { streaming = us.buy.map(p => p.provider_name).join(", "); streamType = "buy"; }
+  }
+
+  // GAP FIX: this function only ever checked US availability — UK
+  // (col 41, StreamingUK) was set once by fillMovieData at add-time and
+  // then NEVER rechecked by this periodic refresh, so it went stale
+  // forever even as US availability kept getting updated on every run.
+  // Same watch/providers response already covers GB, no extra API call.
+  let streamingUK = "";
+  if (provData.results && provData.results.GB) {
+    const gb = provData.results.GB;
+    if (gb.flatrate && gb.flatrate.length) streamingUK = gb.flatrate.map(p => p.provider_name).join(", ");
+    else if (gb.free && gb.free.length) streamingUK = gb.free.map(p => p.provider_name).join(", ");
+    else if (gb.ads && gb.ads.length) streamingUK = gb.ads.map(p => p.provider_name).join(", ");
+    else if (gb.rent && gb.rent.length) streamingUK = gb.rent.map(p => p.provider_name).join(", ");
+    else if (gb.buy && gb.buy.length) streamingUK = gb.buy.map(p => p.provider_name).join(", ");
+  }
+  const existingStreamingUK = sheet.getRange(row, 41).getValue();
+  if (streamingUK || !existingStreamingUK) {
+    sheet.getRange(row, 41).setValue(streamingUK);
+  }
+
+  const prevStreaming = sheet.getRange(row, 15).getValue();
+  const sinceCell = sheet.getRange(row, 32);
+  const prevSince = sinceCell.getValue();
+
+  // relTime already read above (the 1-year skip) — reused here instead
+  // of re-fetching the same cell. Needed here because the widened
+  // Gemini fallback condition right below depends on it too.
+  const relTime = releaseTime;
+  const isRecent = !isNaN(relTime) && relTime <= Date.now() && relTime >= (Date.now() - 5 * 30 * 24 * 60 * 60 * 1000); // 5 months, matches the website's "New on Streaming" window
+
+  // Ask Gemini's lightweight live-search check as a second opinion
+  // whenever TMDB comes up empty for a movie that's plausibly actually
+  // streaming right now — not just "this movie left streaming"
+  // (prevStreaming set, now gone), but ALSO "this movie never had
+  // streaming data at all yet" for a recent release. TMDB's provider
+  // data (via JustWatch) routinely lags real-world releases by days to
+  // weeks, especially for regional Indian OTT drops — without the
+  // isRecent branch, a brand-new movie TMDB hasn't caught up on yet
+  // just sat blank forever, since this fallback was previously only
+  // reachable for movies that had ALREADY been confirmed streaming at
+  // some point. Bounded to isRecent so this doesn't fire forever on
+  // old catalog titles that are genuinely just not streaming anywhere.
+  if (!streaming && (prevStreaming || isRecent || opts.alwaysGeminiFallback)) {
+    const yr = sheet.getRange(row, 2).getValue();
+    const lg = sheet.getRange(row, 30).getValue();
+    let confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
+    Utilities.sleep(1000); // pace Gemini calls between rows in this loop
+    // null means the check itself failed (rate limit, empty response,
+    // network hiccup) — NOT "confirmed not streaming". A bulk run fires
+    // dozens of these back-to-back and is far more likely to hit a
+    // transient failure than a single one-off re-score ever is, which
+    // is exactly what made this refresh silently disagree with a manual
+    // re-score run moments later on the same movie. One retry clears
+    // most of these; if it still fails, flag the row instead of quietly
+    // writing "not streaming".
+    if (confirmed === null) {
+      Utilities.sleep(2000);
+      confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
+      Utilities.sleep(1000);
+    }
+    if (confirmed === null) {
+      result.uncertain = true;
+    } else if (confirmed) {
+      streaming = confirmed; // treat as if TMDB had found it — same downstream logic applies
+    }
+  }
+
+  // Same protection as fillMovieData: only overwrite if we actually
+  // found something this time. A transient TMDB/JustWatch data gap
+  // shouldn't wipe out previously-confirmed streaming info. This DOES
+  // still allow genuine removals to clear the stamp below — that's
+  // this function's actual job — just not from a single empty check
+  // that might just be a momentary data hiccup rather than a real exit.
+  if (streaming || !prevStreaming) {
+    sheet.getRange(row, 15).setValue(streaming);
+  }
+
+  // BUG FIX: this function was updating the raw Streaming column (15)
+  // above but never touching OTTInfo (col 16) — the human-readable
+  // label ("Stream on Netflix (US)") that card ribbons and the "Where
+  // to Watch" panel actually display with priority over column 15. A
+  // platform change (e.g. Netflix -> Amazon) or a genuine removal
+  // would update column 15 correctly but leave the visible label
+  // frozen at whatever fillMovieData originally wrote, months earlier
+  // — this was the actual cause of "streaming info doesn't update."
+  // Same protect-existing condition as column 15 just above, and the
+  // same label format fillMovieData uses (typeLabel falls back to
+  // "Available" for the Gemini-fallback case, where streamType is
+  // still "" since only the TMDB branch above sets it).
+  if (streaming) {
+    const typeLabel = { stream: "Stream", free: "Free", rent: "Rent", buy: "Buy" }[streamType] || "Available";
+    sheet.getRange(row, 16).setValue(typeLabel + " on " + streaming + " (US)");
+  } else if (!prevStreaming) {
+    sheet.getRange(row, 16).setValue("");
+  }
+
+  // relTime/isRecent computed earlier now (needed by the widened
+  // Gemini fallback above) — reused here unchanged.
+
+  // STAMP: if there's streaming right now, it's a recent release, and
+  // the stamp itself is simply missing — set it. This does NOT require
+  // *this specific run* to have witnessed the text go from blank to
+  // filled — that stricter condition meant this function could never
+  // fix a row where the streaming text was already filled (e.g. by a
+  // manual re-score) but the stamp itself never got set. Matches
+  // fillMovieData's own (already correct) stamping logic.
+  if (streaming && !prevSince && isRecent) {
+    sinceCell.setValue(new Date());
+    result.stamped = true;
+  }
+  // NOTE: deliberately no "clear the stamp if !streaming" branch here
+  // anymore. It used to clear col 32 whenever THIS run alone failed to
+  // reconfirm streaming (!streaming && prevStreaming) — but that's the
+  // exact same momentary TMDB/Gemini miss that col 15 right above
+  // correctly shrugs off without touching the data (streaming || !prevStreaming
+  // never overwrites a real value with empty). Treating one run's gap as
+  // "confirmed removal" for the stamp while NOT treating it that way for
+  // the streaming text itself was inconsistent, and wiped real
+  // StreamingSince dates for movies that never actually left streaming
+  // (e.g. Thaai Kizhavi: Apple TV/Hulu never left col 15, but this
+  // branch cleared col 32 anyway on a single miss). A real removal
+  // still isn't lost forever — re-running this refresh, or a manual
+  // re-score, will simply never re-set a stamp that's already blank.
+
+  // --- US theatrical re-check (col 43) ---
+  // A film added right at release might not be listed on ticketing
+  // sites yet when fillMovieData first checked. Give it more chances
+  // on each later run of this sweep, but only while it's still a real
+  // "Now in Theaters" candidate — recent, not yet confirmed, and not
+  // yet streaming (once it's streaming the theatrical badge no longer
+  // applies regardless, and once it's aged past 60 days the badge
+  // could never show either way, so don't waste a Gemini call).
+  const existingUsTheatrical = sheet.getRange(row, 43).getValue();
+  const daysSinceRelease = isNaN(relTime) ? null : (Date.now() - relTime) / (24 * 60 * 60 * 1000);
+  if (opts.checkTheatrical && !existingUsTheatrical && !streaming && daysSinceRelease !== null && daysSinceRelease >= 0 && daysSinceRelease <= 60) {
+    const yr2 = sheet.getRange(row, 2).getValue();
+    const lg2 = sheet.getRange(row, 30).getValue();
+    if (checkUSTheatricalRelease_(String(title), String(yr2), String(lg2))) {
+      sheet.getRange(row, 43).setValue("Yes");
+    }
+    Utilities.sleep(1000); // pace Gemini calls between rows in this loop
+  }
+
+  result.checked = true;
+  result.streaming = streaming;
+  return result;
+}
+
 // =============================================
 // REFRESH STREAMING STATUS — change detection for "New on Streaming"
 // Re-checks existing movies' US streaming availability. When a film that had
@@ -4420,186 +4693,14 @@ function refreshStreamingStatus() {
     const releaseTime = releaseDateRaw ? new Date(releaseDateRaw).getTime() : NaN;
     if (!isNaN(releaseTime) && releaseTime < oneYearAgo) continue;
 
-    // Use stored TMDB ID when available; otherwise fall back to title search.
     try {
-      let tmdbId = String(sheet.getRange(row, 35).getValue()).trim();
-      if (!/^\d+$/.test(tmdbId)) {
-        const searchUrl = "https://api.themoviedb.org/3/search/movie?api_key=" +
-          TMDB_API_KEY + "&include_adult=false&query=" + encodeURIComponent(String(title));
-        const sRes = JSON.parse(UrlFetchApp.fetch(searchUrl).getContentText());
-        const hit = (sRes.results || [])[0];
-        if (!hit) continue;
-        tmdbId = String(hit.id);
-      }
-
-      const provUrl = "https://api.themoviedb.org/3/movie/" + tmdbId +
-        "/watch/providers?api_key=" + TMDB_API_KEY;
-      const provData = JSON.parse(UrlFetchApp.fetch(provUrl).getContentText());
-
-      // BUG FIX: this was only checking flatrate/free/ads, silently missing
-      // rent/buy-only availability (e.g. Amazon Video, Google Play, YouTube
-      // rentals) — a common case for newer titles not yet on a subscription
-      // service. fillMovieData already checks all five categories; this
-      // function's separate copy of the same logic didn't match, which is
-      // exactly why a manual re-score could find streaming info that this
-      // refresh function then failed to detect on its own.
-      // streamType tracked the same way as fillMovieData's own provider
-      // detection (ads folds into "free") so the OTTInfo label below reads
-      // identically regardless of which code path found it.
-      let streaming = "";
-      let streamType = "";
-      if (provData.results && provData.results.US) {
-        const us = provData.results.US;
-        if (us.flatrate && us.flatrate.length) { streaming = us.flatrate.map(p => p.provider_name).join(", "); streamType = "stream"; }
-        else if (us.free && us.free.length) { streaming = us.free.map(p => p.provider_name).join(", "); streamType = "free"; }
-        else if (us.ads && us.ads.length) { streaming = us.ads.map(p => p.provider_name).join(", "); streamType = "free"; }
-        else if (us.rent && us.rent.length) { streaming = us.rent.map(p => p.provider_name).join(", "); streamType = "rent"; }
-        else if (us.buy && us.buy.length) { streaming = us.buy.map(p => p.provider_name).join(", "); streamType = "buy"; }
-      }
-
-      // GAP FIX: this function only ever checked US availability — UK
-      // (col 41, StreamingUK) was set once by fillMovieData at add-time and
-      // then NEVER rechecked by this periodic refresh, so it went stale
-      // forever even as US availability kept getting updated on every run.
-      // Same watch/providers response already covers GB, no extra API call.
-      let streamingUK = "";
-      if (provData.results && provData.results.GB) {
-        const gb = provData.results.GB;
-        if (gb.flatrate && gb.flatrate.length) streamingUK = gb.flatrate.map(p => p.provider_name).join(", ");
-        else if (gb.free && gb.free.length) streamingUK = gb.free.map(p => p.provider_name).join(", ");
-        else if (gb.ads && gb.ads.length) streamingUK = gb.ads.map(p => p.provider_name).join(", ");
-        else if (gb.rent && gb.rent.length) streamingUK = gb.rent.map(p => p.provider_name).join(", ");
-        else if (gb.buy && gb.buy.length) streamingUK = gb.buy.map(p => p.provider_name).join(", ");
-      }
-      const existingStreamingUK = sheet.getRange(row, 41).getValue();
-      if (streamingUK || !existingStreamingUK) {
-        sheet.getRange(row, 41).setValue(streamingUK);
-      }
-
-      const prevStreaming = sheet.getRange(row, 15).getValue();
-      const sinceCell = sheet.getRange(row, 32);
-      const prevSince = sinceCell.getValue();
-
-      // relTime already read above (the 1-year skip) — reused here instead
-      // of re-fetching the same cell. Needed here because the widened
-      // Gemini fallback condition right below depends on it too.
-      const relTime = releaseTime;
-      const isRecent = !isNaN(relTime) && relTime <= Date.now() && relTime >= (Date.now() - 5 * 30 * 24 * 60 * 60 * 1000); // 5 months, matches the website's "New on Streaming" window
-
-      // Ask Gemini's lightweight live-search check as a second opinion
-      // whenever TMDB comes up empty for a movie that's plausibly actually
-      // streaming right now — not just "this movie left streaming"
-      // (prevStreaming set, now gone), but ALSO "this movie never had
-      // streaming data at all yet" for a recent release. TMDB's provider
-      // data (via JustWatch) routinely lags real-world releases by days to
-      // weeks, especially for regional Indian OTT drops — without the
-      // isRecent branch, a brand-new movie TMDB hasn't caught up on yet
-      // just sat blank forever, since this fallback was previously only
-      // reachable for movies that had ALREADY been confirmed streaming at
-      // some point. Bounded to isRecent so this doesn't fire forever on
-      // old catalog titles that are genuinely just not streaming anywhere.
-      if (!streaming && (prevStreaming || isRecent)) {
-        const yr = sheet.getRange(row, 2).getValue();
-        const lg = sheet.getRange(row, 30).getValue();
-        let confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
-        Utilities.sleep(1000); // pace Gemini calls between rows in this loop
-        // null means the check itself failed (rate limit, empty response,
-        // network hiccup) — NOT "confirmed not streaming". A bulk run fires
-        // dozens of these back-to-back and is far more likely to hit a
-        // transient failure than a single one-off re-score ever is, which
-        // is exactly what made this refresh silently disagree with a manual
-        // re-score run moments later on the same movie. One retry clears
-        // most of these; if it still fails, flag the row instead of quietly
-        // writing "not streaming".
-        if (confirmed === null) {
-          Utilities.sleep(2000);
-          confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
-          Utilities.sleep(1000);
-        }
-        if (confirmed === null) {
-          uncertainTitles.push(String(title));
-        } else if (confirmed) {
-          streaming = confirmed; // treat as if TMDB had found it — same downstream logic applies
-        }
-      }
-
-      // Same protection as fillMovieData: only overwrite if we actually
-      // found something this time. A transient TMDB/JustWatch data gap
-      // shouldn't wipe out previously-confirmed streaming info. This DOES
-      // still allow genuine removals to clear the stamp below — that's
-      // this function's actual job — just not from a single empty check
-      // that might just be a momentary data hiccup rather than a real exit.
-      if (streaming || !prevStreaming) {
-        sheet.getRange(row, 15).setValue(streaming);
-      }
-
-      // BUG FIX: this function was updating the raw Streaming column (15)
-      // above but never touching OTTInfo (col 16) — the human-readable
-      // label ("Stream on Netflix (US)") that card ribbons and the "Where
-      // to Watch" panel actually display with priority over column 15. A
-      // platform change (e.g. Netflix -> Amazon) or a genuine removal
-      // would update column 15 correctly but leave the visible label
-      // frozen at whatever fillMovieData originally wrote, months earlier
-      // — this was the actual cause of "streaming info doesn't update."
-      // Same protect-existing condition as column 15 just above, and the
-      // same label format fillMovieData uses (typeLabel falls back to
-      // "Available" for the Gemini-fallback case, where streamType is
-      // still "" since only the TMDB branch above sets it).
-      if (streaming) {
-        const typeLabel = { stream: "Stream", free: "Free", rent: "Rent", buy: "Buy" }[streamType] || "Available";
-        sheet.getRange(row, 16).setValue(typeLabel + " on " + streaming + " (US)");
-      } else if (!prevStreaming) {
-        sheet.getRange(row, 16).setValue("");
-      }
-
-      // relTime/isRecent computed earlier now (needed by the widened
-      // Gemini fallback above) — reused here unchanged.
-
-      // STAMP: if there's streaming right now, it's a recent release, and
-      // the stamp itself is simply missing — set it. This does NOT require
-      // *this specific run* to have witnessed the text go from blank to
-      // filled — that stricter condition meant this function could never
-      // fix a row where the streaming text was already filled (e.g. by a
-      // manual re-score) but the stamp itself never got set. Matches
-      // fillMovieData's own (already correct) stamping logic.
-      if (streaming && !prevSince && isRecent) {
-        sinceCell.setValue(new Date());
+      const r = refreshStreamingForRow_(sheet, row, title, releaseTime, { checkTheatrical: true });
+      if (!r.checked) continue;
+      if (r.uncertain) uncertainTitles.push(String(title));
+      if (r.stamped) {
         newlyAdded++;
-        newlyAddedTitles.push(String(title) + " (" + streaming + ")");
+        newlyAddedTitles.push(String(title) + " (" + r.streaming + ")");
       }
-      // NOTE: deliberately no "clear the stamp if !streaming" branch here
-      // anymore. It used to clear col 32 whenever THIS run alone failed to
-      // reconfirm streaming (!streaming && prevStreaming) — but that's the
-      // exact same momentary TMDB/Gemini miss that col 15 right above
-      // correctly shrugs off without touching the data (streaming || !prevStreaming
-      // never overwrites a real value with empty). Treating one run's gap as
-      // "confirmed removal" for the stamp while NOT treating it that way for
-      // the streaming text itself was inconsistent, and wiped real
-      // StreamingSince dates for movies that never actually left streaming
-      // (e.g. Thaai Kizhavi: Apple TV/Hulu never left col 15, but this
-      // branch cleared col 32 anyway on a single miss). A real removal
-      // still isn't lost forever — re-running this refresh, or a manual
-      // re-score, will simply never re-set a stamp that's already blank.
-
-      // --- US theatrical re-check (col 43) ---
-      // A film added right at release might not be listed on ticketing
-      // sites yet when fillMovieData first checked. Give it more chances
-      // on each later run of this sweep, but only while it's still a real
-      // "Now in Theaters" candidate — recent, not yet confirmed, and not
-      // yet streaming (once it's streaming the theatrical badge no longer
-      // applies regardless, and once it's aged past 60 days the badge
-      // could never show either way, so don't waste a Gemini call).
-      const existingUsTheatrical = sheet.getRange(row, 43).getValue();
-      const daysSinceRelease = isNaN(relTime) ? null : (Date.now() - relTime) / (24 * 60 * 60 * 1000);
-      if (!existingUsTheatrical && !streaming && daysSinceRelease !== null && daysSinceRelease >= 0 && daysSinceRelease <= 60) {
-        const yr2 = sheet.getRange(row, 2).getValue();
-        const lg2 = sheet.getRange(row, 30).getValue();
-        if (checkUSTheatricalRelease_(String(title), String(yr2), String(lg2))) {
-          sheet.getRange(row, 43).setValue("Yes");
-        }
-        Utilities.sleep(1000); // pace Gemini calls between rows in this loop
-      }
-
       checked++;
     } catch (err) {
       Logger.log("Refresh failed for '" + title + "' row " + row + ": " + err);
