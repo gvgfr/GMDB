@@ -1350,6 +1350,24 @@ counts as sufficient on its own; a single vague blog post does not), treat
 it as unconfirmed and return "N/A" rather than guessing from one weak
 signal.
 
+MAJOR STUDIO THEATRICAL RELEASES — extra skepticism required: if this is a
+wide theatrical release from a major studio (Hollywood or large Indian
+studio) that opened in US theaters within roughly the last 30-45 days, be
+very skeptical of ANY claim that it's already streaming. The real-world
+industry norm is a 45+ day theatrical exclusivity window before a PVOD/
+digital release, and even longer before it reaches a subscription service —
+a film streaming within days or a couple weeks of its theatrical opening is
+rare. Do NOT confuse any of these with "currently streaming": the studio's
+OWN streaming service being its eventual destination (e.g. a Warner Bros.
+film will eventually reach HBO Max, but that doesn't mean it's there yet),
+an ANNOUNCED future streaming/digital date, or pre-release marketing about
+where it will stream later. Only report a platform if you find an article
+explicitly stating the film IS available to watch right now, dated after
+its theatrical opening. This caution does NOT apply to films that never had
+a theatrical run, or smaller/regional releases that often go to streaming
+within weeks of a limited theatrical release — only to wide major-studio
+theatrical openings.
+
 Return "N/A" if you cannot confirm current US streaming availability, if it's
 still theater-only, or if you're not confident it's the correct film.
 
@@ -4052,6 +4070,7 @@ SEARCH STRATEGY — try several angles, not just one query, before giving up:
 4. "${title}" OTT release date US
 
 IMPORTANT: JioHotstar (formerly Hotstar/Disney+ Hotstar) is confirmed geo-blocked outside India entirely — finding news that a film streams there almost always means India availability, NOT the US. Do not report it as a US confirmation. Also beware Amazon Prime Video specifically — it has SEPARATE regional catalogs, so "on Prime Video" in a general source often means Prime Video India, not the US. Only confirm a platform if the source is clearly US-specific. Require at least two credible sources to agree (e.g. JustWatch, Reelgood, or the platform's own US site) — a single vague mention isn't enough; return "N/A" if you can't cross-verify.
+MAJOR STUDIO THEATRICAL RELEASES: if this had a wide theatrical opening within roughly the last 30-45 days, be extra skeptical of any streaming claim — the real-world norm is a 45+ day exclusivity window before any digital release, longer still before a subscription service. Don't confuse the studio's own streaming service being its eventual home (e.g. a Warner Bros. film will eventually reach HBO Max) or an announced future date with current availability — only report a platform if an article explicitly says it IS available to watch right now.
 Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly "N/A" if you cannot confirm current US streaming availability. Return ONLY that single word or phrase, nothing else — no explanation, no punctuation.`;
 
   const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
