@@ -140,7 +140,8 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
    options. */
 .select-wrap-lang,
 .select-wrap-year,
-.select-wrap-region{
+.select-wrap-region,
+.select-wrap-platform{
   border:2px solid var(--accent);
   border-radius:20px;
   padding:9px 34px 9px 16px;
@@ -148,10 +149,12 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 }
 .select-wrap-lang .select-icon,
 .select-wrap-year .select-icon,
-.select-wrap-region .select-icon{position:static;pointer-events:none;}
+.select-wrap-region .select-icon,
+.select-wrap-platform .select-icon{position:static;pointer-events:none;}
 .select-wrap-lang .sort-select,
 .select-wrap-year .sort-select,
-.select-wrap-region .sort-select{
+.select-wrap-region .sort-select,
+.select-wrap-platform .sort-select{
   position:absolute;
   inset:0;
   border:none !important;
@@ -165,6 +168,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .select-wrap-lang{--accent:#1DB954;}
 .select-wrap-year{--accent:#E8862E;}
 .select-wrap-region{--accent:#4A90E2;}
+.select-wrap-platform{--accent:#E50914;}
 
 /* Sort is simpler still — the value text itself is hidden (color:
    transparent), so the closed button never needs to show the current
@@ -201,6 +205,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .select-wrap-lang .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%231DB954' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
 .select-wrap-year .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23E8862E' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
 .select-wrap-region .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%234A90E2' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
+.select-wrap-platform .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23E50914' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
 
 .grid-wrap{padding:1.5rem;}
 .grid-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1rem;}
@@ -684,6 +689,12 @@ footer span{color:var(--red);}
     <select id="regionSelect" class="sort-select sort-select-labeled" onchange="onRegionChange()">
       <option value="US" selected>US</option>
       <option value="UK">UK</option>
+    </select>
+  </div>
+  <div class="select-wrap select-wrap-platform">
+    <span class="select-icon sort-by-label">Streaming On</span>
+    <select id="platformSelect" class="sort-select sort-select-labeled" onchange="onFilterSelect()">
+      <option value="all">All</option>
     </select>
   </div>
   <button id="allMoviesBtn" class="ctrl-btn" onclick="showAllMoviesNewest()">🎞️ All Movies</button>
@@ -1969,6 +1980,7 @@ function applyMoviesData(data, fromCache) {
   updateComingSoonBadge();
   updateNewReleasesBadge();
   populateYears();
+  populatePlatforms();
   if (!fromCache) {
     updateNewStreamingBadge();
     renderStreamingCarousel();
@@ -2378,6 +2390,36 @@ function populateYears() {
     years.map(y => `<option value="${y}">${y}</option>`).join("");
 }
 
+// Platform options are derived live from whatever's actually in the data
+// (for the currently selected region) rather than a fixed list — so the
+// dropdown only ever shows platforms that genuinely have movies on them,
+// and automatically picks up new ones (e.g. a new regional service) without
+// needing a code change. Re-run whenever the region toggle changes, since
+// US and UK can have different platform sets entirely.
+function populatePlatforms() {
+  const sel = document.getElementById("platformSelect");
+  if (!sel) return;
+  const region = getSelectedRegion();
+  const platforms = new Set();
+  allMovies.forEach(m => {
+    const raw = region === "UK" ? (m.StreamingUK || m.Streaminguk || "") : (m.OTTInfo || m.OTTinfo || m.Streaming || "");
+    if (!raw) return;
+    raw.split(",").forEach(p => {
+      const name = p.trim();
+      // Same "with ads" cleanup as buildStreamingButtons — a separate
+      // ad-supported-tier entry alongside the base platform isn't a
+      // distinct platform worth its own filter option.
+      if (!name || /with ads/i.test(name)) return;
+      platforms.add(name);
+    });
+  });
+  const sorted = [...platforms].sort((a, b) => a.localeCompare(b));
+  const prevValue = sel.value;
+  sel.innerHTML = '<option value="all">All</option>' +
+    sorted.map(p => `<option value="${p}">${p}</option>`).join("");
+  if (sorted.indexOf(prevValue) !== -1) sel.value = prevValue; // keep selection across a re-render if still valid
+}
+
 function getTierClass(tier, score) {
   const t = score ? getMasalaTier(score) : MASALA_TIERS.find(x => x.name === tier);
   return t ? t.cssClass : "tier-unknown";
@@ -2685,6 +2727,16 @@ function filterMovies() {
     if (yearSel && yearSel.value !== "all") {
       filtered = filtered.filter(m => String(m.Year||"").trim() === yearSel.value);
     }
+
+    const platformSel = document.getElementById("platformSelect");
+    if (platformSel && platformSel.value !== "all") {
+      const region = getSelectedRegion();
+      filtered = filtered.filter(m => {
+        const raw = region === "UK" ? (m.StreamingUK || m.Streaminguk || "") : (m.OTTInfo || m.OTTinfo || m.Streaming || "");
+        if (!raw) return false;
+        return raw.split(",").map(s => s.trim()).indexOf(platformSel.value) !== -1;
+      });
+    }
   }
 
   filtered = sortMovies(filtered);
@@ -2838,6 +2890,7 @@ function onFilterSelect() {
 // (card ribbons + "New on Streaming" filter if active), the New on
 // Streaming badge count, and the streaming carousel.
 function onRegionChange() {
+  populatePlatforms(); // US/UK can have different platform sets entirely
   filterMovies();
   updateNewStreamingBadge();
   renderStreamingCarousel();
