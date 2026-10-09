@@ -1647,6 +1647,7 @@ function onOpen() {
     .createMenu("🎬 GMDB")
     .addItem("Fill next blank movie (one)", "refreshOneBlankMovie")
     .addItem("Re-score selected movie (click a row first)", "rescoreOneMovie")
+    .addItem("Check streaming only for selected movie (cheap, click a row first)", "checkStreamingOnlyForSelectedRow")
     .addItem("Re-score next 5 movies (batch)", "rescoreFiveMovies")
     .addItem("Re-score highlighted rows", "rescoreHighlightedRows")
     .addItem("Fill next missing storyline/trivia (one)", "backfillOneStorylineTrivia")
@@ -1772,6 +1773,75 @@ function rescoreOneMovie() {
   } catch (err) {
     SpreadsheetApp.getUi().alert("Re-score failed for row " + row + ":\n\n" + err);
   }
+}
+
+// Lightweight alternative to rescoreOneMovie() above: fixes/checks ONLY the
+// US streaming column (15) for one selected row, via a single tiny Gemini
+// call (checkStreamingViaGemini_ returns one word/phrase), instead of the
+// full fillMovieData/getGeminiMovieReview pipeline (review text, cast, IMDb
+// lookup, similar movies, etc. — many times the Gemini quota for the exact
+// same streaming check). Use this when a row's Streaming column is simply
+// wrong (e.g. a false "Available on X" written by an earlier bad check) and
+// nothing else about the row needs touching.
+// Unlike refreshStreamingStatus()'s passive "never erase existing data
+// without a fresh confirmation" protection, this ALWAYS overwrites column 15
+// with whatever this check finds (including clearing it to blank on a
+// confirmed "not streaming") — it's a deliberate single-row correction, not
+// a background sweep, so the fresh result should win outright.
+function checkStreamingOnlyForSelectedRow() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
+  const activeRange = SpreadsheetApp.getActiveRange();
+  const row = activeRange ? activeRange.getRow() : 0;
+
+  if (row < 2) {
+    SpreadsheetApp.getUi().alert("Click a cell in the movie's row first, then run this again.");
+    return;
+  }
+
+  const title = sheet.getRange(row, 1).getValue();
+  if (!title) {
+    SpreadsheetApp.getUi().alert("Row " + row + " has no title.");
+    return;
+  }
+
+  const year = sheet.getRange(row, 2).getValue();
+  const filmLanguage = sheet.getRange(row, 30).getValue();
+
+  let confirmed = checkStreamingViaGemini_(String(title), String(year || ""), String(filmLanguage || ""));
+  if (confirmed === null) {
+    // One retry, same pattern as refreshStreamingStatus — a transient
+    // failure (rate limit, empty response) shouldn't be reported as "not
+    // streaming" to the user.
+    Utilities.sleep(2000);
+    confirmed = checkStreamingViaGemini_(String(title), String(year || ""), String(filmLanguage || ""));
+  }
+
+  if (confirmed === null) {
+    SpreadsheetApp.getUi().alert("Streaming check failed for \"" + title + "\" (network/API error) — nothing was changed. Try again in a moment.");
+    return;
+  }
+
+  const streamCell = sheet.getRange(row, 15);
+  const previous = String(streamCell.getValue() || "");
+  streamCell.setValue(confirmed);
+
+  // Stamp StreamingSince (col 32) the same way fillMovieData does, only when
+  // this genuinely newly confirms streaming for a recent release that didn't
+  // have the stamp yet — not a full re-derivation, just the one cheap
+  // date check, no extra API calls.
+  if (confirmed) {
+    const sinceCell = sheet.getRange(row, 32);
+    const existingSince = String(sinceCell.getValue() || "").trim();
+    const releaseDate = sheet.getRange(row, 31).getValue();
+    const relTime = new Date(releaseDate || "").getTime();
+    const isRecent = !isNaN(relTime) && relTime <= Date.now() && relTime >= (Date.now() - 5 * 30 * 24 * 60 * 60 * 1000);
+    if (!existingSince && isRecent) sinceCell.setValue(new Date());
+  }
+
+  const summary = confirmed
+    ? "\"" + title + "\" confirmed streaming on: " + confirmed + (previous && previous !== confirmed ? " (was: \"" + previous + "\")" : "")
+    : "\"" + title + "\" — not confirmed streaming anywhere right now." + (previous ? " Cleared previous value: \"" + previous + "\"" : "");
+  SpreadsheetApp.getActive().toast(summary, "GMDB", 8);
 }
 
 // Re-score 5 movies: if you HIGHLIGHT multiple rows first, re-scores exactly
