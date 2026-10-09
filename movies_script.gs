@@ -3710,6 +3710,7 @@ function autoAddNewReleasesCore() {
           id: m.id,
           title: m.title,
           year: m.release_date ? m.release_date.substring(0, 4) : "",
+          releaseDate: m.release_date || "",
           popularity: m.popularity,
           lang: lang
         });
@@ -3719,8 +3720,21 @@ function autoAddNewReleasesCore() {
     }
   });
 
-  // Sort by popularity, dedupe by title, drop ones already in the sheet
-  candidates.sort((a, b) => b.popularity - a.popularity);
+  // Sort by release date (NEWEST first), dedupe by title, drop ones already
+  // in the sheet.
+  // BUG FIX: this used to sort by TMDB popularity instead. A same-day,
+  // small regional/OTT-only release has near-zero popularity compared to
+  // anything already trending within the same 14-day window, so it
+  // consistently lost the MAX_PER_RUN cut below — EVERY run, for its
+  // entire 14-day eligibility window — and was silently never added at
+  // all, no matter how many times this was run manually. Sorting by
+  // release date instead guarantees the newest releases are always
+  // attempted first, regardless of how popular/unpopular they are yet.
+  candidates.sort((a, b) => {
+    const at = new Date(a.releaseDate || 0).getTime();
+    const bt = new Date(b.releaseDate || 0).getTime();
+    return bt - at; // newest first
+  });
   const seen = {};
   candidates = candidates.filter(c => {
     const key = c.title.toLowerCase().trim();
@@ -3740,7 +3754,11 @@ function autoAddNewReleasesCore() {
   // an orphaned half-filled row is to stop BEFORE starting a new candidate
   // whenever we're getting close to the limit, so nothing is ever mid-write
   // when the platform forcibly terminates the script.
-  const MAX_PER_RUN = 10;
+  // Raised from 10 — now that candidates are sorted newest-first (see
+  // above), a busy day across all 5 languages could still have more than
+  // 10 genuinely new releases; the runtime cutoff below is what actually
+  // keeps this safe, not this count.
+  const MAX_PER_RUN = 20;
   candidates = candidates.slice(0, MAX_PER_RUN);
 
   const added = [];
