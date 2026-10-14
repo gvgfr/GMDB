@@ -300,6 +300,8 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .modal-btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
 .modal-btn-share{background:rgba(29,211,176,0.15);color:#1DD3B0;border:1px solid #1DD3B0;flex-shrink:0;}
 .modal-btn-share:hover{background:#1DD3B0;color:#04231d;}
+.modal-btn-remind{background:rgba(255,176,32,0.15);color:#FFB020;border:1px solid #FFB020;flex-shrink:0;}
+.modal-btn-remind:hover{background:#FFB020;color:#2b1b00;}
 .modal-btn-secondary:hover{border-color:var(--red);}
 
 /* ADD MODAL */
@@ -432,6 +434,9 @@ footer span{color:var(--red);}
 .song-detail-meta{font-size:13px;color:var(--text2);margin:2px 0;}
 .song-detail-links{display:flex;flex-direction:column;gap:10px;margin-top:1.25rem;}
 .add-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid var(--red);border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;display:flex;align-items:center;gap:10px;max-width:90vw;}
+.simple-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid #FFB020;border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;max-width:90vw;text-align:center;}
+.simple-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+@media (max-width:600px){.simple-toast{bottom:90px;}}
 /* BUG FIX: without pointer-events:none above, a "dismissed" toast (opacity:0,
    only translated 100px — not actually off-screen, especially the taller
    .ready card variant) kept silently swallowing taps in whatever part of the
@@ -3205,6 +3210,74 @@ function openMovieByTitle(title) {
   }
 }
 
+// True only when this page is running inside the native Capacitor app
+// shell (iOS/Android), never for a regular browser visit to the site —
+// window.Capacitor only exists because Capacitor's native runtime injects
+// its JS bridge into the page it loads, which it does even for a remote
+// server.url page like this one. Gates native-only features (the Remind Me
+// button below) so they simply don't render on the regular website.
+function isNativeApp() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+function showSimpleToast(message, ms) {
+  let toast = document.getElementById("simpleToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "simpleToast";
+    toast.className = "simple-toast";
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => toast.classList.remove("show"), ms || 3500);
+}
+
+// Native-only "Remind Me" — schedules an on-device local notification via
+// Capacitor's LocalNotifications plugin (no backend/server involved at
+// all, purely scheduled on the phone itself). Defaults to tonight at 8pm,
+// or tomorrow at 8pm if it's already past that today — a single tap, no
+// picker UI, to keep this genuinely simple for people to use.
+async function remindMeLater(title) {
+  const LocalNotifications = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications;
+  if (!LocalNotifications) return; // defensive — button is already gated by isNativeApp()
+
+  try {
+    const perm = await LocalNotifications.requestPermissions();
+    if (perm.display !== "granted") {
+      showSimpleToast("Reminders need notification permission — enable it in Settings to use this.");
+      return;
+    }
+
+    const when = new Date();
+    when.setHours(20, 0, 0, 0); // 8:00 PM
+    if (when.getTime() <= Date.now()) when.setDate(when.getDate() + 1); // already past 8pm today -> tomorrow
+
+    // Positive int32 id derived from the title, so tapping Remind Me again
+    // for the same movie reschedules it instead of stacking duplicates.
+    const id = Math.abs(Array.from(title).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)) % 2147483647;
+
+    await LocalNotifications.schedule({
+      notifications: [{
+        id,
+        title: "🍿 Time to watch!",
+        body: title,
+        schedule: { at: when }
+      }]
+    });
+
+    const Haptics = window.Capacitor.Plugins.Haptics;
+    if (Haptics) Haptics.impact({ style: "medium" }).catch(() => {});
+
+    const whenLabel = when.toDateString() === new Date().toDateString() ? "tonight at 8pm" : "tomorrow at 8pm";
+    showSimpleToast(`We'll remind you to watch "${title}" ${whenLabel}.`);
+  } catch (err) {
+    showSimpleToast("Couldn't set that reminder — try again.");
+    console.error("remindMeLater failed:", err);
+  }
+}
+
 function openMovie(index) {
   const m=(window._currentMovies||allMovies)[index];
   if(!m) return;
@@ -3248,6 +3321,7 @@ function openMovie(index) {
     </div>
       <div class="modal-actions">
         <button class="modal-btn modal-btn-share" onclick="shareMovie('${jsAttrEscape(m.Title)}', '${m.Year||''}')">↗ Share</button>
+        ${isNativeApp() ? `<button class="modal-btn modal-btn-remind" onclick="remindMeLater('${jsAttrEscape(m.Title)}')">⏰ Remind Me</button>` : ""}
         <button class="modal-btn modal-btn-secondary" onclick="closeDetail()" style="flex:1;">Close</button>
       </div>`;
   document.getElementById("detailModal").classList.add("open");
@@ -3583,6 +3657,10 @@ async function submitMovie(){
       mode:"no-cors"
     });
   } catch(err){ /* no-cors: we can't read response anyway */ }
+
+  if (isNativeApp() && window.Capacitor.Plugins.Haptics) {
+    window.Capacitor.Plugins.Haptics.impact({ style: "light" }).catch(() => {});
+  }
 
   // Clear and close the modal immediately so people can keep browsing
   input.value = "";
