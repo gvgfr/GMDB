@@ -70,8 +70,9 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .carousel-poster{width:100%;height:100%;object-fit:cover;display:block;}
 .carousel-poster-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--text3);}
 .carousel-title{font-size:12px;font-weight:600;color:var(--text);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.carousel-score{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:12px;font-weight:700;margin-top:4px;}
-.carousel-platform{font-size:11px;color:var(--text2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.carousel-meta-row{display:flex;align-items:center;gap:5px;margin-top:4px;flex-wrap:wrap;}
+.carousel-score{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:12px;font-weight:700;}
+.carousel-platform-badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:5px;font-size:11px;font-weight:700;white-space:nowrap;}
 .carousel-empty{color:var(--text2);font-size:13px;padding:0 1.5rem;}
 .hero::before{content:'';position:absolute;top:-50%;left:50%;transform:translateX(-50%);width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(229,32,32,0.08) 0%,transparent 70%);pointer-events:none;}
 .hero-eyebrow{font-size:13px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:0.65rem;}
@@ -1045,6 +1046,53 @@ function getPlatformLabel(m) {
   return cleanPlatformNames_(stripped);
 }
 
+// Known platforms: short display name, brand color, search URL builder.
+// Shared between the "Where to Watch" buttons (buildStreamingButtons) and
+// the colored platform badge on New on Streaming carousel cards
+// (getPlatformBadge) — one list, so both always agree on name/color.
+const KNOWN_PLATFORMS = [
+  { keys:["netflix"], label:"Netflix", color:"#E50914", url:t=>`https://www.netflix.com/search?q=${encodeURIComponent(t)}` },
+  { keys:["prime","amazon"], label:"Prime Video", color:"#00A8E1", url:t=>`https://www.primevideo.com/search?phrase=${encodeURIComponent(t)}` },
+  { keys:["hotstar","disney"], label:"Hotstar", color:"#1F80E0", url:t=>`https://www.hotstar.com/in/search?q=${encodeURIComponent(t)}` },
+  { keys:["sun nxt","sunnxt"], label:"Sun NXT", color:"#E8442C", url:t=>`https://www.sunnxt.com/search/${encodeURIComponent(t)}` },
+  { keys:["zee","zee5"], label:"ZEE5", color:"#6A1B9A", url:t=>`https://www.zee5.com/search?q=${encodeURIComponent(t)}` },
+  { keys:["sony","liv"], label:"Sony LIV", color:"#000000", url:t=>`https://www.sonyliv.com/search?searchTerm=${encodeURIComponent(t)}` },
+  { keys:["aha"], label:"aha", color:"#FF7E00", url:t=>`https://www.aha.video/search?q=${encodeURIComponent(t)}` },
+  { keys:["jiocinema","jio"], label:"JioCinema", color:"#A020F0", url:t=>`https://www.jiocinema.com/search/${encodeURIComponent(t)}` },
+  { keys:["hulu"], label:"Hulu", color:"#1CE783", url:t=>`https://www.hulu.com/search?q=${encodeURIComponent(t)}` },
+  { keys:["youtube"], label:"YouTube", color:"#FF0000", url:t=>`https://www.youtube.com/results?search_query=${encodeURIComponent(t+" full movie")}` },
+  { keys:["bbc iplayer","iplayer"], label:"BBC iPlayer", color:"#000000", url:t=>`https://www.bbc.co.uk/iplayer/search?q=${encodeURIComponent(t)}` },
+  { keys:["itvx"], label:"ITVX", color:"#FF0055", url:t=>`https://www.itv.com/watch?q=${encodeURIComponent(t)}` },
+  { keys:["channel 4","channel4","my4"], label:"Channel 4", color:"#00C8B4", url:t=>`https://www.channel4.com/search?q=${encodeURIComponent(t)}` },
+  { keys:["sky","nowtv","now tv"], label:"Sky / NOW", color:"#0072C9", url:t=>`https://www.nowtv.com/search?q=${encodeURIComponent(t)}` },
+];
+
+// Picks black or white text for a given brand background so every badge
+// stays readable — Hulu's bright green and Channel 4's teal are too light
+// for white text, while Netflix/Prime/etc.'s darker colors need white.
+// Standard relative-luminance formula rather than a hardcoded exceptions list.
+function getContrastTextColor_(hex) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0,2), 16), g = parseInt(h.substring(2,4), 16), b = parseInt(h.substring(4,6), 16);
+  const luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
+  return luminance > 0.6 ? "#000" : "#fff";
+}
+
+// A single compact badge for the carousel card — brand color/name for a
+// recognized platform (just "Prime Video", not "Amazon Prime Video" —
+// everyone already knows the name and color), or a plain neutral chip with
+// whatever name is on file for anything not in KNOWN_PLATFORMS. Only the
+// first platform when several are listed — there's only room for one badge
+// next to the score on a 155px card.
+function getPlatformBadge(m) {
+  const first = getPlatformLabel(m).split(",")[0].trim();
+  if (!first) return null;
+  const lower = first.toLowerCase();
+  const known = KNOWN_PLATFORMS.find(p => p.keys.some(k => lower.includes(k)));
+  const color = known ? known.color : "#4a4a4a";
+  return { label: known ? known.label : first, color, text: getContrastTextColor_(color) };
+}
+
 function buildStreamingButtons(m) {
   const region = getSelectedRegion();
   let ott = region === "UK"
@@ -1083,27 +1131,9 @@ function buildStreamingButtons(m) {
       <div class="ott-note">No ${region} streaming data found. <a href="${jwLink}" target="_blank" style="color:#FFB020;">Check JustWatch →</a></div></div>`;
   }
 
-  // Known platforms: name, brand color, search URL builder
-  const platforms = [
-    { keys:["netflix"], label:"Netflix", color:"#E50914", url:t=>`https://www.netflix.com/search?q=${encodeURIComponent(t)}` },
-    { keys:["prime","amazon"], label:"Prime Video", color:"#00A8E1", url:t=>`https://www.primevideo.com/search?phrase=${encodeURIComponent(t)}` },
-    { keys:["hotstar","disney"], label:"Hotstar", color:"#1F80E0", url:t=>`https://www.hotstar.com/in/search?q=${encodeURIComponent(t)}` },
-    { keys:["sun nxt","sunnxt"], label:"Sun NXT", color:"#E8442C", url:t=>`https://www.sunnxt.com/search/${encodeURIComponent(t)}` },
-    { keys:["zee","zee5"], label:"ZEE5", color:"#6A1B9A", url:t=>`https://www.zee5.com/search?q=${encodeURIComponent(t)}` },
-    { keys:["sony","liv"], label:"Sony LIV", color:"#000000", url:t=>`https://www.sonyliv.com/search?searchTerm=${encodeURIComponent(t)}` },
-    { keys:["aha"], label:"aha", color:"#FF7E00", url:t=>`https://www.aha.video/search?q=${encodeURIComponent(t)}` },
-    { keys:["jiocinema","jio"], label:"JioCinema", color:"#A020F0", url:t=>`https://www.jiocinema.com/search/${encodeURIComponent(t)}` },
-    { keys:["hulu"], label:"Hulu", color:"#1CE783", url:t=>`https://www.hulu.com/search?q=${encodeURIComponent(t)}` },
-    { keys:["youtube"], label:"YouTube", color:"#FF0000", url:t=>`https://www.youtube.com/results?search_query=${encodeURIComponent(t+" full movie")}` },
-    { keys:["bbc iplayer","iplayer"], label:"BBC iPlayer", color:"#000000", url:t=>`https://www.bbc.co.uk/iplayer/search?q=${encodeURIComponent(t)}` },
-    { keys:["itvx"], label:"ITVX", color:"#FF0055", url:t=>`https://www.itv.com/watch?q=${encodeURIComponent(t)}` },
-    { keys:["channel 4","channel4","my4"], label:"Channel 4", color:"#00C8B4", url:t=>`https://www.channel4.com/search?q=${encodeURIComponent(t)}` },
-    { keys:["sky","nowtv","now tv"], label:"Sky / NOW", color:"#0072C9", url:t=>`https://www.nowtv.com/search?q=${encodeURIComponent(t)}` },
-  ];
-
   const ottLower = ott.toLowerCase();
   const found = [];
-  platforms.forEach(p => {
+  KNOWN_PLATFORMS.forEach(p => {
     if (p.keys.some(k => ottLower.includes(k))) {
       found.push(`<a href="${p.url(title)}" target="_blank" class="ott-btn" style="--ott-color:${p.color}">${p.label}</a>`);
     }
@@ -2079,11 +2109,13 @@ function applyMoviesData(data, fromCache) {
 const MOVIES_CACHE_KEY = "gmdb_movies_cache_v1";
 
 async function loadMovies() {
-  // Paint the grid/stats instantly from last visit's cache (the Apps
-  // Script backend can genuinely take several seconds, worse on a cold
-  // start, and sitting on a bare spinner that whole time read as "too
-  // slow"). The two "right now" carousels deliberately do NOT render from
-  // this cache pass (see applyMoviesData's fromCache param) — those are
+  // Paint the grid/stats instantly from a cached source — localStorage if
+  // this browser has visited before, otherwise the static snapshot below —
+  // rather than waiting on the live fetch (the Apps Script backend can
+  // genuinely take several seconds, worse on a cold start, and sitting on
+  // a bare spinner that whole time read as "too slow"). The two "right
+  // now" carousels deliberately do NOT render from either cached source
+  // (see applyMoviesData's fromCache param) — those are
   // exactly the sections where a stale answer, even for a couple seconds,
   // reads as actively wrong rather than just old. They stay on their
   // "Loading…" placeholder until the real fetch below lands. Never counts
@@ -2097,6 +2129,11 @@ async function loadMovies() {
   // and re-running this every tick would just re-trigger a pointless
   // re-render (resetting the stats count-up, grid scroll, etc.) on cache
   // content that's usually identical to what's already showing.
+  // Start the live fetch immediately — it's the slow part (several seconds
+  // on an Apps Script cold start), so get it going before spending any time
+  // on the instant-paint attempts below rather than waiting on them first.
+  const livePromise = fetch(API_URL + "?action=movies").then(r => r.json());
+
   let renderedFromCache = false;
   if (!lastRenderedMoviesRaw) {
     try {
@@ -2105,12 +2142,35 @@ async function loadMovies() {
         applyMoviesData(cached, true);
         renderedFromCache = true;
       }
-    } catch(err) { /* corrupt/missing cache — fall through to network */ }
+    } catch(err) { /* corrupt/missing cache — fall through */ }
+
+    // No localStorage cache (first-ever visit on this device, or storage
+    // was cleared) — until now that meant no instant-paint option at all,
+    // so this visitor sat on a blank grid for however long the live fetch
+    // above took. movies-snapshot.json is a same-origin static file
+    // regenerated every few hours by the same GitHub Action that builds
+    // the share pages — same CDN speed as the rest of the page, so it
+    // paints almost immediately. Same fromCache treatment as the
+    // localStorage path: everything except the two "right now" carousels,
+    // which still wait on livePromise below since a many-hours-stale
+    // snapshot is exactly where "new on streaming right now" could be
+    // wrong, not just old.
+    if (!renderedFromCache) {
+      try {
+        const snapRes = await fetch("movies-snapshot.json");
+        if (snapRes.ok) {
+          const snapData = await snapRes.json();
+          if (Array.isArray(snapData) && snapData.length && !lastRenderedMoviesRaw) {
+            applyMoviesData(snapData, true);
+            renderedFromCache = true;
+          }
+        }
+      } catch(err) { /* snapshot missing/unreachable — live fetch below still covers it */ }
+    }
   }
 
   try {
-    const res = await fetch(API_URL + "?action=movies");
-    const data = await res.json();
+    const data = await livePromise;
     const dataRaw = JSON.stringify(data);
     if (dataRaw !== lastRenderedMoviesRaw) {
       applyMoviesData(data);
@@ -2307,7 +2367,7 @@ function renderStreamingCarousel() {
 
   container.innerHTML = streaming.map(m => {
     const idx = allMovies.indexOf(m);
-    const platform = getPlatformLabel(m);
+    const badge = getPlatformBadge(m);
     return `<div class="carousel-card" onclick="openMovieFromCarousel(${idx})">
       <div class="carousel-poster-wrap">
         ${m.PosterURL
@@ -2315,8 +2375,10 @@ function renderStreamingCarousel() {
           : `<div class="carousel-poster-placeholder">🎬</div>`}
       </div>
       <div class="carousel-title">${m.Title}</div>
-      <div class="carousel-score ${getTierClass(m.ConsensusTier, m.GauthamScore)}">${m.GauthamScore||"—"} ${getTierEmoji(m.ConsensusTier, m.GauthamScore)}</div>
-      ${platform ? `<div class="carousel-platform">${platform}</div>` : ""}
+      <div class="carousel-meta-row">
+        <span class="carousel-score ${getTierClass(m.ConsensusTier, m.GauthamScore)}">${m.GauthamScore||"—"} ${getTierEmoji(m.ConsensusTier, m.GauthamScore)}</span>
+        ${badge ? `<span class="carousel-platform-badge" style="background:${badge.color};color:${badge.text}">${badge.label}</span>` : ""}
+      </div>
     </div>`;
   }).join("");
 
