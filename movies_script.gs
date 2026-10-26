@@ -14,6 +14,18 @@ const SPOTIFY_CLIENT_SECRET =
 const SIMILAR_CACHE_COL = 36;
 const SIMILAR_CACHE_DATE_COL = 37;
 
+// A short film isn't a quality problem, it's the wrong TYPE of content for
+// a feature-film site — TMDB catalogs shorts under the same "movie" type
+// as real features with no separate category, and the auto-add bots' TMDB
+// Discover queries make no runtime distinction, so a short (often only
+// watchable for free on YouTube, which is common for shorts specifically)
+// can slip in looking just like a real release. 40 minutes is the
+// standard short-vs-feature line (same threshold the Academy Awards use).
+// Used only against a CONFIRMED runtime below this — 0/missing means TMDB
+// doesn't have the figure yet (common for brand-new Indian releases and
+// pre-release "Coming Soon" entries), which isn't evidence of anything.
+const SHORT_FILM_MAX_MINUTES = 40;
+
 // Gemini's streaming-platform prompts (streamingLive/streamingLiveUK in
 // fillMovieData, and checkStreamingViaGemini_'s own dedicated check) are all
 // told to return "N/A" when a film isn't actually confirmed streaming — but
@@ -390,6 +402,17 @@ function fillMovieData(e) {
       sheet.getRange(lastRow, 1).setValue("[blocked: adult content not allowed]");
     } catch (wErr) { Logger.log("Adult-row cleanup failed: " + wErr); }
     SpreadsheetApp.getActive().toast("That title was blocked (adult content is not allowed).", "GMDB", 6);
+    return;
+  }
+
+  // --- SHORT FILM GUARD --- (see SHORT_FILM_MAX_MINUTES above for why)
+  if (details.runtime > 0 && details.runtime < SHORT_FILM_MAX_MINUTES) {
+    Logger.log("BLOCKED short film (" + details.runtime + " min): " + (details.title || cleanTitle) + " (row " + lastRow + ")");
+    try {
+      sheet.getRange(lastRow, 1, 1, 35).clearContent();
+      sheet.getRange(lastRow, 1).setValue("[blocked: short film, not a feature]");
+    } catch (wErr) { Logger.log("Short-film row cleanup failed: " + wErr); }
+    SpreadsheetApp.getActive().toast("That title was blocked (" + details.runtime + " min — looks like a short film, not a feature).", "GMDB", 6);
     return;
   }
 
@@ -1666,6 +1689,7 @@ function onOpen() {
     .addSeparator()
     .addItem("Remove duplicate movies", "removeDuplicateMovies")
     .addItem("Remove low-scoring movies (below 65)", "removeLowScoringMovies")
+    .addItem("Remove short films (checks runtime via TMDB)", "removeShortFilms")
     .addSeparator()
     .addItem("Auto-add new releases now", "autoAddNewReleases")
     .addItem("Add upcoming releases (next 7 days, no review yet)", "autoAddUpcomingReleases")
@@ -4007,6 +4031,12 @@ function autoAddUpcomingReleasesCore() {
           adultTitlePatterns.test(String(details.original_title || ""))) {
         continue;
       }
+      // Same short-film guard as fillMovieData (see there for why) — only
+      // on a CONFIRMED runtime below the line, never on missing data (an
+      // upcoming title very often has no runtime yet on TMDB).
+      if (details.runtime > 0 && details.runtime < SHORT_FILM_MAX_MINUTES) {
+        continue;
+      }
 
       const creditsUrl = "https://api.themoviedb.org/3/movie/" + c.id + "/credits?api_key=" + TMDB_API_KEY;
       const credits = JSON.parse(UrlFetchApp.fetch(creditsUrl).getContentText());
@@ -5165,4 +5195,58 @@ function backfillMissingTMDbID() {
   }
 
   SpreadsheetApp.getActive().toast("TMDbID backfill: checked " + checked + ", filled " + filled + ".", "GMDB", 8);
+}
+
+// =============================================
+// REMOVE SHORT FILMS (existing catalog cleanup)
+// One-off sweep for short films that slipped in before the
+// SHORT_FILM_MAX_MINUTES guard existed (fillMovieData and
+// autoAddUpcomingReleasesCore now reject these at add time — see
+// SHORT_FILM_MAX_MINUTES near the top of this file for why). Cheap: one
+// TMDB details call per row, no Gemini cost. Only checks rows with a
+// stored TMDbID (col 35) — a row without one needs "Backfill missing TMDB
+// IDs" run first before this can see it.
+// =============================================
+function removeShortFilms() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+
+  const toRemove = [];
+  for (let row = 2; row <= lastRow; row++) {
+    const title = sheet.getRange(row, 1).getValue();
+    const tmdbId = String(sheet.getRange(row, 35).getValue()).trim();
+    if (!title || !/^\d+$/.test(tmdbId)) continue;
+    try {
+      const detailsUrl = "https://api.themoviedb.org/3/movie/" + tmdbId + "?api_key=" + TMDB_API_KEY;
+      const details = JSON.parse(UrlFetchApp.fetch(detailsUrl).getContentText());
+      if (details.runtime > 0 && details.runtime < SHORT_FILM_MAX_MINUTES) {
+        toRemove.push({ row: row, title: title, runtime: details.runtime });
+      }
+    } catch (err) {
+      Logger.log("Short-film check failed for row " + row + " (" + title + "): " + err);
+    }
+    Utilities.sleep(150);
+  }
+
+  if (!toRemove.length) {
+    SpreadsheetApp.getUi().alert("No short films found (checked every row with a TMDB ID on file).");
+    return;
+  }
+
+  const list = toRemove.map(t => "• " + t.title + " (" + t.runtime + " min)").join("\n");
+  const ui = SpreadsheetApp.getUi();
+  const resp = ui.alert(
+    "Remove " + toRemove.length + " short film(s)?",
+    list + "\n\nThis cannot be undone.",
+    ui.ButtonSet.YES_NO
+  );
+  if (resp !== ui.Button.YES) {
+    SpreadsheetApp.getActive().toast("Cancelled — nothing removed.", "GMDB", 5);
+    return;
+  }
+
+  // Delete bottom-up so row numbers stay valid
+  toRemove.sort((a, b) => b.row - a.row).forEach(t => sheet.deleteRow(t.row));
+  SpreadsheetApp.getActive().toast("Removed " + toRemove.length + " short film(s).", "GMDB", 8);
 }

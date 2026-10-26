@@ -2028,8 +2028,14 @@ function applyMoviesData(data, fromCache) {
   // Coming Soon rows are the one deliberate exception: they never HAVE a
   // score yet (nothing to review before a film releases), so let those
   // through based on having a future ReleaseDate instead.
+  // Hard floor at 50 regardless of score — the backend already has its own
+  // sweep that deletes anything scoring below 50 (sweepLowScoringMovies_,
+  // piggybacked on the daily streaming refresh), but that runs on its own
+  // schedule, so a freshly-added or freshly-rescored low-scorer can sit
+  // visible on the site for however long until that next runs. This filter
+  // closes that gap immediately, client-side, independent of backend timing.
   allMovies = data.filter(m => m.Title && (
-    (m.GauthamScore !== "" && m.GauthamScore != null) || isComingSoon(m)
+    (m.GauthamScore !== "" && m.GauthamScore != null && Number(m.GauthamScore) >= 50) || isComingSoon(m)
   ));
   updateStats();
   updateComingSoonBadge();
