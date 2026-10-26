@@ -1835,6 +1835,18 @@ function checkStreamingOnlyForSelectedRow() {
   const previous = String(streamCell.getValue() || "");
   streamCell.setValue(confirmed);
 
+  // BUG FIX: this used to only write column 15 (Streaming) — but the
+  // website displays OTTInfo (col 16) with PRIORITY over column 15 (see
+  // index.html: m.OTTInfo || m.Streaming). This tool exists specifically
+  // to correct a row whose streaming info is wrong, so leaving a stale/
+  // wrong OTTInfo label in place meant the site kept showing the old
+  // value even after this "fix" ran — the exact same class of bug as the
+  // Mandaadi incident, just in the manual correction tool itself. Same
+  // label format as fillMovieData/refreshStreamingStatus; this check
+  // never learns a rent/buy/subscription type, so it uses the same
+  // neutral "Available" fallback they use for an unknown type.
+  sheet.getRange(row, 16).setValue(confirmed ? ("Available on " + confirmed + " (US)") : "");
+
   // Stamp StreamingSince (col 32) the same way fillMovieData does, only when
   // this genuinely newly confirms streaming for a recent release that didn't
   // have the stamp yet — not a full re-derivation, just the one cheap
