@@ -56,7 +56,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .logo{font-family:'Bricolage Grotesque','Inter',sans-serif;font-size:26px;font-weight:800;letter-spacing:-0.5px;line-height:1;background:linear-gradient(135deg,#16C95E 0%,#6FE34A 50%,#C5F23B 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#16C95E;}
 .logo span{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:#7B8F6E;display:block;letter-spacing:3.5px;text-transform:uppercase;margin-top:6px;-webkit-text-fill-color:#7B8F6E;}
 .header-actions{display:flex;gap:10px;align-items:center;}
-.btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all 0.2s;font-family:'Inter',sans-serif;}
+.btn{padding:8px 16px;border-radius:6px;font-size:14.5px;font-weight:500;cursor:pointer;border:none;transition:all 0.2s;font-family:'Inter',sans-serif;}
 .btn-primary{background:var(--red);color:white;}
 .btn-primary:hover{background:var(--red2);}
 .btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}
@@ -65,13 +65,13 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .btn-about:hover{background:rgba(22,201,94,0.16);color:#C5F23B;}
 .btn-songs{background:rgba(29,185,84,0.1);color:#1DB954;border:1.5px solid #1DB954;font-weight:700;}
 .btn-songs:hover{background:rgba(29,185,84,0.2);}
-.btn-howto{background:rgba(255,176,32,0.16);color:#FFB020;border:2.5px solid #FFB020;font-weight:900;padding:6px 12px;border-radius:50%;line-height:1;flex-shrink:0;font-size:18px;text-shadow:0 0 1px currentColor;}
+.btn-howto{background:rgba(255,176,32,0.16);color:#FFB020;border:2.5px solid #FFB020;font-weight:900;padding:6px 12px;border-radius:50%;line-height:1;flex-shrink:0;font-size:20px;text-shadow:0 0 1px currentColor;}
 .btn-howto:hover{background:rgba(255,176,32,0.2);}
 
 .hero{padding:2.25rem 1.5rem 1rem;text-align:center;border-bottom:1px solid var(--border);position:relative;}
 .streaming-carousel-section{padding:1.25rem 0 1.5rem;border-bottom:1px solid var(--border);}
-.streaming-carousel-label{font-size:20px;font-weight:800;color:var(--text);margin:0 1.5rem 0.85rem;}
-.streaming-carousel-tv-icon{font-size:26px;vertical-align:middle;margin-right:2px;}
+.streaming-carousel-label{font-size:22.5px;font-weight:800;color:var(--text);margin:0 1.5rem 0.85rem;}
+.streaming-carousel-tv-icon{font-size:29px;vertical-align:middle;margin-right:2px;}
 .streaming-carousel{display:flex;gap:12px;overflow-x:auto;padding:0 1.5rem 10px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--red) rgba(255,255,255,0.08);}
 .streaming-carousel::-webkit-scrollbar{height:8px;}
 .streaming-carousel::-webkit-scrollbar-track{background:rgba(255,255,255,0.08);border-radius:4px;}
@@ -81,20 +81,20 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .carousel-card:hover{transform:translateY(-4px);}
 .carousel-poster-wrap{position:relative;width:155px;height:220px;border-radius:8px;overflow:hidden;background:var(--bg2);}
 .carousel-poster{width:100%;height:100%;object-fit:cover;display:block;}
-.carousel-poster-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--text3);}
-.carousel-title{font-size:12px;font-weight:600;color:var(--text);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.carousel-poster-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--text3);}
+.carousel-title{font-size:13.5px;font-weight:600;color:var(--text);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .carousel-meta-row{display:flex;align-items:center;gap:5px;margin-top:4px;flex-wrap:wrap;}
-.carousel-score{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:12px;font-weight:700;}
-.carousel-platform-badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:5px;font-size:11px;font-weight:700;white-space:nowrap;}
-.carousel-empty{color:var(--text2);font-size:13px;padding:0 1.5rem;}
+.carousel-score{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:13.5px;font-weight:700;}
+.carousel-platform-badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:5px;font-size:12.5px;font-weight:700;white-space:nowrap;}
+.carousel-empty{color:var(--text2);font-size:14.5px;padding:0 1.5rem;}
 .hero::before{content:'';position:absolute;top:-50%;left:50%;transform:translateX(-50%);width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(229,32,32,0.08) 0%,transparent 70%);pointer-events:none;}
-.hero-eyebrow{font-size:13px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:0.65rem;}
+.hero-eyebrow{font-size:14.5px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:0.65rem;}
 .hero-title{font-family:'Playfair Display',serif;font-size:clamp(1.4rem,3.2vw,2.2rem);font-weight:900;line-height:1.1;margin-bottom:0.85rem;}
 .hero-title span{color:var(--red);}
-.hero-desc{font-size:17px;color:var(--text);max-width:600px;margin:0 auto 1.5rem;line-height:1.65;}
+.hero-desc{font-size:19px;color:var(--text);max-width:600px;margin:0 auto 1.5rem;line-height:1.65;}
 .inline-about-link{cursor:pointer;font-weight:700;color:var(--text);}
 .hero-actions{display:flex;gap:12px;justify-content:center;margin-bottom:0.25rem;flex-wrap:wrap;}
-.btn-hero{padding:14px 28px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all 0.2s;}
+.btn-hero{padding:14px 28px;border-radius:8px;font-size:17px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all 0.2s;}
 .btn-hero-primary{background:var(--red);color:white;}
 .btn-hero-primary:hover{background:var(--red2);transform:translateY(-1px);}
 .btn-hero-secondary{background:var(--bg3);color:#F2C94C;border:1px solid var(--border);}
@@ -103,10 +103,10 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .search-wrap{max-width:520px;margin:0 auto;position:relative;}
 .search-wrap-below-filters{margin-top:1.5rem;}
 .search-wrap-outer{padding:0 1.5rem;}
-.search-input{width:100%;padding:15px 54px 15px 20px;background:#2a2030;border:2px solid #FFE600;border-radius:10px;color:var(--text);font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:all 0.2s;box-shadow:0 0 0 0 rgba(255,230,0,0);scroll-margin-top:76px;}
+.search-input{width:100%;padding:15px 54px 15px 20px;background:#2a2030;border:2px solid #FFE600;border-radius:10px;color:var(--text);font-size:17px;font-family:'Inter',sans-serif;outline:none;transition:all 0.2s;box-shadow:0 0 0 0 rgba(255,230,0,0);scroll-margin-top:76px;}
 .search-input:focus{box-shadow:0 0 0 3px rgba(255,230,0,0.25);border-color:#FFE600;}
 .search-input::placeholder{color:rgba(255,255,255,0.75);}
-.search-hint{font-size:12.5px;color:#FFB020;margin-top:10px;margin-bottom:1.5rem;text-align:center;opacity:0.85;}
+.search-hint{font-size:14px;color:#FFB020;margin-top:10px;margin-bottom:1.5rem;text-align:center;opacity:0.85;}
 .hint-add-link{cursor:pointer;text-decoration:underline;font-weight:800;opacity:1;color:#F2C94C;font-size:1.05em;}
 .hint-add-link:hover{color:#FFDD66;}
 .search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;border:none;padding:6px;border-radius:8px;transition:background 0.2s;}
@@ -118,27 +118,27 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .suggestion-item:hover,.suggestion-item.active{background:rgba(229,32,32,0.15);}
 .suggestion-poster{width:32px;height:48px;border-radius:4px;object-fit:cover;background:var(--bg3);flex-shrink:0;}
 .suggestion-info{flex:1;min-width:0;}
-.suggestion-title{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.suggestion-meta{font-size:12px;color:var(--text2);}
-.suggestion-score{font-size:13px;font-weight:700;padding:2px 8px;border-radius:4px;flex-shrink:0;}
+.suggestion-title{font-size:16px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.suggestion-meta{font-size:13.5px;color:var(--text2);}
+.suggestion-score{font-size:14.5px;font-weight:700;padding:2px 8px;border-radius:4px;flex-shrink:0;}
 
 .stats-bar{display:flex;gap:2rem;justify-content:center;padding:1rem 1.5rem;border-bottom:1px solid var(--border);flex-wrap:wrap;}
 .stat{text-align:center;}
 .stat-clickable{cursor:pointer;border-radius:8px;padding:4px 10px;transition:background 0.15s;}
 .stat-clickable:hover{background:rgba(255,255,255,0.06);}
 .stat-clickable:hover .stat-num{text-decoration:underline;}
-.stat-num{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--red);}
-.stat-label{font-size:11px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;}
+.stat-num{font-family:'Playfair Display',serif;font-size:27px;font-weight:700;color:var(--red);}
+.stat-label{font-size:12.5px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;}
 
 .filters{display:flex;gap:10px;padding:1rem 1.5rem;background:#211934;border-bottom:2px solid #3d2f5c;scrollbar-width:none;flex-wrap:wrap;align-items:center;}
-.filter-btn{padding:10px 18px;border-radius:24px;font-size:14px;font-weight:600;cursor:pointer;border:2px solid var(--border);background:transparent;color:var(--text2);transition:all 0.2s;white-space:nowrap;font-family:'Inter',sans-serif;}
+.filter-btn{padding:10px 18px;border-radius:24px;font-size:16px;font-weight:600;cursor:pointer;border:2px solid var(--border);background:transparent;color:var(--text2);transition:all 0.2s;white-space:nowrap;font-family:'Inter',sans-serif;}
 .filter-btn:hover{transform:translateY(-1px);}
 .filter-btn:hover,.filter-btn.active{background:var(--red);color:white;border-color:var(--red);}
 .fb-vera{border-color:#10D96A;color:#10D96A;}
 .fb-vera:hover,.fb-vera.active{background:#10D96A;color:#06231a;border-color:#10D96A;}
 .fb-semma{border-color:#5BA8FF;color:#5BA8FF;}
 .fb-semma:hover,.fb-semma.active{background:#5BA8FF;color:#06223d;border-color:#5BA8FF;}
-.ctrl-btn{padding:7px 14px;border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;border:1.5px solid rgba(29,211,176,0.55);background:var(--bg2);color:rgba(29,211,176,0.85);font-family:'Inter',sans-serif;white-space:nowrap;transition:all 0.2s;}
+.ctrl-btn{padding:7px 14px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;border:1.5px solid rgba(29,211,176,0.55);background:var(--bg2);color:rgba(29,211,176,0.85);font-family:'Inter',sans-serif;white-space:nowrap;transition:all 0.2s;}
 .ctrl-btn:hover{transform:translateY(-1px);border-color:#1DD3B0;color:#1DD3B0;}
 .ctrl-btn.active{background:#1DD3B0;color:#04231d;border-color:#1DD3B0;}
 .fb-parava{border-color:#FFB020;color:#FFB020;}
@@ -146,8 +146,8 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .fb-mokkai{border-color:#FF5C7A;color:#FF5C7A;}
 .fb-mokkai:hover,.fb-mokkai.active{background:#FF5C7A;color:#3d0612;border-color:#FF5C7A;}
 .select-wrap{position:relative;display:inline-flex;align-items:center;}
-.select-icon{position:absolute;left:14px;font-size:15px;pointer-events:none;z-index:1;}
-.sort-by-label{font-size:11px;font-weight:800;letter-spacing:0.5px;color:var(--accent);white-space:nowrap;}
+.select-icon{position:absolute;left:14px;font-size:17px;pointer-events:none;z-index:1;}
+.sort-by-label{font-size:12.5px;font-weight:800;letter-spacing:0.5px;color:var(--accent);white-space:nowrap;}
 .select-wrap-sort{--accent:#F2C94C;}
 /* Language, Year and Region now match Sort's pattern — value hidden
    entirely, just the label + chevron shown, whole pill clickable for a
@@ -176,7 +176,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
   background-color:transparent !important;
   color:transparent !important;
   padding:0 !important;
-  font-size:14px;
+  font-size:16px;
   background-position:right 10px center;
   background-size:18px;
 }
@@ -208,12 +208,12 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
   background-color:transparent !important;
   color:transparent !important;
   padding:0 !important;
-  font-size:14px;
+  font-size:16px;
   background-position:right 10px center;
   background-size:18px;
 }
 
-.sort-select{padding:10px 46px 10px 40px;border-radius:24px;font-size:14px;font-weight:600;cursor:pointer;border:2px solid var(--accent);background:var(--bg2);color:var(--text);font-family:'Inter',sans-serif;appearance:none;-webkit-appearance:none;background-repeat:no-repeat;background-position:right 10px center;background-size:22px;transition:all 0.2s;}
+.sort-select{padding:10px 46px 10px 40px;border-radius:24px;font-size:16px;font-weight:600;cursor:pointer;border:2px solid var(--accent);background:var(--bg2);color:var(--text);font-family:'Inter',sans-serif;appearance:none;-webkit-appearance:none;background-repeat:no-repeat;background-position:right 10px center;background-size:22px;transition:all 0.2s;}
 .sort-select:hover{background-color:rgba(255,255,255,0.05);}
 .sort-select:focus{outline:none;box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);}
 .select-wrap-sort .sort-select{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23F2C94C' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
@@ -225,15 +225,15 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .grid-wrap{padding:1.5rem;}
 .grid-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1rem;}
 .grid-header .section-title{margin-bottom:0;}
-.score-legend{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--text);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:8px 14px;}
-.legend-intro{font-weight:700;color:#FFB020;text-transform:uppercase;letter-spacing:0.5px;font-size:11px;}
+.score-legend{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:14.5px;color:var(--text);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:8px 14px;}
+.legend-intro{font-weight:700;color:#FFB020;text-transform:uppercase;letter-spacing:0.5px;font-size:12.5px;}
 .legend-item{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-weight:600;}
 .legend-clickable{cursor:pointer;border-radius:6px;padding:3px 8px;transition:background 0.15s;}
 .legend-active{background:rgba(255,255,255,0.14);outline:1px solid rgba(255,255,255,0.25);}
-.legend-clear{align-items:center;gap:4px;cursor:pointer;border-radius:6px;padding:3px 10px;font-weight:700;font-size:13px;color:var(--red);border:1px solid var(--red);margin-left:4px;}
+.legend-clear{align-items:center;gap:4px;cursor:pointer;border-radius:6px;padding:3px 10px;font-weight:700;font-size:14.5px;color:var(--red);border:1px solid var(--red);margin-left:4px;}
 .legend-clear:hover{background:rgba(229,32,32,0.12);}
 .legend-clickable:hover{background:rgba(255,255,255,0.08);}
-.section-title{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:1.25rem;}
+.section-title{font-size:12.5px;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:1.25rem;}
 .movies-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;}
 .view-toggle{display:flex;gap:4px;background:rgba(0,0,0,0.3);border-radius:10px;padding:4px;margin-left:auto;}
 .view-btn{width:38px;height:38px;border-radius:8px;border:none;background:transparent;color:var(--text2);cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}
@@ -243,7 +243,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .movies-grid.list-view .card{display:flex;flex-direction:row;align-items:center;height:auto;}
 .movies-grid.list-view .card-poster,.movies-grid.list-view .card-poster-placeholder{width:60px;height:90px;flex-shrink:0;border-radius:8px;}
 .movies-grid.list-view .card-body{flex:1;padding:0 0 0 16px;display:flex;align-items:center;justify-content:space-between;}
-.movies-grid.list-view .card-title{font-size:17px;margin-bottom:2px;white-space:normal;}
+.movies-grid.list-view .card-title{font-size:19px;margin-bottom:2px;white-space:normal;}
 .movies-grid.list-view .card-meta{margin-bottom:0;}
 .movies-grid.list-view .card-info{flex:1;}
 @media(min-width:640px){.movies-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));}}
@@ -258,16 +258,16 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .card-poster-wrap{position:relative;overflow:hidden;}
 .card-new-ribbon{position:absolute;top:18px;left:-46px;width:180px;text-align:center;background:#1DD3B0;color:#04241d;font-size:11px;font-weight:800;letter-spacing:0.2px;padding:5px 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,0.35);z-index:2;pointer-events:none;white-space:nowrap;}
 .card-coming-ribbon{background:#FFB020;color:#3d2a06;}
-.card-theater-badge{position:absolute;bottom:8px;right:8px;background:rgba(229,32,32,0.92);color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,0.35);white-space:nowrap;}
+.card-theater-badge{position:absolute;bottom:8px;right:8px;background:rgba(229,32,32,0.92);color:#fff;font-size:12.5px;font-weight:800;padding:4px 10px;border-radius:12px;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,0.35);white-space:nowrap;}
 
 #newStreamBtn{position:relative;}
 #newStreamBtn.attention-pulse{animation:newStreamPulse 1.6s ease-in-out 3;}
 @keyframes newStreamPulse{0%,100%{box-shadow:0 0 0 0 rgba(29,211,176,0.55);}50%{box-shadow:0 0 0 10px rgba(29,211,176,0);}}
-.new-stream-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#1DD3B0;color:#04241d;font-size:11px;font-weight:800;}
+.new-stream-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#1DD3B0;color:#04241d;font-size:12.5px;font-weight:800;}
 .card-poster-placeholder{width:100%;aspect-ratio:2/3;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--text3);}
 .card-body{padding:12px 14px 14px;}
-.card-title{font-size:16px;font-weight:700;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.card-meta{font-size:13px;color:var(--text2);margin-bottom:10px;}
+.card-title{font-size:18px;font-weight:700;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-meta{font-size:14.5px;color:var(--text2);margin-bottom:10px;}
 .card-score{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;font-size:16px;font-weight:700;}
 .tier-vera{background:rgba(16,185,90,0.22);color:#10D96A;}
 .tier-semma{background:rgba(56,150,255,0.22);color:#5BA8FF;}
@@ -285,31 +285,31 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .modal-scroll-region{display:contents;}
 .modal-poster{width:100%;max-height:420px;object-fit:contain;background:#000;border-radius:16px 16px 0 0;}
 .modal-poster-placeholder{width:100%;height:200px;background:var(--bg3);border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:center;font-size:4rem;color:var(--text3);}
-.modal-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,0.75);border:1px solid rgba(255,255,255,0.25);cursor:pointer;color:white;font-size:22px;display:flex;align-items:center;justify-content:center;z-index:10;}
-.shared-link-banner{background:linear-gradient(135deg,#16C95E 0%,#6FE34A 100%);color:#04231d;font-weight:700;font-size:14px;padding:12px 18px;text-align:center;cursor:pointer;line-height:1.4;}
+.modal-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,0.75);border:1px solid rgba(255,255,255,0.25);cursor:pointer;color:white;font-size:25px;display:flex;align-items:center;justify-content:center;z-index:10;}
+.shared-link-banner{background:linear-gradient(135deg,#16C95E 0%,#6FE34A 100%);color:#04231d;font-weight:700;font-size:16px;padding:12px 18px;text-align:center;cursor:pointer;line-height:1.4;}
 .shared-link-cta{text-decoration:underline;}
 .shared-link-banner:hover{filter:brightness(1.05);}
 .modal-body{padding:1.5rem;}
-.modal-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;margin-bottom:4px;}
-.modal-meta{font-size:13px;color:var(--text2);margin-bottom:1.25rem;}
+.modal-title{font-family:'Playfair Display',serif;font-size:29px;font-weight:700;margin-bottom:4px;}
+.modal-meta{font-size:14.5px;color:var(--text2);margin-bottom:1.25rem;}
 .meta-language{color:#1DB954;font-weight:600;}
 .meta-genre{color:#B36AE2;font-weight:600;}
 .modal-score-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center;}
-.modal-score-big{font-family:'Playfair Display',serif;font-size:42px;font-weight:900;color:var(--red);line-height:1;}
-.modal-score-label{font-size:11px;color:var(--text2);letter-spacing:1px;}
-.modal-badge{padding:6px 12px;border-radius:6px;font-size:13px;font-weight:600;}
+.modal-score-big{font-family:'Playfair Display',serif;font-size:47px;font-weight:900;color:var(--red);line-height:1;}
+.modal-score-label{font-size:12.5px;color:var(--text2);letter-spacing:1px;}
+.modal-badge{padding:6px 12px;border-radius:6px;font-size:14.5px;font-weight:600;}
 .modal-section{margin-bottom:1.25rem;}
-.modal-section-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#C9A24B;font-weight:700;margin-bottom:6px;}
-.modal-section-value{font-size:16px;color:var(--text);line-height:1.7;}
+.modal-section-label{font-size:12.5px;letter-spacing:2px;text-transform:uppercase;color:#C9A24B;font-weight:700;margin-bottom:6px;}
+.modal-section-value{font-size:18px;color:var(--text);line-height:1.7;}
 .story-clamp{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
 .story-clamp.story-open{-webkit-line-clamp:unset;overflow:visible;}
-.story-toggle{background:none;border:none;color:#FFB020;font-size:14px;font-weight:600;cursor:pointer;padding:6px 0 0;font-family:inherit;}
+.story-toggle{background:none;border:none;color:#FFB020;font-size:16px;font-weight:600;cursor:pointer;padding:6px 0 0;font-family:inherit;}
 .story-toggle:hover{text-decoration:underline;}
 .trivia-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;}
-.trivia-item{position:relative;padding-left:26px;font-size:15px;color:var(--text);line-height:1.55;}
-.trivia-item::before{content:"🎬";position:absolute;left:0;top:1px;font-size:14px;}
+.trivia-item{position:relative;padding-left:26px;font-size:17px;color:var(--text);line-height:1.55;}
+.trivia-item::before{content:"🎬";position:absolute;left:0;top:1px;font-size:16px;}
 .modal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:1.5rem;position:sticky;bottom:0;background:linear-gradient(to top, var(--bg2) 70%, transparent);padding:16px 0 4px;z-index:5;}
-.modal-btn{flex:1;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;}
+.modal-btn{flex:1;padding:12px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;}
 .modal-btn-primary{background:var(--red);color:white;}
 .modal-btn-primary:hover{background:var(--red2);}
 .modal-btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
@@ -331,14 +331,14 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 #addModal .add-modal{margin:1rem auto;}
 #addSongModal{align-items:flex-start;overflow-y:auto;padding:2rem 1rem;}
 #addSongModal .add-modal{margin:1rem auto;}
-.add-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:0.5rem;}
-.add-desc{font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;}
-.add-input{width:100%;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.2s;margin-bottom:0.75rem;scroll-margin-top:76px;}
+.add-title{font-family:'Playfair Display',serif;font-size:25px;font-weight:700;margin-bottom:0.5rem;}
+.add-desc{font-size:14.5px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;}
+.add-input{width:100%;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:17px;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.2s;margin-bottom:0.75rem;scroll-margin-top:76px;}
 .add-input:focus{border-color:var(--red);}
 .add-input::placeholder{color:var(--text3);}
-.add-hint{font-size:12px;color:var(--text3);margin-bottom:1.25rem;line-height:1.5;}
+.add-hint{font-size:13.5px;color:var(--text3);margin-bottom:1.25rem;line-height:1.5;}
 .add-actions{display:flex;gap:10px;}
-.status-msg{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:1rem;display:none;}
+.status-msg{padding:12px 16px;border-radius:8px;font-size:14.5px;margin-bottom:1rem;display:none;}
 .status-success{background:rgba(29,158,117,0.15);color:#1D9E75;border:1px solid rgba(29,158,117,0.3);}
 .status-error{background:rgba(229,32,32,0.15);color:var(--red);border:1px solid rgba(229,32,32,0.3);}
 .status-loading{background:rgba(255,255,255,0.05);color:var(--text2);border:1px solid var(--border);}
@@ -365,45 +365,45 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
    (Add a Movie, Share, Songs) had no way to ever be reached. */
 #howToModal{align-items:flex-start;overflow-y:auto;padding:2rem 1rem;}
 #howToModal .about-modal{margin:1rem auto;}
-#howToModal .about-section-label{font-size:15px;}
-#howToModal .about-section p{font-size:17px;line-height:1.75;}
+#howToModal .about-section-label{font-size:17px;}
+#howToModal .about-section p{font-size:19px;line-height:1.75;}
 /* Same fix as above — song detail was still centered with no scroll of
    its own, so Trivia (often multi-line) could push the Spotify/YouTube/
    Share buttons off-screen with no way to reach them. */
 #songDetailModal{align-items:flex-start;overflow-y:auto;padding:2rem 1rem;}
 #songDetailModal .song-detail-modal{margin:1rem auto;}
 .about-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;}
-.about-title{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;}
+.about-title{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;}
 .about-title span{color:var(--red);}
 .about-section{margin-bottom:1.5rem;}
-.about-section-label{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);font-weight:700;margin-bottom:0.75rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border);}
+.about-section-label{font-size:14.5px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);font-weight:700;margin-bottom:0.75rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border);}
 .score-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;}
 .score-card{padding:12px;border-radius:8px;border:1px solid var(--border);}
-.score-range{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:2px;}
-.score-label{font-size:14px;color:var(--text);font-weight:600;}
-.score-translation{font-size:12px;color:var(--text2);font-style:italic;margin-top:1px;}
+.score-range{font-family:'Playfair Display',serif;font-size:25px;font-weight:700;margin-bottom:2px;}
+.score-label{font-size:16px;color:var(--text);font-weight:600;}
+.score-translation{font-size:13.5px;color:var(--text2);font-style:italic;margin-top:1px;}
 .score-bar{height:3px;border-radius:2px;margin-top:8px;}
-.source-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:15px;color:var(--text);}
+.source-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:17px;color:var(--text);}
 .source-row:last-child{border-bottom:none;}
-.source-weight{font-size:12px;color:var(--text2);font-weight:600;}
+.source-weight{font-size:13.5px;color:var(--text2);font-weight:600;}
 .conf-row{display:flex;gap:8px;margin-bottom:0.5rem;}
-.conf-badge{padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;}
-.about-note{background:var(--bg3);border-left:3px solid var(--red);border-radius:0 6px 6px 0;padding:12px 14px;font-size:15px;color:var(--text);line-height:1.7;margin-bottom:8px;}
+.conf-badge{padding:4px 10px;border-radius:4px;font-size:13.5px;font-weight:600;}
+.about-note{background:var(--bg3);border-left:3px solid var(--red);border-radius:0 6px 6px 0;padding:12px 14px;font-size:17px;color:var(--text);line-height:1.7;margin-bottom:8px;}
 
 .empty{text-align:center;padding:4rem 2rem;color:var(--text2);}
 .empty-icon{font-size:3rem;margin-bottom:1rem;}
-.empty-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:0.5rem;}
+.empty-title{font-size:20px;font-weight:600;color:var(--text);margin-bottom:0.5rem;}
 .loading{text-align:center;padding:4rem;color:var(--text2);}
 .spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
-footer{text-align:center;padding:2rem;border-top:1px solid var(--border);font-size:12px;color:var(--text3);}
+footer{text-align:center;padding:2rem;border-top:1px solid var(--border);font-size:13.5px;color:var(--text3);}
 footer span{color:var(--red);}
 
 /* TAKEAWAY QUOTE */
 .takeaway{
   font-family:'Playfair Display',serif;
-  font-size:18px;font-style:italic;font-weight:600;
+  font-size:20px;font-style:italic;font-weight:600;
   color:var(--text);line-height:1.55;
   border-left:3px solid var(--red);
   padding:6px 0 6px 18px;margin:1rem 0 1.25rem;
@@ -420,36 +420,36 @@ footer span{color:var(--red);}
 .cast-photo-strip::-webkit-scrollbar-thumb:hover{background:var(--red2);}
 .cast-photo-item{flex:0 0 auto;width:72px;text-align:center;}
 .cast-photo-img{width:64px;height:64px;border-radius:50%;object-fit:cover;object-position:top center;background:var(--bg3);border:2px solid rgba(255,255,255,0.1);}
-.cast-photo-placeholder{width:64px;height:64px;border-radius:50%;background:var(--bg3);border:2px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:22px;}
-.cast-photo-name{margin-top:6px;font-size:11px;line-height:1.25;color:var(--text2);word-break:break-word;display:block;text-decoration:none;}
+.cast-photo-placeholder{width:64px;height:64px;border-radius:50%;background:var(--bg3);border:2px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:25px;}
+.cast-photo-name{margin-top:6px;font-size:12.5px;line-height:1.25;color:var(--text2);word-break:break-word;display:block;text-decoration:none;}
 .cast-photo-name:hover{color:#1DD3B0;text-decoration:underline;}
 .meta-block{flex:1;min-width:120px;}
-.meta-block-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#FFB020;margin-bottom:4px;font-weight:600;}
-.meta-block-value{font-size:14px;color:var(--text);line-height:1.5;}
-.songs-value{font-size:13px;color:var(--red);font-weight:500;}
+.meta-block-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#FFB020;margin-bottom:4px;font-weight:600;}
+.meta-block-value{font-size:16px;color:var(--text);line-height:1.5;}
+.songs-value{font-size:14.5px;color:var(--red);font-weight:500;}
 .songs-wrap{display:flex;flex-direction:column;gap:8px;}
 .song-card{display:flex;gap:12px;background:rgba(29,185,84,0.06);border:1px solid rgba(29,185,84,0.25);border-radius:10px;padding:10px 14px;transition:border-color 0.2s;cursor:pointer;}
 .song-card:hover{border-color:rgba(29,185,84,0.5);}
 .song-poster{width:52px;height:74px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--bg3);}
-.song-poster-placeholder{display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text3);}
+.song-poster-placeholder{display:flex;align-items:center;justify-content:center;font-size:22.5px;color:var(--text3);}
 .song-card-body{flex:1;min-width:0;}
-.song-title{font-size:14px;color:var(--text);font-weight:700;}
-.song-link{font-size:14px;color:var(--text);font-weight:700;text-decoration:none;display:inline-block;}
+.song-title{font-size:16px;color:var(--text);font-weight:700;}
+.song-link{font-size:16px;color:var(--text);font-weight:700;text-decoration:none;display:inline-block;}
 .song-link:hover{text-decoration:underline;}
-.song-singers{font-size:12px;color:var(--text3);margin-top:2px;}
-.song-why{font-size:13px;color:var(--text2);line-height:1.5;margin-top:5px;}
+.song-singers{font-size:13.5px;color:var(--text3);margin-top:2px;}
+.song-why{font-size:14.5px;color:var(--text2);line-height:1.5;margin-top:5px;}
 .song-why b{color:var(--text);font-weight:600;}
-.song-score{font-size:12px;color:#1DB954;font-weight:700;}
+.song-score{font-size:13.5px;color:#1DB954;font-weight:700;}
 .song-card-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:6px;}
-.song-spotify-badge{display:inline-flex;align-items:center;gap:5px;background:#1DB954;color:#04231d;font-size:11px;font-weight:800;padding:5px 10px;border-radius:20px;text-decoration:none;flex-shrink:0;}
+.song-spotify-badge{display:inline-flex;align-items:center;gap:5px;background:#1DB954;color:#04231d;font-size:12.5px;font-weight:800;padding:5px 10px;border-radius:20px;text-decoration:none;flex-shrink:0;}
 .song-spotify-badge:hover{background:#1ED760;}
 .song-detail-modal{max-width:420px;margin:1rem auto;padding:2rem;text-align:center;}
 .song-detail-poster{width:160px;height:230px;border-radius:10px;object-fit:cover;margin:0 auto 1rem;display:block;box-shadow:0 8px 24px rgba(0,0,0,0.5);}
 .song-detail-title{font-size:1.4rem;margin:0 0 4px;}
-.song-detail-meta{font-size:13px;color:var(--text2);margin:2px 0;}
+.song-detail-meta{font-size:14.5px;color:var(--text2);margin:2px 0;}
 .song-detail-links{display:flex;flex-direction:column;gap:10px;margin-top:1.25rem;}
-.add-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid var(--red);border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;display:flex;align-items:center;gap:10px;max-width:90vw;}
-.simple-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid #FFB020;border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;max-width:90vw;text-align:center;}
+.add-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid var(--red);border-radius:12px;padding:14px 22px;font-size:16px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;display:flex;align-items:center;gap:10px;max-width:90vw;}
+.simple-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid #FFB020;border-radius:12px;padding:14px 22px;font-size:16px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;max-width:90vw;text-align:center;}
 .simple-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 @media (max-width:600px){.simple-toast{bottom:90px;}}
 /* BUG FIX: without pointer-events:none above, a "dismissed" toast (opacity:0,
@@ -462,7 +462,7 @@ footer span{color:var(--red);}
 .add-toast.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto;}
 .toast-spinner{width:16px;height:16px;border:2px solid rgba(229,32,32,0.3);border-top-color:var(--red);border-radius:50%;animation:toastspin 0.8s linear infinite;display:inline-block;}
 @keyframes toastspin{to{transform:rotate(360deg);}}
-.toast-btn{background:var(--red);color:white;border:none;padding:5px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;margin-left:6px;}
+.toast-btn{background:var(--red);color:white;border:none;padding:5px 14px;border-radius:6px;font-size:14.5px;font-weight:600;cursor:pointer;margin-left:6px;}
 .toast-btn:hover{background:var(--red2);}
 /* "Ready" state — bigger, shows the actual poster, and (unlike the plain
    .add-toast text state above) never auto-hides on its own. Both the close
@@ -472,53 +472,53 @@ footer span{color:var(--red);}
    opacity/blur of its own applied to the card, text, or buttons. */
 .add-toast.ready{max-width:380px;padding:14px;gap:14px;}
 .add-toast-poster{width:56px;height:80px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--bg3);}
-.add-toast-poster-placeholder{width:56px;height:80px;border-radius:6px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;color:var(--text3);}
+.add-toast-poster-placeholder{width:56px;height:80px;border-radius:6px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:25px;flex-shrink:0;color:var(--text3);}
 .add-toast-body{flex:1;min-width:0;padding-right:18px;}
-.add-toast-eyebrow{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#1DD3B0;margin-bottom:3px;}
-.add-toast-title{font-weight:700;font-size:15px;color:var(--text);line-height:1.3;margin-bottom:10px;overflow-wrap:break-word;}
-.add-toast-view-btn{background:var(--red);color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.add-toast-eyebrow{font-size:12.5px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#1DD3B0;margin-bottom:3px;}
+.add-toast-title{font-weight:700;font-size:17px;color:var(--text);line-height:1.3;margin-bottom:10px;overflow-wrap:break-word;}
+.add-toast-view-btn{background:var(--red);color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:14.5px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .add-toast-view-btn:hover{background:var(--red2);}
-.add-toast-close{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:var(--text2);font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.add-toast-close{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:var(--text2);font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .add-toast-close:hover{background:rgba(255,255,255,0.22);color:var(--text);}
 .similar-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .similar-card{cursor:pointer;transition:transform 0.2s;}
 .similar-card:hover{transform:translateY(-3px);}
 .similar-card img,.similar-noposter{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;}
-.similar-title{font-size:12px;font-weight:600;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.similar-reason{font-size:10px;color:var(--text3);line-height:1.3;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.similar-score{font-size:11px;font-weight:700;display:inline-block;padding:1px 6px;border-radius:4px;margin-top:3px;}
-.recs-loading{grid-column:1/-1;color:var(--text3);font-size:13px;padding:12px 0;}
-.rec-badge{font-size:11px;font-weight:700;display:inline-block;padding:2px 8px;border-radius:4px;margin-top:3px;}
+.similar-title{font-size:13.5px;font-weight:600;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.similar-reason{font-size:11px;color:var(--text3);line-height:1.3;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.similar-score{font-size:12.5px;font-weight:700;display:inline-block;padding:1px 6px;border-radius:4px;margin-top:3px;}
+.recs-loading{grid-column:1/-1;color:var(--text3);font-size:14.5px;padding:12px 0;}
+.rec-badge{font-size:12.5px;font-weight:700;display:inline-block;padding:2px 8px;border-radius:4px;margin-top:3px;}
 .rec-have{background:rgba(16,185,90,0.2);color:#10D96A;}
 .rec-add{background:rgba(229,32,32,0.2);color:var(--red);}
 .ott-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
-.ott-btn{display:inline-flex;align-items:center;font-size:13px;font-weight:600;color:#fff;text-decoration:none;background:var(--ott-color);padding:7px 16px;border-radius:8px;transition:all 0.2s;opacity:0.92;}
+.ott-btn{display:inline-flex;align-items:center;font-size:14.5px;font-weight:600;color:#fff;text-decoration:none;background:var(--ott-color);padding:7px 16px;border-radius:8px;transition:all 0.2s;opacity:0.92;}
 .ott-btn:hover{opacity:1;transform:translateY(-1px);}
-.ott-note{font-size:11px;color:var(--text3);}
+.ott-note{font-size:12.5px;color:var(--text3);}
 
 /* MASALA SCORE BADGE */
 .gmdb-badge{
   display:inline-flex;align-items:center;gap:6px;
   background:#E52020;border-radius:6px;
-  padding:4px 10px;font-size:13px;font-weight:700;
+  padding:4px 10px;font-size:14.5px;font-weight:700;
   color:white;letter-spacing:0.5px;
 }
-.gmdb-badge-label{font-size:10px;font-weight:600;letter-spacing:1px;opacity:0.85;}
+.gmdb-badge-label{font-size:11px;font-weight:600;letter-spacing:1px;opacity:0.85;}
 .badges-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem;}
 
 /* SCORE BREAKDOWN */
 .score-breakdown{margin:1.25rem 0;}
-.breakdown-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
+.breakdown-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
 .breakdown-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
-.breakdown-label{font-size:14px;color:var(--text2);width:150px;flex-shrink:0;}
+.breakdown-label{font-size:16px;color:var(--text2);width:150px;flex-shrink:0;}
 .breakdown-bar-wrap{flex:1;height:9px;background:rgba(255,255,255,0.08);border-radius:5px;overflow:hidden;}
 .breakdown-bar{height:100%;border-radius:5px;transition:width 1.6s cubic-bezier(0.22,1,0.36,1);}
-.breakdown-score{font-size:14px;font-weight:700;width:32px;text-align:right;flex-shrink:0;}
+.breakdown-score{font-size:16px;font-weight:700;width:32px;text-align:right;flex-shrink:0;}
 
 /* Mobile: declutter the filter/sort bar */
 @media(max-width:640px){
   .filters{gap:7px;padding:0.75rem 0.85rem;}
-  .filter-btn{padding:7px 12px;font-size:12px;}
+  .filter-btn{padding:7px 12px;font-size:13.5px;}
   /* Wider posters + tighter section padding so exactly 2 full posters show
      with a clear partial 3rd peeking in — signals "swipe for more" instead
      of the cramped 3-and-a-sliver look at the smaller desktop size. */
@@ -528,18 +528,18 @@ footer span{color:var(--red);}
   .carousel-card{width:44vw;max-width:190px;}
   .carousel-poster-wrap{width:44vw;max-width:190px;height:63vw;max-height:270px;}
   .grid-header{flex-direction:column;align-items:flex-start;gap:8px;}
-  .score-legend{width:100%;justify-content:flex-start;gap:8px 10px;font-size:12.5px;padding:12px 14px;flex-wrap:wrap;}
-  .legend-intro{width:100%;margin-bottom:4px;font-size:11px;}
+  .score-legend{width:100%;justify-content:flex-start;gap:8px 10px;font-size:14px;padding:12px 14px;flex-wrap:wrap;}
+  .legend-intro{width:100%;margin-bottom:4px;font-size:12.5px;}
   .legend-item{flex:0 0 auto;}
-  .sort-select{font-size:13px;background-size:20px;}
-  .sort-by-label{font-size:10px;}
+  .sort-select{font-size:14.5px;background-size:20px;}
+  .sort-by-label{font-size:11px;}
   .select-wrap{min-width:0;}
   .view-toggle{margin-left:auto;}
   .view-btn{width:32px;height:32px;}
-  .filter-btn .tier-emoji{font-size:13px;}
+  .filter-btn .tier-emoji{font-size:14.5px;}
   .hero h1{font-size:2.2rem;}
   .stats{gap:1.5rem;}
-  .search-input{font-size:16px;padding:13px 50px 13px 16px;}
+  .search-input{font-size:18px;padding:13px 50px 13px 16px;}
   .similar-wrap{grid-template-columns:repeat(2,1fr);}
 
   /* --- Mobile modal: full-screen sheet; poster + content scroll together,
@@ -580,31 +580,31 @@ footer span{color:var(--red);}
     gap:10px;
     box-shadow:0 -4px 16px rgba(0,0,0,0.5);
   }
-  .modal-close{width:44px;height:44px;font-size:24px;top:10px;right:10px;}
+  .modal-close{width:44px;height:44px;font-size:27px;top:10px;right:10px;}
   /* Toast sits above the pinned footer so it never covers Close */
   .add-toast{bottom:90px;}
-  .modal-btn{padding:15px;font-size:15px;}
+  .modal-btn{padding:15px;font-size:17px;}
   .add-modal-title, .add-title{font-size:1.4rem;}
   .similar-card img, .similar-noposter{height:auto;}
   .meta-grid{grid-template-columns:1fr 1fr;}
-  .breakdown-row{font-size:14px;}
-  .breakdown-label{font-size:14px;width:130px;}
-  .breakdown-score{font-size:15px;}
-  .modal-section-value{font-size:16.5px;line-height:1.75;}
-  .modal-section-label{font-size:12px;}
+  .breakdown-row{font-size:16px;}
+  .breakdown-label{font-size:16px;width:130px;}
+  .breakdown-score{font-size:17px;}
+  .modal-section-value{font-size:18.5px;line-height:1.75;}
+  .modal-section-label{font-size:13.5px;}
   header{padding:0 1rem;height:56px;}
   .logo{font-size:21px;}
   .logo span{font-size:8.5px;letter-spacing:2.5px;margin-top:5px;line-height:1.4;}
-  .btn{padding:8px 12px;font-size:13px;}
+  .btn{padding:8px 12px;font-size:14.5px;}
   .modal-poster{max-height:38vh;border-radius:0;}
   .modal-poster-placeholder{border-radius:0;}
   .modal-title{font-size:1.5rem;}
   .add-modal{padding:1.5rem 1.25rem;}
-  .add-input{font-size:16px;}
+  .add-input{font-size:18px;}
   .add-suggestion-item, .suggestion-item{padding:10px;}
 }
 @media(max-width:400px){
-  .filter-btn{padding:6px 10px;font-size:11px;}
+  .filter-btn{padding:6px 10px;font-size:12.5px;}
   .filters{gap:6px;}
   .hero h1{font-size:1.9rem;}
   .similar-wrap{grid-template-columns:repeat(2,1fr);}
@@ -612,7 +612,7 @@ footer span{color:var(--red);}
 
 .filter-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .filter-group-controls{margin-left:0;flex:1;display:flex;justify-content:space-between;gap:10px;}
-.filter-group-label{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#FFB020;margin-right:4px;white-space:nowrap;}
+.filter-group-label{font-size:12.5px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#FFB020;margin-right:4px;white-space:nowrap;}
 .filter-divider{width:1px;align-self:stretch;background:rgba(255,255,255,0.12);margin:0 4px;}
 @media(max-width:640px){
   .filter-group-controls{margin-left:0;width:100%;justify-content:flex-start;}
@@ -621,13 +621,13 @@ footer span{color:var(--red);}
 }
 
 .tribute-banner{background:linear-gradient(135deg,#1a1510,#0a0a0a);border-bottom:2px solid #FFB020;padding:14px 20px;display:flex;align-items:center;justify-content:center;gap:16px;position:relative;}
-.tribute-banner-text{color:#f0ede6;font-size:14px;line-height:1.5;max-width:720px;text-align:center;}
+.tribute-banner-text{color:#f0ede6;font-size:16px;line-height:1.5;max-width:720px;text-align:center;}
 .tribute-banner-text b{color:#FFB020;}
-.tribute-banner-close{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#9b9690;font-size:20px;cursor:pointer;padding:4px 8px;line-height:1;}
+.tribute-banner-close{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#9b9690;font-size:22.5px;cursor:pointer;padding:4px 8px;line-height:1;}
 .tribute-banner-close:hover{color:#f0ede6;}
 @media (max-width:600px){
   .tribute-banner{padding:12px 40px 12px 16px;}
-  .tribute-banner-text{font-size:13px;text-align:left;}
+  .tribute-banner-text{font-size:14.5px;text-align:left;}
 }
 
 .install-sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;animation:installFadeIn 0.2s ease-out;}
@@ -635,16 +635,16 @@ footer span{color:var(--red);}
 @keyframes installFadeIn{from{opacity:0;}to{opacity:1;}}
 @keyframes installSheetUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
 .install-sheet-handle{width:36px;height:4px;background:var(--text3);border-radius:2px;margin:0 auto 14px;opacity:0.5;}
-.install-sheet-close{position:absolute;top:14px;right:14px;background:var(--bg3);border:none;color:var(--text);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;}
+.install-sheet-close{position:absolute;top:14px;right:14px;background:var(--bg3);border:none;color:var(--text);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:22.5px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;}
 .install-sheet-close:hover{color:var(--red);}
 .install-sheet-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-right:40px;}
 .install-sheet-icon-img{width:52px;height:52px;border-radius:12px;flex-shrink:0;display:block;}
-.install-sheet-title{font-size:15.5px;font-weight:800;color:var(--text);line-height:1.3;}
-.install-sheet-sub{font-size:12px;color:var(--text3);margin-top:3px;}
-.install-sheet-step{display:flex;align-items:center;gap:12px;padding:7px 0;font-size:13.5px;color:var(--text2);line-height:1.4;}
-.install-sheet-step-num{width:24px;height:24px;border-radius:50%;background:rgba(229,32,32,0.15);color:var(--red);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.install-sheet-title{font-size:17.5px;font-weight:800;color:var(--text);line-height:1.3;}
+.install-sheet-sub{font-size:13.5px;color:var(--text3);margin-top:3px;}
+.install-sheet-step{display:flex;align-items:center;gap:12px;padding:7px 0;font-size:15px;color:var(--text2);line-height:1.4;}
+.install-sheet-step-num{width:24px;height:24px;border-radius:50%;background:rgba(229,32,32,0.15);color:var(--red);font-size:13.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .install-sheet-step b{color:var(--text);}
-.install-sheet-cta{width:100%;margin-top:14px;padding:12px;border-radius:8px;background:var(--red);color:white;border:none;font-size:14.5px;font-weight:700;cursor:pointer;}
+.install-sheet-cta{width:100%;margin-top:14px;padding:12px;border-radius:8px;background:var(--red);color:white;border:none;font-size:16.5px;font-weight:700;cursor:pointer;}
 .install-sheet-cta:hover{background:var(--red2);}
 </style>
 </head>
@@ -793,7 +793,7 @@ footer span{color:var(--red);}
   </div>
 </div>
 
-<footer>Built with ❤️ · Powered by TMDB, OMDB & Gemini<br><span style="font-size:11px;color:var(--text3);">This product uses the TMDB API but is not endorsed or certified by TMDB.</span><br><span style="font-size:11px;color:var(--text3);display:inline-block;margin-top:8px;max-width:580px;">Scores are a weighted average across seven dimensions — writing, emotional impact, engagement, performances, rewatchability, critical consensus, and audience reception — drawn from reputation-weighted critics and anchored against benchmark films at every tier. Even so, taste is personal: you may love what scored low, or vice versa. A well-researched guide, not a verdict. 🍿</span></footer>
+<footer>Built with ❤️ · Powered by TMDB, OMDB & Gemini<br><span style="font-size:12.5px;color:var(--text3);">This product uses the TMDB API but is not endorsed or certified by TMDB.</span><br><span style="font-size:12.5px;color:var(--text3);display:inline-block;margin-top:8px;max-width:580px;">Scores are a weighted average across seven dimensions — writing, emotional impact, engagement, performances, rewatchability, critical consensus, and audience reception — drawn from reputation-weighted critics and anchored against benchmark films at every tier. Even so, taste is personal: you may love what scored low, or vice versa. A well-researched guide, not a verdict. 🍿</span></footer>
 
 <!-- Movie Detail Modal -->
 <div class="modal-overlay" id="detailModal" onclick="closeModalOverlay(event,'detailModal')">
@@ -825,11 +825,11 @@ footer span{color:var(--red);}
       <h2 class="about-title">Masala<br/><span>Meter</span></h2>
       <button class="modal-close" style="position:relative;top:auto;right:auto;" onclick="document.getElementById('aboutModal').classList.remove('open')">✕</button>
     </div>
-    <p style="font-size:16px;color:var(--text);margin-bottom:1.5rem;line-height:1.7;">A curated recommendation system for Indian cinema. Every film is run through the <b>same formula and process</b> — no score is assigned by one person's personal judgment or preference.</p>
+    <p style="font-size:18px;color:var(--text);margin-bottom:1.5rem;line-height:1.7;">A curated recommendation system for Indian cinema. Every film is run through the <b>same formula and process</b> — no score is assigned by one person's personal judgment or preference.</p>
 
     <div class="about-section">
       <p class="about-section-label">Scoring Methodology</p>
-      <p style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:0.75rem;">Each score is a <b>weighted average across seven evaluative dimensions</b>, calculated identically for every film:</p>
+      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-bottom:0.75rem;">Each score is a <b>weighted average across seven evaluative dimensions</b>, calculated identically for every film:</p>
       <div class="source-row"><span>Writing Quality</span><span class="source-weight">20%</span></div>
       <div class="source-row"><span>Emotional Impact</span><span class="source-weight">20%</span></div>
       <div class="source-row"><span>Engagement & Pacing</span><span class="source-weight">15%</span></div>
@@ -837,7 +837,7 @@ footer span{color:var(--red);}
       <div class="source-row"><span>Rewatchability</span><span class="source-weight">15%</span></div>
       <div class="source-row"><span>Critical Consensus</span><span class="source-weight">10%</span></div>
       <div class="source-row"><span>Audience Reception</span><span class="source-weight">5%</span></div>
-      <p style="font-size:14px;color:var(--text);line-height:1.6;margin-top:0.75rem;">Each dimension is independently evaluated against source material — critic reviews, audience data, and box office reception — before the weighted formula is applied. Scores are anchored against benchmark films at every tier, producing a researched, consistent yardstick rather than an intuitive guess.</p>
+      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-top:0.75rem;">Each dimension is independently evaluated against source material — critic reviews, audience data, and box office reception — before the weighted formula is applied. Scores are anchored against benchmark films at every tier, producing a researched, consistent yardstick rather than an intuitive guess.</p>
       <div class="score-grid" style="margin-top:1rem;">
         <div class="score-card"><div class="score-range" style="color:#10D96A">85–100</div><div class="score-label">🔥🔥🔥🔥🔥 Vera Level</div><div class="score-translation">"On another level"</div><div class="score-bar" style="background:#10D96A"></div></div>
         <div class="score-card"><div class="score-range" style="color:#5BA8FF">75–84</div><div class="score-label">🔥🔥🔥🔥 Semma</div><div class="score-translation">"Awesome"</div><div class="score-bar" style="background:#5BA8FF"></div></div>
@@ -849,49 +849,49 @@ footer span{color:var(--red);}
 
     <div class="about-section">
       <p class="about-section-label">Critic Weighting Model</p>
-      <p style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:0.75rem;">The critic panel is language-specific — Tamil, Telugu, Hindi, Malayalam, and Kannada releases each draw on a different roster of established critics local to that industry, rather than one fixed global list. A representative example for Tamil cinema:</p>
+      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-bottom:0.75rem;">The critic panel is language-specific — Tamil, Telugu, Hindi, Malayalam, and Kannada releases each draw on a different roster of established critics local to that industry, rather than one fixed global list. A representative example for Tamil cinema:</p>
       <div class="source-row"><span>Lead critic (e.g. Baradwaj Rangan)</span><span class="source-weight">~20%</span></div>
       <div class="source-row"><span>Second lead critic</span><span class="source-weight">~20%</span></div>
       <div class="source-row"><span>Additional reputable critics</span><span class="source-weight">~40%</span></div>
       <div class="source-row"><span>Audience signal (Reddit, Letterboxd)</span><span class="source-weight">~20%</span></div>
-      <p style="font-size:14px;color:var(--text);line-height:1.6;margin-top:0.75rem;">Weighting favors critics with an established reputation and track record in that specific film industry, on the same logic IMDb uses vote-weighting to prevent a small, unrepresentative sample from skewing a result.</p>
+      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-top:0.75rem;">Weighting favors critics with an established reputation and track record in that specific film industry, on the same logic IMDb uses vote-weighting to prevent a small, unrepresentative sample from skewing a result.</p>
     </div>
 
     <div class="about-section">
       <p class="about-section-label">Confidence Score</p>
-      <p style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:0.75rem;">A separate indicator of how much source material informed the score — analogous to a sample-size caveat. A high score built on thin coverage is flagged as such.</p>
+      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-bottom:0.75rem;">A separate indicator of how much source material informed the score — analogous to a sample-size caveat. A high score built on thin coverage is flagged as such.</p>
       <div class="conf-row">
         <span class="conf-badge tier-vera">High</span>
-        <span style="font-size:15px;color:var(--text)">Multiple major critics broadly agree</span>
+        <span style="font-size:17px;color:var(--text)">Multiple major critics broadly agree</span>
       </div>
       <div class="conf-row">
         <span class="conf-badge tier-parava">Medium</span>
-        <span style="font-size:15px;color:var(--text)">Some coverage, mixed consensus</span>
+        <span style="font-size:17px;color:var(--text)">Some coverage, mixed consensus</span>
       </div>
       <div class="conf-row">
         <span class="conf-badge tier-mokkai">Low</span>
-        <span style="font-size:15px;color:var(--text)">Limited critic coverage</span>
+        <span style="font-size:17px;color:var(--text)">Limited critic coverage</span>
       </div>
     </div>
 
     <div class="about-section">
       <p class="about-section-label">🗓️ Coming Soon</p>
-      <p style="font-size:15px;color:var(--text);line-height:1.7;">Films with a confirmed release date that hasn't arrived yet. There's no score shown here — nothing to review until the film actually releases — just the poster, basic details, and expected date. Once it releases and gets reviewed, it moves into New Releases (and Now in Theaters too, if it gets a confirmed US theatrical run).</p>
+      <p style="font-size:17px;color:var(--text);line-height:1.7;">Films with a confirmed release date that hasn't arrived yet. There's no score shown here — nothing to review until the film actually releases — just the poster, basic details, and expected date. Once it releases and gets reviewed, it moves into New Releases (and Now in Theaters too, if it gets a confirmed US theatrical run).</p>
     </div>
 
     <div class="about-section">
       <p class="about-section-label">🆕 New Releases</p>
-      <p style="font-size:15px;color:var(--text);line-height:1.7;">Any reviewed film released in the last month, regardless of where it's playing — the broad "just came out" view. Use this to catch a fresh release that hasn't (or won't) get a US theatrical run.</p>
+      <p style="font-size:17px;color:var(--text);line-height:1.7;">Any reviewed film released in the last month, regardless of where it's playing — the broad "just came out" view. Use this to catch a fresh release that hasn't (or won't) get a US theatrical run.</p>
     </div>
 
     <div class="about-section">
       <p class="about-section-label">🎬 Now in Theaters</p>
-      <p style="font-size:15px;color:var(--text);line-height:1.7;">The narrower subset of New Releases with a <b>confirmed US theatrical release</b> — checked directly against real ticketing sites and distributors, not just a recent release date. A film that only released in India (or elsewhere) stays under New Releases until it's actually confirmed playing in US theaters.</p>
+      <p style="font-size:17px;color:var(--text);line-height:1.7;">The narrower subset of New Releases with a <b>confirmed US theatrical release</b> — checked directly against real ticketing sites and distributors, not just a recent release date. A film that only released in India (or elsewhere) stays under New Releases until it's actually confirmed playing in US theaters.</p>
     </div>
 
     <div class="about-section" id="about-hit-songs">
       <p class="about-section-label">♪ Hit Songs</p>
-      <p style="font-size:15px;color:var(--text);line-height:1.7;">A separate score from the film's own Masala Meter — this one's just about the song. Each Masala Meter Song Score out of 10 is a weighted blend of <b>melody (40%)</b>, <b>vocals (25%)</b>, <b>lyrics (20%)</b>, and <b>replay value (15%)</b>, alongside a one-line note on what specifically makes it work.</p>
+      <p style="font-size:17px;color:var(--text);line-height:1.7;">A separate score from the film's own Masala Meter — this one's just about the song. Each Masala Meter Song Score out of 10 is a weighted blend of <b>melody (40%)</b>, <b>vocals (25%)</b>, <b>lyrics (20%)</b>, and <b>replay value (15%)</b>, alongside a one-line note on what specifically makes it work.</p>
     </div>
 
     <div class="about-section">
@@ -926,41 +926,41 @@ footer span{color:var(--red);}
       <h2 class="about-title" style="font-size:1.8rem;">How to<br/><span>Use This Site</span></h2>
       <button class="modal-close" style="position:relative;top:auto;right:auto;" onclick="document.getElementById('howToModal').classList.remove('open')">✕</button>
     </div>
-    <p style="font-size:17px;color:var(--text2);margin-bottom:1.5rem;line-height:1.65;">A quick tour of what's on the page — for how scores themselves work, see "About Masala Meter" instead.</p>
+    <p style="font-size:19px;color:var(--text2);margin-bottom:1.5rem;line-height:1.65;">A quick tour of what's on the page — for how scores themselves work, see "About Masala Meter" instead.</p>
 
     <div class="about-section">
       <p class="about-section-label">🔍 Search</p>
-      <p style="font-size:17px;color:var(--text);line-height:1.75;">Type a title to jump straight to it — searches every movie in the catalog, not just what's currently showing on screen.</p>
+      <p style="font-size:19px;color:var(--text);line-height:1.75;">Type a title to jump straight to it — searches every movie in the catalog, not just what's currently showing on screen.</p>
     </div>
 
     <div class="about-section">
       <p class="about-section-label">🎚️ Filters &amp; Sort</p>
-      <p style="font-size:17px;color:var(--text);line-height:1.75;">The button row narrows what's showing — <b>New on Streaming</b>, <b>Now in Theaters</b>, <b>Coming Soon</b>, plus Genre and Language dropdowns. The Sort dropdown changes the order within whatever's currently filtered.</p>
+      <p style="font-size:19px;color:var(--text);line-height:1.75;">The button row narrows what's showing — <b>New on Streaming</b>, <b>Now in Theaters</b>, <b>Coming Soon</b>, plus Genre and Language dropdowns. The Sort dropdown changes the order within whatever's currently filtered.</p>
     </div>
 
     <div class="about-section">
       <p class="about-section-label">🔥 Tier Legend</p>
-      <p style="font-size:17px;color:var(--text);line-height:1.75;">Tap a fire-tier (Vera Level, Semma, Paakkalam…) above the grid to show only films at that tier. Tap it again to clear.</p>
+      <p style="font-size:19px;color:var(--text);line-height:1.75;">Tap a fire-tier (Vera Level, Semma, Paakkalam…) above the grid to show only films at that tier. Tap it again to clear.</p>
     </div>
 
     <div class="about-section">
       <p class="about-section-label">🌍 Region Toggle</p>
-      <p style="font-size:17px;color:var(--text);line-height:1.75;">Switches "Where to Watch" between US and UK streaming availability for whichever movie you're viewing.</p>
+      <p style="font-size:19px;color:var(--text);line-height:1.75;">Switches "Where to Watch" between US and UK streaming availability for whichever movie you're viewing.</p>
     </div>
 
     <div class="about-section">
       <p class="about-section-label">➕ Add a Movie</p>
-      <p style="font-size:17px;color:var(--text);line-height:1.75;">Can't find something? Type its name and this site will look it up, review it, and score it — usually ready within a minute or two.</p>
+      <p style="font-size:19px;color:var(--text);line-height:1.75;">Can't find something? Type its name and this site will look it up, review it, and score it — usually ready within a minute or two.</p>
     </div>
 
     <div class="about-section">
       <p class="about-section-label">↗ Share</p>
-      <p style="font-size:17px;color:var(--text);line-height:1.75;">On any movie, gets you a link with that film's own poster and score attached — so it previews properly when you send it, instead of showing a generic card.</p>
+      <p style="font-size:19px;color:var(--text);line-height:1.75;">On any movie, gets you a link with that film's own poster and score attached — so it previews properly when you send it, instead of showing a generic card.</p>
     </div>
 
     <div class="about-section">
       <p class="about-section-label">♪ Songs</p>
-      <p style="font-size:17px;color:var(--text);line-height:1.75;">A separate catalog of song-only reviews — browse or search independently of the movie it's from, and you can request a song be reviewed the same way you'd add a movie.</p>
+      <p style="font-size:19px;color:var(--text);line-height:1.75;">A separate catalog of song-only reviews — browse or search independently of the movie it's from, and you can request a song be reviewed the same way you'd add a movie.</p>
     </div>
   </div>
 </div>
@@ -972,13 +972,13 @@ footer span{color:var(--red);}
       <h2 class="about-title" style="font-size:1.8rem;">♪ Songs</h2>
       <button class="modal-close" style="position:relative;top:auto;right:auto;" onclick="document.getElementById('songsModal').classList.remove('open')">✕</button>
     </div>
-    <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;line-height:1.6;">Every song already scored across the catalog, in one place — search for a song directly without needing to find its movie first. Can't find one? You can get it reviewed and added.</p>
+    <p style="font-size:16px;color:var(--text2);margin-bottom:1rem;line-height:1.6;">Every song already scored across the catalog, in one place — search for a song directly without needing to find its movie first. Can't find one? You can get it reviewed and added.</p>
     <div style="position:relative;">
       <input class="search-input" type="text" id="songSearchInput" placeholder="Search for a song..." oninput="renderSongsList()" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" name="song-search-field"/>
     </div>
     <div id="songsListWrap" class="songs-wrap" style="margin-top:1rem;max-height:50vh;overflow-y:auto;"></div>
     <div id="songNotFoundWrap" style="display:none;text-align:center;margin-top:1rem;padding:1rem;background:var(--bg3);border-radius:10px;">
-      <p style="font-size:14px;color:var(--text2);margin-bottom:0.75rem;">Can't find <b id="songNotFoundQuery"></b>?</p>
+      <p style="font-size:16px;color:var(--text2);margin-bottom:0.75rem;">Can't find <b id="songNotFoundQuery"></b>?</p>
       <button class="btn btn-primary" onclick="openAddSongModal()">Get It Reviewed →</button>
     </div>
   </div>
@@ -1155,7 +1155,7 @@ function buildStreamingButtons(m) {
   if (!isNaN(relTime) && relTime > Date.now()) {
     const relStr = new Date(relTime).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
     return `<div class="modal-section"><div class="modal-section-label">Where to Watch</div>
-      <div style="color:#FFB020;font-size:14px;font-weight:700;margin-bottom:6px;">🗓️ Not released yet</div>
+      <div style="color:#FFB020;font-size:16px;font-weight:700;margin-bottom:6px;">🗓️ Not released yet</div>
       <div class="ott-note">Expected ${relStr}. <a href="${jwLink}" target="_blank" style="color:#FFB020;">Check JustWatch →</a></div></div>`;
   }
 
@@ -1164,7 +1164,7 @@ function buildStreamingButtons(m) {
     if (isInTheaters(m)) {
       const showtimes = `https://www.google.com/search?q=${encodeURIComponent(title + " showtimes near me")}`;
       return `<div class="modal-section"><div class="modal-section-label">Where to Watch</div>
-        <div style="color:#FFB020;font-size:14px;font-weight:700;margin-bottom:8px;">🎬 Likely in Theaters</div>
+        <div style="color:#FFB020;font-size:16px;font-weight:700;margin-bottom:8px;">🎬 Likely in Theaters</div>
         <div class="ott-wrap">
           <a href="${showtimes}" target="_blank" class="ott-btn" style="--ott-color:#E8442C">🎟️ Find Showtimes Near You</a>
         </div>
@@ -1188,7 +1188,7 @@ function buildStreamingButtons(m) {
   // Two independent sources, not just one — JustWatch is actually the same
   // data TMDB's own API pulls from, so Reelgood (a separate company/data
   // pipeline) gives a genuinely independent second check.
-  const jwNote = `<a href="${jwLink}" target="_blank" style="color:#FFB020;font-size:12px;">Verify on JustWatch →</a> · <a href="${reelgoodLink}" target="_blank" style="color:#FFB020;font-size:12px;">Reelgood →</a>`;
+  const jwNote = `<a href="${jwLink}" target="_blank" style="color:#FFB020;font-size:13.5px;">Verify on JustWatch →</a> · <a href="${reelgoodLink}" target="_blank" style="color:#FFB020;font-size:13.5px;">Reelgood →</a>`;
   const inner = found.length
     ? `<div class="ott-wrap">${found.join("")}</div><div class="ott-note">${ott} · ${jwNote}</div>`
     : `<div class="modal-section-value">${ott} · ${jwNote}</div>`;
@@ -1201,7 +1201,7 @@ function buildStreamingButtons(m) {
     const released = !isNaN(relTime) && relTime <= Date.now();
     const recentRelease = released && relTime >= Date.now() - 5*30*24*60*60*1000;
     if (recentRelease) {
-      newBadge = `<div style="margin-top:8px;color:#1DD3B0;font-size:13px;font-weight:600;">📺 New on Streaming</div>`;
+      newBadge = `<div style="margin-top:8px;color:#1DD3B0;font-size:14.5px;font-weight:600;">📺 New on Streaming</div>`;
     }
   }
 
@@ -1213,7 +1213,7 @@ function buildStreamingButtons(m) {
   const sinceTime = new Date(sinceRaw).getTime();
   if (region === "US" && ott && !isNaN(sinceTime)) {
     const sinceStr = new Date(sinceTime).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
-    sinceBadge = `<div style="margin-top:6px;color:var(--text2);font-size:12px;">Available to stream since ${sinceStr}</div>`;
+    sinceBadge = `<div style="margin-top:6px;color:var(--text2);font-size:13.5px;">Available to stream since ${sinceStr}</div>`;
   }
 
   return `<div class="modal-section"><div class="modal-section-label">Where to Watch</div>${inner}${newBadge}${sinceBadge}</div>`;
@@ -1459,7 +1459,7 @@ function renderSongsList() {
       ? `<img class="song-poster" src="${s.PosterURL}" alt=""/>`
       : `<div class="song-poster song-poster-placeholder">🎵</div>`;
     const movieLine = s.Movie
-      ? `<div style="font-size:12px;color:var(--text3);margin-top:2px;">${s.Movie}${s.Year ? " ("+s.Year+")" : ""}</div>` : "";
+      ? `<div style="font-size:13.5px;color:var(--text3);margin-top:2px;">${s.Movie}${s.Year ? " ("+s.Year+")" : ""}</div>` : "";
     const singers = s.Singers ? `<div class="song-singers">${s.Singers}</div>` : "";
     const musicDirector = s.MusicDirector ? `<div class="song-singers">Music: ${s.MusicDirector}</div>` : "";
     const why = s.WhyHit ? `<div class="song-why"><b>Why it's a hit:</b> ${s.WhyHit}</div>` : "";
@@ -1524,7 +1524,7 @@ function renderSongDetailContent(s, loadingExtras) {
   const raaga = s.Raaga ? `<div class="modal-section"><div class="modal-section-label">Raaga</div><div class="modal-section-value">${s.Raaga}</div></div>` : "";
   const arrangement = s.Arrangement ? `<div class="modal-section"><div class="modal-section-label">The Arrangement</div><div class="modal-section-value">${s.Arrangement}</div></div>` : "";
   const extrasLoading = (loadingExtras && !s.Trivia && !s.Arrangement)
-    ? `<div style="display:flex;align-items:center;gap:8px;justify-content:center;padding:10px 0;font-size:12px;color:var(--text2);"><span class="toast-spinner" style="width:12px;height:12px;"></span> Looking up more details for this song…</div>`
+    ? `<div style="display:flex;align-items:center;gap:8px;justify-content:center;padding:10px 0;font-size:13.5px;color:var(--text2);"><span class="toast-spinner" style="width:12px;height:12px;"></span> Looking up more details for this song…</div>`
     : "";
   document.getElementById("songDetailContent").innerHTML = `
     ${poster}
@@ -1592,7 +1592,7 @@ async function shareSong() {
   function showCopyToast(msg) {
     const t = document.createElement("div");
     t.textContent = msg;
-    t.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1DD3B0;color:#04231d;font-weight:700;padding:10px 18px;border-radius:24px;z-index:99999;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,0.4);";
+    t.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1DD3B0;color:#04231d;font-weight:700;padding:10px 18px;border-radius:24px;z-index:99999;font-size:16px;box-shadow:0 4px 16px rgba(0,0,0,0.4);";
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 2200);
   }
@@ -1775,7 +1775,7 @@ async function searchSongIdentity() {
 
   clearTimeout(songIdentifyTimer);
   box.style.display = "block";
-  box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Identifying...</div>`;
+  box.innerHTML = `<div style="font-size:14.5px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Identifying...</div>`;
 
   // Shared "no confirmed match" card — same "Can't find X?" phrasing and
   // pattern as the Songs search's not-found CTA, with its own "+" add
@@ -1786,7 +1786,7 @@ async function searchSongIdentity() {
   // here's how to add it anyway.
   function cantFindBox(title) {
     return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center;">
-      <div style="font-size:13px;color:var(--text2);margin-bottom:8px;">Can't find "<b>${title}</b>"?</div>
+      <div style="font-size:14.5px;color:var(--text2);margin-bottom:8px;">Can't find "<b>${title}</b>"?</div>
       <button class="btn btn-primary" style="width:100%;padding:8px;" onclick="submitSong()">➕ Add It Anyway</button>
     </div>`;
   }
@@ -1797,7 +1797,7 @@ async function searchSongIdentity() {
     // Gemini with search grounding routinely takes several seconds.
     const reassureTimer = setTimeout(() => {
       if (input.value.trim() !== requestedFor) return;
-      box.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Still identifying…</div>`;
+      box.innerHTML = `<div style="font-size:14.5px;color:var(--text2);padding:8px 0;display:flex;align-items:center;gap:8px;"><span class="toast-spinner" style="width:12px;height:12px;"></span> Still identifying…</div>`;
     }, 3000);
 
     // Doesn't use Google Search grounding server-side (see
@@ -1830,8 +1830,8 @@ async function searchSongIdentity() {
       box.innerHTML = `<div style="background:rgba(29,185,84,0.08);border:1px solid rgba(29,185,84,0.3);border-radius:8px;padding:10px 12px;display:flex;gap:10px;">
         ${posterImg}
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;color:#1DB954;font-size:14px;">♪ ${result.title}</div>
-          <div style="font-size:12px;color:var(--text2);margin-top:2px;">${meta}</div>
+          <div style="font-weight:700;color:#1DB954;font-size:16px;">♪ ${result.title}</div>
+          <div style="font-size:13.5px;color:var(--text2);margin-top:2px;">${meta}</div>
           <button class="btn btn-primary" style="margin-top:8px;width:100%;padding:8px;" onclick="confirmSongIdentity('${safeTitle}','${safeMovie}')">✓ Yes, this is it — Review It</button>
         </div>
       </div>`;
@@ -1978,7 +1978,7 @@ async function updateAddSongToast(title, attempt) {
   const eyebrow = target ? "✅ Reviewed" : "⏳ Couldn't confirm it";
   const body = target
     ? `<div class="add-toast-title">${target.Title}${target.Movie ? " — " + target.Movie : ""}</div><button class="add-toast-view-btn" onclick="jumpToAddedSong()">View Song →</button>`
-    : `<span style="font-size:12px;color:var(--text2);">Couldn't confidently identify this as a real Indian film song. Try the exact song title.</span>`;
+    : `<span style="font-size:13.5px;color:var(--text2);">Couldn't confidently identify this as a real Indian film song. Try the exact song title.</span>`;
   toast.innerHTML = `
     <button class="add-toast-close" onclick="dismissAddSongToast()" aria-label="Dismiss">✕</button>
     <div class="add-toast-poster-placeholder">🎵</div>
@@ -3320,7 +3320,7 @@ async function loadTMDBRecommendations(title, year, lang, director, genre) {
       </div>`;
     }).join("");
   } catch(err) {
-    box.innerHTML = `<div class="recs-loading">Couldn't load suggestions.<br><span style="font-size:11px;color:#FF5C7A;">${(err && err.message) || err}</span></div>`;
+    box.innerHTML = `<div class="recs-loading">Couldn't load suggestions.<br><span style="font-size:12.5px;color:#FF5C7A;">${(err && err.message) || err}</span></div>`;
     console.error("Recommendations error:", err);
   }
 }
@@ -3554,8 +3554,8 @@ function openMovie(index) {
         ${m.GauthamScore?`<div class="gmdb-badge" onclick="openAbout()" style="cursor:pointer;" title="Tap to see what this score means"><span class="gmdb-badge-label">MASALA METER</span>${m.GauthamScore}</div>`:""}
         ${(m.ConsensusTier||m.GauthamScore)?`<span class="modal-badge ${getTierClass(m.ConsensusTier, m.GauthamScore)}" onclick="openAbout()" style="cursor:pointer;" title="Tap to see what this tier means">${getTierEmoji(m.ConsensusTier, m.GauthamScore)} ${getTierLabel(m.ConsensusTier, m.GauthamScore)}</span>`:""}
       </div>
-      ${isNowInTheaters(m)?`<p style="font-size:14px;color:#ff9e9e;margin-bottom:1rem;"><b style="color:#ff6b6b;">🎬 Now in Theaters</b></p>`:""}
-      ${upcoming?`<p style="font-size:14px;color:#FFD27A;margin-bottom:1rem;"><b style="color:#FFB020;">🗓️ Coming Soon</b> — expected ${formattedReleaseDate}</p>`:""}
+      ${isNowInTheaters(m)?`<p style="font-size:16px;color:#ff9e9e;margin-bottom:1rem;"><b style="color:#ff6b6b;">🎬 Now in Theaters</b></p>`:""}
+      ${upcoming?`<p style="font-size:16px;color:#FFD27A;margin-bottom:1rem;"><b style="color:#FFB020;">🗓️ Coming Soon</b> — expected ${formattedReleaseDate}</p>`:""}
       ${buildStreamingButtons(m)}
       ${m.Takeaway?`<div class="takeaway">${m.Takeaway}</div>`:""}
       ${buildMetaGrid(m)}
@@ -3566,7 +3566,7 @@ function openMovie(index) {
       ${buildHitSongs(m)}
       ${buildTrivia(m)}
       ${m.Confidence?`<div class="modal-section"><div class="modal-section-label">Confidence</div><div class="modal-section-value">${m.Confidence}</div></div>`:""}
-      ${m.ReviewSources?`<div class="modal-section"><div class="modal-section-label">Sources</div><div class="modal-section-value" style="font-size:12px;color:var(--text2)">${m.ReviewSources}</div></div>`:""}
+      ${m.ReviewSources?`<div class="modal-section"><div class="modal-section-label">Sources</div><div class="modal-section-value" style="font-size:13.5px;color:var(--text2)">${m.ReviewSources}</div></div>`:""}
       ${m.Trailer?`<div class="modal-section"><a class="modal-btn modal-btn-primary" href="${m.Trailer}" target="_blank" style="display:flex;">▶ Watch Trailer</a></div>`:""}
       ${upcoming?"":buildSimilarMovies(m)}
       </div>
@@ -3734,7 +3734,7 @@ async function shareMovie(title, year) {
   function showCopyToast(msg) {
     const t = document.createElement("div");
     t.textContent = msg;
-    t.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1DD3B0;color:#04231d;font-weight:700;padding:10px 18px;border-radius:24px;z-index:99999;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,0.4);";
+    t.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1DD3B0;color:#04231d;font-weight:700;padding:10px 18px;border-radius:24px;z-index:99999;font-size:16px;box-shadow:0 4px 16px rgba(0,0,0,0.4);";
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 2200);
   }
@@ -4012,7 +4012,7 @@ async function updateAddToast(title, attempt) {
   const eyebrow = target ? "✅ Added" : "⏳ Taking longer than usual";
   const action = target
     ? `<button class="add-toast-view-btn" onclick="jumpToMovie('${displayTitle}')">View Review →</button>`
-    : `<span style="font-size:12px;color:var(--text2);">It'll appear once ready — try searching for it in a bit.</span>`;
+    : `<span style="font-size:13.5px;color:var(--text2);">It'll appear once ready — try searching for it in a bit.</span>`;
   toast.innerHTML = `
     <button class="add-toast-close" onclick="dismissAddToast()" aria-label="Dismiss">✕</button>
     ${poster}
