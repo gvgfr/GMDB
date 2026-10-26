@@ -1658,6 +1658,8 @@ function onOpen() {
     .addItem("Re-score selected movie (click a row first)", "rescoreOneMovie")
     .addItem("Check streaming only for selected movie (cheap, click a row first)", "checkStreamingOnlyForSelectedRow")
     .addItem("Check streaming only — last 6 months, no Streaming yet (cheap batch)", "checkStreamingOnlyRecentReleases")
+    .addItem("Start automatic streaming check (recent releases, every 4 hrs)", "startAutoCheckStreamingRecentReleases")
+    .addItem("Stop automatic streaming check (recent releases)", "stopAutoCheckStreamingRecentReleases")
     .addItem("Re-score next 5 movies (batch)", "rescoreFiveMovies")
     .addItem("Re-score highlighted rows", "rescoreHighlightedRows")
     .addItem("Fill next missing storyline/trivia (one)", "backfillOneStorylineTrivia")
@@ -4916,6 +4918,28 @@ function startAutoRefreshStreamingStatus() {
 // menu item is clicked by hand again.
 function stopAutoRefreshStreamingStatus() {
   const triggers = ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "refreshStreamingStatus");
+  triggers.forEach(t => ScriptApp.deleteTrigger(t));
+  return triggers.length;
+}
+
+// Same idea as startAutoRefreshStreamingStatus above, for
+// checkStreamingOnlyRecentReleases: that function already caps itself at 5
+// minutes and reports "STOPPED EARLY ... run again to continue" when a
+// backlog is bigger than one run can clear — which otherwise means someone
+// has to sit there clicking the menu item several times in a row to work
+// through it, and do that again every time a new backlog builds up. Every
+// 4 hours is cheap on Gemini quota (checkStreamingViaGemini_ is one small
+// call per movie) while still clearing a few-hundred-movie backlog within
+// a day and keeping pace with the normal day-to-day trickle afterward
+// without anyone needing to touch the menu again.
+function startAutoCheckStreamingRecentReleases() {
+  stopAutoCheckStreamingRecentReleases();
+  ScriptApp.newTrigger("checkStreamingOnlyRecentReleases").timeBased().everyHours(4).create();
+  SpreadsheetApp.getActive().toast("Will now check recent releases for new US streaming availability automatically every 4 hours — no need to click the menu or re-run it to work through a backlog.", "GMDB", 10);
+}
+
+function stopAutoCheckStreamingRecentReleases() {
+  const triggers = ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "checkStreamingOnlyRecentReleases");
   triggers.forEach(t => ScriptApp.deleteTrigger(t));
   return triggers.length;
 }
