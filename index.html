@@ -28,6 +28,19 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link rel="preconnect" href="https://script.google.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap" rel="stylesheet"/>
+
+<!-- "Add to Home Screen" support: an icon + standalone-launch metadata so
+     the site behaves like a real app once added (own icon, no browser
+     chrome, app-style name) instead of just a bookmarked tab. manifest.json
+     also lets Chrome on Android offer its own native one-tap "Install"
+     prompt (captured below as beforeinstallprompt) instead of only manual
+     instructions. -->
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Masala Meter"/>
+<meta name="theme-color" content="#0a0a0a"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -616,6 +629,23 @@ footer span{color:var(--red);}
   .tribute-banner{padding:12px 40px 12px 16px;}
   .tribute-banner-text{font-size:13px;text-align:left;}
 }
+
+.install-sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;animation:installFadeIn 0.2s ease-out;}
+.install-sheet{position:fixed;left:0;right:0;bottom:0;z-index:999;background:var(--bg2);border-top:1px solid var(--border);border-radius:16px 16px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom, 0px));box-shadow:0 -8px 30px rgba(0,0,0,0.5);animation:installSheetUp 0.25s ease-out;max-width:480px;margin:0 auto;}
+@keyframes installFadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes installSheetUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.install-sheet-handle{width:36px;height:4px;background:var(--text3);border-radius:2px;margin:0 auto 14px;opacity:0.5;}
+.install-sheet-close{position:absolute;top:16px;right:16px;background:var(--bg3);border:none;color:var(--text2);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1;}
+.install-sheet-close:hover{color:var(--text);}
+.install-sheet-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-right:30px;}
+.install-sheet-icon-img{width:52px;height:52px;border-radius:12px;flex-shrink:0;display:block;}
+.install-sheet-title{font-size:15.5px;font-weight:800;color:var(--text);line-height:1.3;}
+.install-sheet-sub{font-size:12px;color:var(--text3);margin-top:3px;}
+.install-sheet-step{display:flex;align-items:center;gap:12px;padding:7px 0;font-size:13.5px;color:var(--text2);line-height:1.4;}
+.install-sheet-step-num{width:24px;height:24px;border-radius:50%;background:rgba(229,32,32,0.15);color:var(--red);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.install-sheet-step b{color:var(--text);}
+.install-sheet-cta{width:100%;margin-top:14px;padding:12px;border-radius:8px;background:var(--red);color:white;border:none;font-size:14.5px;font-weight:700;cursor:pointer;}
+.install-sheet-cta:hover{background:var(--red2);}
 </style>
 </head>
 <body>
@@ -623,6 +653,21 @@ footer span{color:var(--red);}
 <div class="tribute-banner" id="tributeBanner" style="display:none;">
   <div class="tribute-banner-text"><b>In memory of Nana Patekar (1951–2026).</b> Few actors could switch from menace to mischief in a single scene the way he did — from <i>Parinda</i> and <i>Krantiveer</i> to his turn opposite Rajinikanth in <i>Kaala</i>, dubbing his own Tamil lines. Rest well, Nana.</div>
   <button class="tribute-banner-close" onclick="dismissTributeBanner()" aria-label="Dismiss">×</button>
+</div>
+
+<div class="install-sheet-backdrop" id="installSheetBackdrop" style="display:none;" onclick="dismissInstallBanner()"></div>
+<div class="install-sheet" id="installSheet" style="display:none;" role="dialog" aria-label="Add Masala Meter to your Home Screen">
+  <div class="install-sheet-handle"></div>
+  <button class="install-sheet-close" onclick="dismissInstallBanner()" aria-label="Dismiss">✕</button>
+  <div class="install-sheet-header">
+    <img class="install-sheet-icon-img" src="apple-touch-icon.png" alt=""/>
+    <div>
+      <div class="install-sheet-title">Add Masala Meter to your Home Screen</div>
+      <div class="install-sheet-sub">Instant access · no browser bar · feels like an app</div>
+    </div>
+  </div>
+  <div class="install-sheet-steps" id="installSheetSteps"></div>
+  <button class="install-sheet-cta" id="installSheetCta" style="display:none;" onclick="triggerNativeInstall()">Install App</button>
 </div>
 
 <header>
@@ -3337,6 +3382,96 @@ function isNativeApp() {
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 }
 
+// =============================================
+// "ADD TO HOME SCREEN" PROMPT
+// iOS has no API to trigger the real install flow programmatically — the
+// best any web page can do is show instructions for the manual Share ->
+// Add to Home Screen steps. Android/Chrome DOES support a real one-tap
+// install via the beforeinstallprompt event (captured below), so that path
+// gets an actual "Install App" button instead of instructions when it's
+// available. Shown once per visit until dismissed or installed; permanently
+// silenced after either via localStorage, same pattern as the tribute banner.
+// =============================================
+const INSTALL_BANNER_DISMISS_KEY = "gmdb_install_banner_dismissed_v1";
+let deferredInstallPrompt = null;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  maybeShowNativeInstallCta();
+});
+
+// Already added to the Home Screen / installed — covers both the iOS
+// "launched as a home-screen web app" flag and the standard PWA
+// display-mode media query Android/Chrome/desktop use for the same thing.
+function isStandaloneAlready() {
+  try {
+    if (window.navigator.standalone === true) return true;
+    if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return true;
+  } catch (err) { /* ignore */ }
+  return false;
+}
+
+function initInstallBanner() {
+  // Already installed one way or another (home-screen web app, or the real
+  // native app via Capacitor) — nothing to prompt for.
+  if (isStandaloneAlready() || isNativeApp()) return;
+  try { if (localStorage.getItem(INSTALL_BANNER_DISMISS_KEY)) return; } catch (err) { /* ignore */ }
+
+  const ua = navigator.userAgent || "";
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+  const isAndroid = /Android/.test(ua);
+  if (!isIOS && !isAndroid) return; // desktop — not worth this prompt
+
+  const steps = document.getElementById("installSheetSteps");
+  if (isIOS) {
+    // Add to Home Screen is a Safari-only feature on iOS — Chrome/Firefox
+    // for iOS can't do it from their own menu at all (Apple's restriction,
+    // not those browsers' choice), so point people to Safari instead of
+    // showing steps that don't exist in whichever browser they're in.
+    if (/CriOS|FxiOS|EdgiOS/.test(ua)) {
+      steps.innerHTML = `<div class="install-sheet-step">Open this page in <b>Safari</b> to add it to your Home Screen — that option isn't available in this browser on iPhone/iPad.</div>`;
+    } else {
+      steps.innerHTML = `
+        <div class="install-sheet-step"><span class="install-sheet-step-num">1</span>Tap the <b>Share</b> button (⬆️) in Safari's toolbar</div>
+        <div class="install-sheet-step"><span class="install-sheet-step-num">2</span>Scroll down and tap <b>"Add to Home Screen"</b></div>
+        <div class="install-sheet-step"><span class="install-sheet-step-num">3</span>Tap <b>"Add"</b> in the top right</div>`;
+    }
+  } else {
+    // Android fallback copy — the beforeinstallprompt listener above
+    // usually replaces this with a real one-tap button on Chrome; this is
+    // what shows for a browser that event doesn't fire on.
+    steps.innerHTML = `
+      <div class="install-sheet-step"><span class="install-sheet-step-num">1</span>Tap the <b>⋮ menu</b> in your browser's toolbar</div>
+      <div class="install-sheet-step"><span class="install-sheet-step-num">2</span>Tap <b>"Add to Home screen"</b> or <b>"Install app"</b></div>`;
+  }
+
+  document.getElementById("installSheetBackdrop").style.display = "block";
+  document.getElementById("installSheet").style.display = "block";
+  maybeShowNativeInstallCta();
+}
+
+function maybeShowNativeInstallCta() {
+  const cta = document.getElementById("installSheetCta");
+  const sheet = document.getElementById("installSheet");
+  if (!cta || !sheet) return;
+  if (deferredInstallPrompt && sheet.style.display !== "none") cta.style.display = "block";
+}
+
+async function triggerNativeInstall() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  try { await deferredInstallPrompt.userChoice; } catch (err) { /* ignore */ }
+  deferredInstallPrompt = null;
+  dismissInstallBanner();
+}
+
+function dismissInstallBanner() {
+  document.getElementById("installSheetBackdrop").style.display = "none";
+  document.getElementById("installSheet").style.display = "none";
+  try { localStorage.setItem(INSTALL_BANNER_DISMISS_KEY, "1"); } catch (err) { /* ignore */ }
+}
+
 function showSimpleToast(message, ms) {
   let toast = document.getElementById("simpleToast");
   if (!toast) {
@@ -3953,6 +4088,10 @@ try {
 } catch(err) {
   if (Date.now() < TRIBUTE_BANNER_EXPIRES) document.getElementById("tributeBanner").style.display = "flex";
 }
+
+// Small delay so this doesn't compete with the very first paint — let the
+// page actually show up before asking for anything.
+setTimeout(initInstallBanner, 1500);
 
 Promise.all([loadMovies(), loadSongs()]).then(handleSharedSongLink);
 
