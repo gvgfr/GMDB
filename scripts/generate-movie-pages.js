@@ -116,6 +116,17 @@ async function main() {
   const data = await fetchMovies();
   const movies = data.filter(m => m.Title && m.GauthamScore !== "" && m.GauthamScore != null);
 
+  // Static snapshot of the exact same raw payload the live action=movies
+  // endpoint returns, committed to the repo root so GitHub Pages serves it
+  // same-origin alongside index.html. The site's loadMovies() fetches this
+  // first and paints instantly from it before the live Apps Script call
+  // resolves — that call can take several seconds on a cold start, and
+  // until now a first-time visitor (no localStorage cache yet) had no
+  // fast path at all and just sat on a blank grid for it. A snapshot up to
+  // ~6 hours stale is a fine stand-in for the general catalog; the live
+  // fetch still runs regardless and is what actually updates the page.
+  fs.writeFileSync(path.join(__dirname, "..", "movies-snapshot.json"), JSON.stringify(data));
+
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
   const seen = new Map();
