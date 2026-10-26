@@ -1330,10 +1330,6 @@ to streaming eventually. TMDB's own structured provider data can lag several
 days behind real announcements for brand-new releases, so this is a backup
 check specifically for that gap.
 
-TODAY'S DATE is ${todayForPrompt_()}. An announced streaming/OTT start date
-that is on or before today means the film IS available now — only a date
-after today counts as an "announced future date".
-
 Try several search angles before concluding nothing is available — a single
 narrow query often misses a real, recent release:
 1. the title + year + "streaming US"
@@ -1366,8 +1362,6 @@ entertainment outlet, the platform's own US-facing site, or explicit
 mention of "US," "American subscribers," etc. When genuinely unclear,
 default to "N/A" rather than assuming the same brand means the same
 regional availability.
-
-${NETFLIX_GLOBAL_NOTE}
 
 CROSS-VERIFICATION — do not trust a single mention. Before confirming a
 platform, check at least TWO of these credible sources and require they
@@ -1415,7 +1409,7 @@ news articles or official platform announcements (e.g. "now streaming on
 Netflix UK", "OTT release date UK"), not just a general mention that it might
 come to streaming eventually. TMDB's own structured provider data can lag
 several days behind real announcements for brand-new releases, so this is a
-backup check specifically for that gap. (Same TODAY'S DATE as above applies.)
+backup check specifically for that gap.
 
 Try several search angles before concluding nothing is available — a single
 narrow query often misses a real, recent release:
@@ -1440,7 +1434,7 @@ catalog. Only report a platform as confirmed if the source is clearly
 UK-specific — a UK entertainment outlet, the platform's own UK-facing site,
 or explicit mention of "UK," "British subscribers," etc. When genuinely
 unclear, default to "N/A" rather than assuming the same brand means the same
-regional availability. The NETFLIX EXCEPTION above applies to the UK too.
+regional availability.
 
 UK-SPECIFIC PLATFORMS ARE VALID ANSWERS TOO — don't limit yourself to the
 global streaming names. BBC iPlayer, ITVX, Channel 4 (My4), and Sky/NOW are
@@ -4306,27 +4300,8 @@ function autoAddNewlyStreamingCore() {
 // a confirmation step right before it's about to conclude a movie left
 // streaming — TMDB's own data can lag, and this catches the case where
 // TMDB briefly reports nothing but the movie genuinely never left.
-// Today's date, spelled out for Gemini prompts. Gemini has no reliable sense
-// of "now" on its own, so a prompt asking whether a film is streaming
-// "right now" couldn't tell a passed OTT date ("streams on Netflix from
-// Oct 23", read on Oct 26) from a future one — and the prompts' "an
-// announced future date is not current availability" caution then made it
-// answer N/A for films that had already dropped (e.g. Dorothy).
-function todayForPrompt_() {
-  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MMMM d, yyyy");
-}
-
-// Netflix exception to the "regional catalogs" caution, shared by every
-// streaming prompt. Prime Video's India catalog really is separate, but
-// Netflix almost always takes worldwide rights for the Indian films it
-// buys, so the only coverage of the drop is Indian press that never says
-// "US" — which the US-specific/two-source rules otherwise rejected.
-const NETFLIX_GLOBAL_NOTE = `NETFLIX EXCEPTION: unlike Prime Video, when Netflix picks up an Indian film's post-theatrical streaming rights it almost always releases it GLOBALLY on the same day (announcements typically say "worldwide"/"globally", or list several dubbed languages). So if at least two credible sources (Indian outlets are fine here) report the film is streaming on Netflix from a date that is today or earlier, and none says it is restricted to India, treat that as confirmed availability in the US and the UK too, and answer "Netflix".`;
-
 function checkStreamingViaGemini_(title, year, filmLanguage) {
   const prompt = `Using Google Search, check whether the ${filmLanguage || "Indian"} film "${title}" (${year}) is CURRENTLY available to stream in the US right now. Look for real news articles or official platform announcements, not speculation.
-
-TODAY'S DATE is ${todayForPrompt_()}. An announced streaming/OTT start date that is on or before today means the film IS available now — only a date after today is a "future" date.
 
 SEARCH STRATEGY — try several angles, not just one query, before giving up:
 1. "${title}" ${year} streaming US
@@ -4335,7 +4310,6 @@ SEARCH STRATEGY — try several angles, not just one query, before giving up:
 4. "${title}" OTT release date US
 
 IMPORTANT: JioHotstar (formerly Hotstar/Disney+ Hotstar) is confirmed geo-blocked outside India entirely — finding news that a film streams there almost always means India availability, NOT the US. Do not report it as a US confirmation. Also beware Amazon Prime Video specifically — it has SEPARATE regional catalogs, so "on Prime Video" in a general source often means Prime Video India, not the US. Only confirm a platform if the source is clearly US-specific. Require at least two credible sources to agree (e.g. JustWatch, Reelgood, or the platform's own US site) — a single vague mention isn't enough; return "N/A" if you can't cross-verify.
-${NETFLIX_GLOBAL_NOTE}
 HOLLYWOOD STUDIO THEATRICAL RELEASES ONLY: if (and only if) ${filmLanguage || "Indian"} is English/Hollywood and this had a wide US theatrical opening within roughly the last 30-45 days, be extra skeptical of any streaming claim — the real-world Hollywood norm is a 45+ day exclusivity window before any digital release, longer still before a subscription service. Don't confuse the studio's own streaming service being its eventual home (e.g. a Warner Bros. film will eventually reach HBO Max) or an announced future date with current availability. This does NOT apply to Indian-language films (Tamil, Telugu, Hindi, Malayalam, Kannada, etc.) — Indian OTT platforms routinely pay for much faster exclusive windows (often 3-8 weeks) even for big-budget hits, so a large Indian film streaming within a month of release is normal, not suspicious; evaluate those under the normal cross-verification rules above only.
 Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly "N/A" if you cannot confirm current US streaming availability. Return ONLY that single word or phrase, nothing else — no explanation, no punctuation.`;
 
