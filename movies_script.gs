@@ -774,96 +774,6 @@ function fillMovieData(e) {
 // =============================================
 // GEMINI AI REVIEW
 // =============================================
-// The US streaming question, word for word as re-score asks it (the
-// streamingLive field of getGeminiMovieReview's prompt). Re-score kept
-// finding streaming that the separate one-line check in
-// checkStreamingViaGemini_ missed, because the two had been written (and
-// patched) separately and drifted apart. Now both use this one copy, so a
-// streaming check, the daily refresh and a re-score all ask Gemini the
-// exact same thing.
-function streamingLiveInstructions_(filmLanguage) {
-  return `streamingLive: Use Google Search to check whether THIS SPECIFIC ${filmLanguage || "Indian"}
-film is CURRENTLY available to stream in the US right now — look for actual
-news articles or official platform announcements (e.g. "now streaming on
-Netflix", "OTT release date"), not just a general mention that it might come
-to streaming eventually. TMDB's own structured provider data can lag several
-days behind real announcements for brand-new releases, so this is a backup
-check specifically for that gap.
-
-Try several search angles before concluding nothing is available — a single
-narrow query often misses a real, recent release:
-1. the title + year + "streaming US"
-2. the title + specific platform names (Netflix, Hulu, Prime Video, Disney+, Max)
-3. the title + "JustWatch" (JustWatch aggregates real US availability, useful
-   even without needing their own API)
-4. the title + "OTT release date US"
-
-Return ONLY the platform name if you can
-confirm it (e.g. "Netflix", "Amazon Prime Video", "ZEE5") — do not guess.
-
-IMPORTANT: many platforms that stream Indian films are India-exclusive and
-NOT available in the US at all — JioHotstar (formerly Hotstar/Disney+
-Hotstar) is confirmed geo-blocked outside India entirely, with no US access.
-Finding real news that a film is "streaming on JioHotstar" almost always
-means it's available in India, NOT the US — do not report it as US
-availability just because you found genuine streaming news; that news is
-likely about a different region.
-
-BROADER CAUTION — this applies beyond just JioHotstar: several platforms
-(Amazon Prime Video especially, but also Netflix to a lesser degree) operate
-SEPARATE regional catalogs under the same brand name. A film can be
-genuinely available on "Prime Video" in India while NOT being on Prime
-Video in the US at all — these are different catalogs, not the same
-service. If a source doesn't explicitly confirm the US specifically (e.g. a
-general Indian entertainment site just saying "now on Prime Video" without
-naming a region), do NOT assume that means the US catalog. Only report a
-platform as confirmed if the source is clearly US-specific — a US
-entertainment outlet, the platform's own US-facing site, or explicit
-mention of "US," "American subscribers," etc. When genuinely unclear,
-default to "N/A" rather than assuming the same brand means the same
-regional availability.
-
-CROSS-VERIFICATION — do not trust a single mention. Before confirming a
-platform, check at least TWO of these credible sources and require they
-AGREE: JustWatch (justwatch.com/us/...), Reelgood (reelgood.com), the
-platform's own official US site (e.g. netflix.com, hulu.com), or a US
-entertainment outlet's explicit coverage. If you only find ONE source and
-it isn't clearly US-specific and authoritative (the platform's own US site
-counts as sufficient on its own; a single vague blog post does not), treat
-it as unconfirmed and return "N/A" rather than guessing from one weak
-signal.
-
-HOLLYWOOD STUDIO THEATRICAL RELEASES — extra skepticism required, but ONLY
-for English-language Hollywood studio films: if this is a wide theatrical
-release from a major Hollywood studio (e.g. Warner Bros., Disney, Universal,
-Paramount) that opened in US theaters within roughly the last 30-45 days, be
-very skeptical of ANY claim that it's already streaming. The real-world
-Hollywood industry norm is a 45+ day theatrical exclusivity window before a
-PVOD/digital release, and even longer before it reaches a subscription
-service. Do NOT confuse any of these with "currently streaming": the
-studio's OWN streaming service being its eventual destination (e.g. a
-Warner Bros. film will eventually reach HBO Max, but that doesn't mean it's
-there yet), an ANNOUNCED future streaming/digital date, or pre-release
-marketing about where it will stream later. Only report a platform if you
-find an article explicitly stating the film IS available to watch right
-now, dated after its theatrical opening.
-
-IMPORTANT — this skepticism does NOT apply to Indian-language films (Tamil,
-Telugu, Hindi, Malayalam, Kannada, etc.), regardless of budget or how wide
-the theatrical release was. Indian OTT platforms (Netflix, Amazon Prime
-Video, ZEE5, SonyLIV, etc.) routinely pay for much faster exclusive
-streaming windows than Hollywood — often just 3-8 weeks after theatrical
-release even for big-budget hits — so a large/successful Indian film
-streaming within a month of release is completely normal, not suspicious.
-Treat a genuinely well-sourced streaming claim for an Indian film at face
-value under the normal cross-verification rules above; only the Hollywood-
-studio-specific slow-windowing caution above should make you doubt an
-otherwise well-sourced claim.
-
-Return "N/A" if you cannot confirm current US streaming availability, if it's
-still theater-only, or if you're not confident it's the correct film.`;
-}
-
 function getGeminiMovieReview(title, year, filmLanguage) {
 
   const prompt = `
@@ -1412,7 +1322,86 @@ nearest hundred/thousand if the exact count isn't stated) — you don't need
 pinpoint precision, just don't fabricate a number with no basis. Return "N/A"
 only if you found nothing to go on at all.
 
-${streamingLiveInstructions_(filmLanguage)}
+streamingLive: Use Google Search to check whether THIS SPECIFIC ${filmLanguage || "Indian"}
+film is CURRENTLY available to stream in the US right now — look for actual
+news articles or official platform announcements (e.g. "now streaming on
+Netflix", "OTT release date"), not just a general mention that it might come
+to streaming eventually. TMDB's own structured provider data can lag several
+days behind real announcements for brand-new releases, so this is a backup
+check specifically for that gap.
+
+Try several search angles before concluding nothing is available — a single
+narrow query often misses a real, recent release:
+1. the title + year + "streaming US"
+2. the title + specific platform names (Netflix, Hulu, Prime Video, Disney+, Max)
+3. the title + "JustWatch" (JustWatch aggregates real US availability, useful
+   even without needing their own API)
+4. the title + "OTT release date US"
+
+Return ONLY the platform name if you can
+confirm it (e.g. "Netflix", "Amazon Prime Video", "ZEE5") — do not guess.
+
+IMPORTANT: many platforms that stream Indian films are India-exclusive and
+NOT available in the US at all — JioHotstar (formerly Hotstar/Disney+
+Hotstar) is confirmed geo-blocked outside India entirely, with no US access.
+Finding real news that a film is "streaming on JioHotstar" almost always
+means it's available in India, NOT the US — do not report it as US
+availability just because you found genuine streaming news; that news is
+likely about a different region.
+
+BROADER CAUTION — this applies beyond just JioHotstar: several platforms
+(Amazon Prime Video especially, but also Netflix to a lesser degree) operate
+SEPARATE regional catalogs under the same brand name. A film can be
+genuinely available on "Prime Video" in India while NOT being on Prime
+Video in the US at all — these are different catalogs, not the same
+service. If a source doesn't explicitly confirm the US specifically (e.g. a
+general Indian entertainment site just saying "now on Prime Video" without
+naming a region), do NOT assume that means the US catalog. Only report a
+platform as confirmed if the source is clearly US-specific — a US
+entertainment outlet, the platform's own US-facing site, or explicit
+mention of "US," "American subscribers," etc. When genuinely unclear,
+default to "N/A" rather than assuming the same brand means the same
+regional availability.
+
+CROSS-VERIFICATION — do not trust a single mention. Before confirming a
+platform, check at least TWO of these credible sources and require they
+AGREE: JustWatch (justwatch.com/us/...), Reelgood (reelgood.com), the
+platform's own official US site (e.g. netflix.com, hulu.com), or a US
+entertainment outlet's explicit coverage. If you only find ONE source and
+it isn't clearly US-specific and authoritative (the platform's own US site
+counts as sufficient on its own; a single vague blog post does not), treat
+it as unconfirmed and return "N/A" rather than guessing from one weak
+signal.
+
+HOLLYWOOD STUDIO THEATRICAL RELEASES — extra skepticism required, but ONLY
+for English-language Hollywood studio films: if this is a wide theatrical
+release from a major Hollywood studio (e.g. Warner Bros., Disney, Universal,
+Paramount) that opened in US theaters within roughly the last 30-45 days, be
+very skeptical of ANY claim that it's already streaming. The real-world
+Hollywood industry norm is a 45+ day theatrical exclusivity window before a
+PVOD/digital release, and even longer before it reaches a subscription
+service. Do NOT confuse any of these with "currently streaming": the
+studio's OWN streaming service being its eventual destination (e.g. a
+Warner Bros. film will eventually reach HBO Max, but that doesn't mean it's
+there yet), an ANNOUNCED future streaming/digital date, or pre-release
+marketing about where it will stream later. Only report a platform if you
+find an article explicitly stating the film IS available to watch right
+now, dated after its theatrical opening.
+
+IMPORTANT — this skepticism does NOT apply to Indian-language films (Tamil,
+Telugu, Hindi, Malayalam, Kannada, etc.), regardless of budget or how wide
+the theatrical release was. Indian OTT platforms (Netflix, Amazon Prime
+Video, ZEE5, SonyLIV, etc.) routinely pay for much faster exclusive
+streaming windows than Hollywood — often just 3-8 weeks after theatrical
+release even for big-budget hits — so a large/successful Indian film
+streaming within a month of release is completely normal, not suspicious.
+Treat a genuinely well-sourced streaming claim for an Indian film at face
+value under the normal cross-verification rules above; only the Hollywood-
+studio-specific slow-windowing caution above should make you doubt an
+otherwise well-sourced claim.
+
+Return "N/A" if you cannot confirm current US streaming availability, if it's
+still theater-only, or if you're not confident it's the correct film.
 
 streamingLiveUK: Use Google Search to check whether THIS SPECIFIC ${filmLanguage || "Indian"}
 film is CURRENTLY available to stream in the UK right now — look for actual
@@ -4312,18 +4301,17 @@ function autoAddNewlyStreamingCore() {
 // streaming — TMDB's own data can lag, and this catches the case where
 // TMDB briefly reports nothing but the movie genuinely never left.
 function checkStreamingViaGemini_(title, year, filmLanguage) {
-  const prompt = `
-You are an Indian cinema expert and critic. This database focuses exclusively on Indian cinema.
+  const prompt = `Using Google Search, check whether the ${filmLanguage || "Indian"} film "${title}" (${year}) is CURRENTLY available to stream in the US right now. Look for real news articles or official platform announcements, not speculation.
 
-Always prefer the Indian film when multiple films share the same title.
-Prioritize: Tamil, Telugu, Malayalam, Kannada, Hindi, Marathi, Bengali.
-English movies are ok if reviewed by New York Times or NPR.
+SEARCH STRATEGY — try several angles, not just one query, before giving up:
+1. "${title}" ${year} streaming US
+2. "${title}" Netflix OR Hulu OR "Prime Video" OR "Disney+" OR Max release
+3. "${title}" JustWatch (JustWatch aggregates real US availability, useful even without their API)
+4. "${title}" OTT release date US
 
-For the movie "${title}" (${year}), answer ONE field:
-
-${streamingLiveInstructions_(filmLanguage)}
-
-Return ONLY the streamingLive answer — the platform name, or exactly "N/A" — nothing else, no explanation, no punctuation.`;
+IMPORTANT: JioHotstar (formerly Hotstar/Disney+ Hotstar) is confirmed geo-blocked outside India entirely — finding news that a film streams there almost always means India availability, NOT the US. Do not report it as a US confirmation. Also beware Amazon Prime Video specifically — it has SEPARATE regional catalogs, so "on Prime Video" in a general source often means Prime Video India, not the US. Only confirm a platform if the source is clearly US-specific. Require at least two credible sources to agree (e.g. JustWatch, Reelgood, or the platform's own US site) — a single vague mention isn't enough; return "N/A" if you can't cross-verify.
+HOLLYWOOD STUDIO THEATRICAL RELEASES ONLY: if (and only if) ${filmLanguage || "Indian"} is English/Hollywood and this had a wide US theatrical opening within roughly the last 30-45 days, be extra skeptical of any streaming claim — the real-world Hollywood norm is a 45+ day exclusivity window before any digital release, longer still before a subscription service. Don't confuse the studio's own streaming service being its eventual home (e.g. a Warner Bros. film will eventually reach HBO Max) or an announced future date with current availability. This does NOT apply to Indian-language films (Tamil, Telugu, Hindi, Malayalam, Kannada, etc.) — Indian OTT platforms routinely pay for much faster exclusive windows (often 3-8 weeks) even for big-budget hits, so a large Indian film streaming within a month of release is normal, not suspicious; evaluate those under the normal cross-verification rules above only.
+Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly "N/A" if you cannot confirm current US streaming availability. Return ONLY that single word or phrase, nothing else — no explanation, no punctuation.`;
 
   const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
   const payload = {
