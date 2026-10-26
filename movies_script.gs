@@ -1969,6 +1969,9 @@ function checkStreamingOnlyRecentReleases() {
     markStreamChecked_(ordered[n].key);
     if (confirmed) {
       sheet.getRange(row, 15).setValue(confirmed);
+      // The site shows OTTInfo (col 16) ahead of col 15, so a stale label
+      // left there would hide this find — same label checkStreamingOnlyForSelectedRow writes.
+      sheet.getRange(row, 16).setValue("Available on " + confirmed + " (US)");
       const sinceCell = sheet.getRange(row, 32);
       if (!String(sinceCell.getValue() || "").trim()) sinceCell.setValue(new Date());
       found++;
@@ -1982,7 +1985,7 @@ function checkStreamingOnlyRecentReleases() {
 
   let summary = "Checked " + checked + " of " + eligible.length + " eligible movie(s) with no Streaming value.\n";
   if (stoppedEarly) {
-    summary += "STOPPED EARLY (hit the 5-minute time limit) — " + (eligible.length - checked) + " eligible movie(s) not reached this run. The next run starts with those.\n\n";
+    summary += "STOPPED EARLY (hit the 4-minute time limit) — " + (eligible.length - checked) + " eligible movie(s) not reached this run. The next run starts with those.\n\n";
   }
   summary += found > 0 ? "Newly found streaming:\n" + foundTitles.join("\n") : "No new streaming found this run.";
   if (failedTitles.length) summary += "\n\nCheck failed (left unchanged) for:\n" + failedTitles.join("\n");
@@ -4348,9 +4351,20 @@ Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly
     if (!data.candidates || !data.candidates[0]) return null;
     const cand = data.candidates[0];
     if (!cand.content || !cand.content.parts || !cand.content.parts[0]) return null; // empty/filtered response
-    const text = (data.candidates[0].content.parts[0].text || "").trim();
-    if (!text || /^n\/a$/i.test(text)) return "";
-    const cleaned = stripCitationMarkers_(text).replace(/["'.]/g, "").trim();
+    // Grounded (Google Search) answers can arrive split across several
+    // parts, and despite "return ONLY the platform name" Gemini sometimes
+    // adds a sentence after it — which got written into the Streaming
+    // column as-is. Join all parts, keep the first non-empty line, and
+    // treat anything still sentence-length as unconfirmed rather than a
+    // platform name.
+    const fullText = cand.content.parts.map(p => p.text || "").join("").trim();
+    const text = (fullText.split("\n").map(l => l.trim()).filter(Boolean)[0] || "");
+    if (!text || /^n\/a\b/i.test(text)) return "";
+    const cleaned = stripCitationMarkers_(text).replace(/\[\d+(?:\s*,\s*\d+)*\]/g, "").replace(/["'.*]/g, "").trim(); // also numeric citations like [1]
+    if (cleaned.length > 60) {
+      Logger.log("checkStreamingViaGemini_ got a sentence, not a platform, for '" + title + "': " + cleaned.slice(0, 200));
+      return "";
+    }
     // Same hard blocklist as the main streamingLive field — JioHotstar is
     // verified India-only, not trusted as a genuine US confirmation even
     // when Gemini names it.
@@ -4779,7 +4793,13 @@ function refreshStreamingStatus() {
       // reachable for movies that had ALREADY been confirmed streaming at
       // some point. Bounded to isRecent so this doesn't fire forever on
       // old catalog titles that are genuinely just not streaming anywhere.
-      if (!streaming && (prevStreaming || isRecent)) {
+      // NOT for rows that already have streaming (prevStreaming): an empty
+      // answer can't clear them anyway (see the protect-existing write
+      // below), so that call bought nothing — and since TMDB never lists
+      // many Indian OTT drops at all, it fired a 10-20s Gemini search for
+      // every such film from the last year on every run, which is what ate
+      // this refresh's time budget and pushed it past the 6-min limit.
+      if (!streaming && !prevStreaming && isRecent) {
         const yr = sheet.getRange(row, 2).getValue();
         const lg = sheet.getRange(row, 30).getValue();
         let confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
