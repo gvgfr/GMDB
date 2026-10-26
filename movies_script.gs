@@ -1912,7 +1912,7 @@ function checkStreamingOnlyRecentReleases() {
   if (lastRow < 2) return;
 
   const startTime = Date.now();
-  const CUTOFF_MS = 5 * 60 * 1000;
+  const CUTOFF_MS = 4 * 60 * 1000; // see refreshStreamingStatus — leaves room for one slow last row
   const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
 
   const titles = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
@@ -1935,18 +1935,21 @@ function checkStreamingOnlyRecentReleases() {
     const relTime = new Date(releaseDates[i][0] || "").getTime();
     if (isNaN(relTime) || relTime > Date.now()) continue; // unparsable/future — skip rather than guess
     if (Date.now() - relTime > SIX_MONTHS_MS) continue; // older than 6 months — out of scope
-    eligible.push(i);
+    eligible.push({ key: streamCheckKey_("SCRECENT_", title, years[i][0]), row: i + 2, i: i });
   }
+  // Least-recently-checked first, so rows at the bottom (newest additions)
+  // aren't starved by the same top rows every run.
+  const ordered = orderByLastStreamCheck_("SCRECENT_", eligible);
 
   let checked = 0, found = 0, failed = 0;
   const foundTitles = [];
   const failedTitles = [];
   let stoppedEarly = false;
 
-  for (let n = 0; n < eligible.length; n++) {
+  for (let n = 0; n < ordered.length; n++) {
     if (Date.now() - startTime > CUTOFF_MS) { stoppedEarly = true; break; }
-    const i = eligible[n];
-    const row = i + 2;
+    const i = ordered[n].i;
+    const row = ordered[n].row;
     const title_s = String(titles[i][0]), year_s = String(years[i][0] || ""), lang_s = String(languages[i][0] || "");
 
     checked++;
@@ -1963,6 +1966,7 @@ function checkStreamingOnlyRecentReleases() {
       Logger.log("checkStreamingOnlyRecentReleases: FAILED (network/API) for '" + title_s + "' (row " + row + ")");
       continue; // genuine check failure — leave the row untouched, don't guess
     }
+    markStreamChecked_(ordered[n].key);
     if (confirmed) {
       sheet.getRange(row, 15).setValue(confirmed);
       const sinceCell = sheet.getRange(row, 32);
@@ -1978,7 +1982,7 @@ function checkStreamingOnlyRecentReleases() {
 
   let summary = "Checked " + checked + " of " + eligible.length + " eligible movie(s) with no Streaming value.\n";
   if (stoppedEarly) {
-    summary += "STOPPED EARLY (hit the 5-minute time limit) — " + (eligible.length - checked) + " eligible movie(s) not reached this run. Run again to continue through the rest.\n\n";
+    summary += "STOPPED EARLY (hit the 5-minute time limit) — " + (eligible.length - checked) + " eligible movie(s) not reached this run. The next run starts with those.\n\n";
   }
   summary += found > 0 ? "Newly found streaming:\n" + foundTitles.join("\n") : "No new streaming found this run.";
   if (failedTitles.length) summary += "\n\nCheck failed (left unchanged) for:\n" + failedTitles.join("\n");
@@ -4606,14 +4610,53 @@ function tidyAllRows() {
 // Runs daily via the installable trigger set up by
 // startAutoRefreshStreamingStatus() below. Batched to respect the 6-min limit.
 // =============================================
+// Both bulk streaming jobs used to walk the sheet from row 2 every run and
+// stop at their time limit. New movies are appended at the bottom, so once
+// enough recent-but-not-yet-streaming rows sat above them, every run spent
+// its whole budget re-checking those same top rows and never reached the
+// newest ones (e.g. Dorothy, which a one-row check found instantly). Now
+// each job remembers when it last checked each movie and goes
+// least-recently-checked first: never-checked rows (brand-new additions)
+// come first, newest row first, and a run that stops early just leaves the
+// rest for the next run instead of starting over.
+function streamCheckKey_(prefix, title, year) {
+  return prefix + String(title).trim().toLowerCase() + "|" + String(year || "").trim();
+}
+
+// items: [{key, row, ...}] — returns them least-recently-checked first.
+// Also drops remembered keys for movies no longer in the list (aged out of
+// the window, deleted) so the stored map can't grow forever.
+function orderByLastStreamCheck_(prefix, items) {
+  const props = PropertiesService.getScriptProperties();
+  const all = props.getProperties();
+  const live = {};
+  items.forEach(it => { live[it.key] = true; });
+  Object.keys(all).forEach(k => {
+    if (k.indexOf(prefix) === 0 && !live[k]) props.deleteProperty(k);
+  });
+  return items.slice().sort((a, b) => {
+    const ta = Number(all[a.key] || 0), tb = Number(all[b.key] || 0);
+    if (ta !== tb) return ta - tb;
+    return b.row - a.row; // never-checked ties: newest (bottom) row first
+  });
+}
+
+function markStreamChecked_(key) {
+  PropertiesService.getScriptProperties().setProperty(key, String(Date.now()));
+}
+
 function refreshStreamingStatus() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
 
   const startTime = Date.now();
-  const CUTOFF_MS = 5 * 60 * 1000; // stop before the 6-min Apps Script limit
-  let checked = 0, newlyAdded = 0, lastRowSeen = 1;
+  // Stop starting new rows at 4 min, not 5: one row can take a minute or
+  // more (TMDB + a Gemini search + a retry + the theatrical check), and the
+  // low-score sweep still runs after the loop — 5 min left too little room
+  // and runs were dying at Apps Script's hard 6-min limit.
+  const CUTOFF_MS = 4 * 60 * 1000;
+  let checked = 0, newlyAdded = 0, stoppedEarly = false;
   const newlyAddedTitles = [];
   // Rows where a check genuinely failed (network/HTTP error, or Gemini's
   // fallback errored even after a retry) rather than confirming "not
@@ -4621,27 +4664,16 @@ function refreshStreamingStatus() {
   // silently looking identical to a clean "nothing found" result.
   const uncertainTitles = [];
 
-  // Always re-scan from row 2 on every run instead of resuming from a
-  // persisted row pointer. Skipping an old (>1 year) row below is a single
-  // cheap cell comparison, so walking past the — usually much larger —
-  // older part of the catalog costs virtually nothing. The old round-robin
-  // pointer existed to spread that walk across runs back when EVERY row
-  // got a real API call; with the 1-year skip already doing that job for
-  // free, persisting a pointer only risked leaving a newly-added row
-  // unchecked for an entire lap if the pointer happened to already be past
-  // it — exactly what made a movie that just started streaming look like
-  // this refresh had missed it, when a manual re-score (which always
-  // checks the row it's run on) found it immediately. Starting fresh each
-  // run means a movie added minutes ago gets checked on the very next click.
+  // Order: least-recently-checked first (see orderByLastStreamCheck_), so
+  // a movie added minutes ago is still checked on the very next run.
   const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
+  const titles = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  const years = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
   const releaseDates = sheet.getRange(2, 31, lastRow - 1, 1).getValues();
 
+  const candidates = [];
   for (let i = 0; i < releaseDates.length; i++) {
-    if (Date.now() - startTime > CUTOFF_MS) break;
-    const row = i + 2;
-    lastRowSeen = row;
-
-    const title = sheet.getRange(row, 1).getValue();
+    const title = titles[i][0];
     if (!title) continue;
 
     // Skip movies released more than a year ago entirely — no TMDB call,
@@ -4659,6 +4691,15 @@ function refreshStreamingStatus() {
     // as null rather than the empty string getValue() actually returns.
     const releaseTime = releaseDateRaw ? new Date(releaseDateRaw).getTime() : NaN;
     if (!isNaN(releaseTime) && releaseTime < oneYearAgo) continue;
+    candidates.push({ key: streamCheckKey_("SCREFRESH_", title, years[i][0]), row: i + 2, i: i, releaseTime: releaseTime });
+  }
+  const ordered = orderByLastStreamCheck_("SCREFRESH_", candidates);
+
+  for (let n = 0; n < ordered.length; n++) {
+    if (Date.now() - startTime > CUTOFF_MS) { stoppedEarly = true; break; }
+    const row = ordered[n].row;
+    const title = titles[ordered[n].i][0];
+    const releaseTime = ordered[n].releaseTime;
 
     // Use stored TMDB ID when available; otherwise fall back to title search.
     try {
@@ -4841,6 +4882,7 @@ function refreshStreamingStatus() {
       }
 
       checked++;
+      markStreamChecked_(ordered[n].key); // only on success — a failed row stays first in line
     } catch (err) {
       Logger.log("Refresh failed for '" + title + "' row " + row + ": " + err);
       // A hard failure (network error, TMDB throwing on a rate limit, etc.)
@@ -4851,11 +4893,9 @@ function refreshStreamingStatus() {
     }
   }
 
-  // Whether this run made it all the way to the last row before the time
-  // budget ran out — every recent movie got (re)checked either way, unless
-  // this is false, in which case running it again will pick up wherever
-  // this one stopped.
-  const finishedFullSweep = lastRowSeen >= lastRow;
+  // Whether every recent movie got (re)checked this run; if not, the next
+  // run starts with the ones this run didn't reach.
+  const finishedFullSweep = !stoppedEarly;
   const newlyAddedList = newlyAddedTitles.length
     ? "\n" + newlyAddedTitles.map(t => "• " + t).join("\n")
     : "";
@@ -4885,7 +4925,7 @@ function refreshStreamingStatus() {
   const summary = "Streaming refresh done.\n\n" +
     "Checked: " + checked + " movie(s) released within the last year.\n" +
     "Newly on streaming: " + newlyAdded + newlyAddedList +
-    (finishedFullSweep ? "" : "\n\nRan out of time before reaching the end of the sheet — run it again to cover the rest.") +
+    (finishedFullSweep ? "" : "\n\nRan out of time with " + (ordered.length - checked) + " recent movie(s) left — the next run starts with those.") +
     uncertainList + sweepList;
   // SpreadsheetApp.getUi() throws when there's no user session to attach a
   // dialog to — which is exactly the case for the daily trigger below. Fall
@@ -4919,10 +4959,14 @@ function sweepLowScoringMovies_() {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
 
+  // One batch read instead of two cell reads per row — on a big sheet the
+  // per-cell version alone took long enough to push the daily refresh past
+  // Apps Script's 6-min limit.
+  const vals = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
   const toRemove = [];
   for (let row = 2; row <= lastRow; row++) {
-    const title = sheet.getRange(row, 1).getValue();
-    const score = Number(sheet.getRange(row, 10).getValue());
+    const title = vals[row - 2][0];
+    const score = Number(vals[row - 2][9]);
     if (title && score > 0 && score < AUTO_SWEEP_FLOOR) {
       toRemove.push({ row: row, title: title, score: score });
     }
