@@ -71,6 +71,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .carousel-poster-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--text3);}
 .carousel-title{font-size:12px;font-weight:600;color:var(--text);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .carousel-score{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:12px;font-weight:700;margin-top:4px;}
+.carousel-platform{font-size:11px;color:var(--text2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .carousel-empty{color:var(--text2);font-size:13px;padding:0 1.5rem;}
 .hero::before{content:'';position:absolute;top:-50%;left:50%;transform:translateX(-50%);width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(229,32,32,0.08) 0%,transparent 70%);pointer-events:none;}
 .hero-eyebrow{font-size:13px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:0.65rem;}
@@ -1012,25 +1013,44 @@ function getSelectedRegion() {
   return document.getElementById("regionSelect")?.value === "UK" ? "UK" : "US";
 }
 
+// TMDB/JustWatch often lists an ad-supported tier as a SEPARATE entry
+// alongside the base platform (e.g. "Netflix, Netflix Standard with Ads")
+// — redundant for display purposes, so drop the "with ads" variants and
+// just show the clean platform name once. Shared by anywhere a raw
+// OTTInfo/Streaming string needs to become a short, clean display label
+// (the "Where to Watch" panel, and the New on Streaming carousel cards).
+function cleanPlatformNames_(raw) {
+  if (!raw) return "";
+  const cleaned = raw.split(",")
+    .map(s => s.trim())
+    .filter(s => !/with ads/i.test(s))
+    .filter((s, i, arr) => arr.indexOf(s) === i); // dedupe
+  // Fallback: if filtering removed everything (only an ad-tier was ever
+  // listed, no clean base name), keep the original rather than show nothing.
+  return cleaned.length ? cleaned.join(", ") : raw;
+}
+
+// Raw OTTInfo is a full sentence-style label (e.g. "Stream on Netflix
+// (US)"), not a bare platform name — fine for substring-matching in
+// buildStreamingButtons below, but too long for a 155px carousel card.
+// Falls back to the raw Streaming column (just the platform name already)
+// when OTTInfo itself is blank.
+function getPlatformLabel(m) {
+  const region = getSelectedRegion();
+  const raw = region === "UK"
+    ? (m.StreamingUK || m.Streaminguk || "")
+    : (m.OTTInfo || m.OTTinfo || m.Streaming || "");
+  if (!raw) return "";
+  const stripped = raw.replace(/^(Stream|Free|Rent|Buy|Available)\s+on\s+/i, "").replace(/\s*\(US\)\s*$/i, "").trim();
+  return cleanPlatformNames_(stripped);
+}
+
 function buildStreamingButtons(m) {
   const region = getSelectedRegion();
   let ott = region === "UK"
     ? (m.StreamingUK || m.Streaminguk || "")
     : (m.OTTInfo || m.OTTinfo || m.Streaming || "");
-  // TMDB/JustWatch often lists an ad-supported tier as a SEPARATE entry
-  // alongside the base platform (e.g. "Netflix, Netflix Standard with Ads")
-  // — redundant for display purposes, so drop the "with ads" variants and
-  // just show the clean platform name once.
-  if (ott) {
-    const cleaned = ott.split(",")
-      .map(s => s.trim())
-      .filter(s => !/with ads/i.test(s))
-      .filter((s, i, arr) => arr.indexOf(s) === i) // dedupe
-      .join(", ");
-    // Fallback: if filtering removed everything (only an ad-tier was ever
-    // listed, no clean base name), keep the original rather than show nothing.
-    if (cleaned) ott = cleaned;
-  }
+  if (ott) ott = cleanPlatformNames_(ott);
   const title = m.Title || "";
   const jwLink = `https://www.justwatch.com/${region === "UK" ? "gb" : "us"}/search?q=${encodeURIComponent(title)}`;
   const reelgoodLink = `https://reelgood.com/search?q=${encodeURIComponent(title)}`;
@@ -2287,6 +2307,7 @@ function renderStreamingCarousel() {
 
   container.innerHTML = streaming.map(m => {
     const idx = allMovies.indexOf(m);
+    const platform = getPlatformLabel(m);
     return `<div class="carousel-card" onclick="openMovieFromCarousel(${idx})">
       <div class="carousel-poster-wrap">
         ${m.PosterURL
@@ -2295,6 +2316,7 @@ function renderStreamingCarousel() {
       </div>
       <div class="carousel-title">${m.Title}</div>
       <div class="carousel-score ${getTierClass(m.ConsensusTier, m.GauthamScore)}">${m.GauthamScore||"—"} ${getTierEmoji(m.ConsensusTier, m.GauthamScore)}</div>
+      ${platform ? `<div class="carousel-platform">${platform}</div>` : ""}
     </div>`;
   }).join("");
 
