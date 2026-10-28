@@ -481,7 +481,12 @@ function fillMovieData(e) {
   // genuinely nothing to lose.
   let aiReview;
   try {
-    aiReview = getGeminiMovieReview(cleanTitle, releaseYear, filmLanguage);
+    // On a re-score the film was found by its stored TMDB ID, so give
+    // Gemini TMDB's title rather than whatever text is in the cell — a
+    // title Sheets had turned into a date ("Mon Sep 21 2026 00:00:00 …")
+    // otherwise got reviewed as-is, and Gemini found nothing and scored 0.
+    const reviewTitle = (forceRescore && (details.title || movie.title)) || cleanTitle;
+    aiReview = getGeminiMovieReview(reviewTitle, releaseYear, filmLanguage);
   } catch (geminiErr) {
     const currentDirector = sheet.getRange(lastRow, 3).getValue();
     if (currentDirector) {
@@ -574,7 +579,12 @@ function fillMovieData(e) {
   // verdicts, so no single source (one bad search, one fan-brigaded IMDb
   // rating) can move the result much. Only when Gemini actually answered —
   // a failed review leaves this blank like every other dimension.
-  if (aiReview.audienceReception !== "" && aiReview.audienceReception != null) {
+  // Skip it when Gemini came back with no real review (every dimension 0
+  // or blank) — otherwise a lone IMDb rating produced an audience score
+  // sitting next to an empty review.
+  const geminiReviewed = ["writingQuality", "emotionalImpact", "engagementPacing", "performances", "rewatchability", "criticalConsensus"]
+    .some(k => Number(aiReview[k]) > 0);
+  if (geminiReviewed && aiReview.audienceReception !== "" && aiReview.audienceReception != null) {
     const audience = computeAudienceReception_({
       gemini: aiReview.audienceReception,
       letterboxd: aiReview.letterboxdRatingLive,
