@@ -498,7 +498,10 @@ function fillMovieData(e) {
   // --- Write all data to sheet ---
   // Use official TMDB title instead of what user typed
   const officialTitle = details.title || movie.title || cleanTitle;
-  sheet.getRange(lastRow, 1).setValue(officialTitle);
+  // Plain-text format first: otherwise Sheets auto-converts a title that
+  // looks like a date (e.g. "September 21") into a Date, and every later
+  // lookup then searches for "Mon Sep 21 2026 00:00:00 GMT-0400 …".
+  sheet.getRange(lastRow, 1).setNumberFormat("@").setValue(officialTitle);
   sheet.getRange(lastRow, 2).setValue(releaseYear);
   sheet.getRange(lastRow, 31).setValue(releaseDate); // full YYYY-MM-DD for precise sorting
 
@@ -2038,10 +2041,11 @@ function checkStreamingOnlyRecentReleases() {
   if (lastRow < 2) return;
 
   const startTime = Date.now();
-  const CUTOFF_MS = 4 * 60 * 1000; // see refreshStreamingStatus — leaves room for one slow last row
+  const CUTOFF_MS = 3 * 60 * 1000; // see refreshStreamingStatus — leaves room for one slow last row
   const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
 
-  const titles = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  // Display values: a title Sheets turned into a date still reads as typed.
+  const titles = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
   const years = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
   const streamingVals = sheet.getRange(2, 15, lastRow - 1, 1).getValues();
   const languages = sheet.getRange(2, 30, lastRow - 1, 1).getValues();
@@ -2081,18 +2085,22 @@ function checkStreamingOnlyRecentReleases() {
     checked++;
     let confirmed = checkStreamingViaGemini_(title_s, year_s, lang_s);
     Utilities.sleep(1000); // pace Gemini calls between rows
-    if (confirmed === null) {
+    // Retry only while there's time left: a stalled call can take a minute
+    // or more, and two of them after the cutoff ran past the 6-min limit.
+    if (confirmed === null && Date.now() - startTime < CUTOFF_MS) {
       Utilities.sleep(2000);
       confirmed = checkStreamingViaGemini_(title_s, year_s, lang_s);
       Utilities.sleep(1000);
     }
+    // Counted as checked even on failure, so a row that keeps failing goes
+    // to the back of the line instead of eating the start of every run.
+    markStreamChecked_(ordered[n].key);
     if (confirmed === null) {
       failed++;
       failedTitles.push(title_s);
       Logger.log("checkStreamingOnlyRecentReleases: FAILED (network/API) for '" + title_s + "' (row " + row + ")");
       continue; // genuine check failure — leave the row untouched, don't guess
     }
-    markStreamChecked_(ordered[n].key);
     if (confirmed) {
       sheet.getRange(row, 15).setValue(confirmed);
       // The site shows OTTInfo (col 16) ahead of col 15, so a stale label
@@ -2111,7 +2119,7 @@ function checkStreamingOnlyRecentReleases() {
 
   let summary = "Checked " + checked + " of " + eligible.length + " eligible movie(s) with no Streaming value.\n";
   if (stoppedEarly) {
-    summary += "STOPPED EARLY (hit the 4-minute time limit) — " + (eligible.length - checked) + " eligible movie(s) not reached this run. The next run starts with those.\n\n";
+    summary += "STOPPED EARLY (hit the 3-minute time limit) — " + (eligible.length - checked) + " eligible movie(s) not reached this run. The next run starts with those.\n\n";
   }
   summary += found > 0 ? "Newly found streaming:\n" + foundTitles.join("\n") : "No new streaming found this run.";
   if (failedTitles.length) summary += "\n\nCheck failed (left unchanged) for:\n" + failedTitles.join("\n");
@@ -4791,11 +4799,11 @@ function refreshStreamingStatus() {
   if (lastRow < 2) return;
 
   const startTime = Date.now();
-  // Stop starting new rows at 4 min, not 5: one row can take a minute or
-  // more (TMDB + a Gemini search + a retry + the theatrical check), and the
-  // low-score sweep still runs after the loop — 5 min left too little room
-  // and runs were dying at Apps Script's hard 6-min limit.
-  const CUTOFF_MS = 4 * 60 * 1000;
+  // Stop starting new rows at 3 min: one row can take a couple of minutes
+  // (TMDB + a Gemini search that stalls + the theatrical check — Apps
+  // Script can't time out a single fetch), and the low-score sweep still
+  // runs after the loop. 4 and 5 min both still hit the hard 6-min limit.
+  const CUTOFF_MS = 3 * 60 * 1000;
   let checked = 0, newlyAdded = 0, stoppedEarly = false;
   const newlyAddedTitles = [];
   // Rows where a check genuinely failed (network/HTTP error, or Gemini's
@@ -4807,7 +4815,7 @@ function refreshStreamingStatus() {
   // Order: least-recently-checked first (see orderByLastStreamCheck_), so
   // a movie added minutes ago is still checked on the very next run.
   const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
-  const titles = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  const titles = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues(); // date-converted titles read as typed
   const years = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
   const releaseDates = sheet.getRange(2, 31, lastRow - 1, 1).getValues();
 
@@ -4938,7 +4946,7 @@ function refreshStreamingStatus() {
         // re-score run moments later on the same movie. One retry clears
         // most of these; if it still fails, flag the row instead of quietly
         // writing "not streaming".
-        if (confirmed === null) {
+        if (confirmed === null && Date.now() - startTime < CUTOFF_MS) { // no retry once out of time
           Utilities.sleep(2000);
           confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
           Utilities.sleep(1000);
@@ -5018,7 +5026,8 @@ function refreshStreamingStatus() {
       // could never show either way, so don't waste a Gemini call).
       const existingUsTheatrical = sheet.getRange(row, 43).getValue();
       const daysSinceRelease = isNaN(relTime) ? null : (Date.now() - relTime) / (24 * 60 * 60 * 1000);
-      if (!existingUsTheatrical && !streaming && daysSinceRelease !== null && daysSinceRelease >= 0 && daysSinceRelease <= 60) {
+      if (!existingUsTheatrical && !streaming && daysSinceRelease !== null && daysSinceRelease >= 0 && daysSinceRelease <= 60 &&
+          Date.now() - startTime < CUTOFF_MS) { // skip once out of time — the next run gets it
         const yr2 = sheet.getRange(row, 2).getValue();
         const lg2 = sheet.getRange(row, 30).getValue();
         if (checkUSTheatricalRelease_(String(title), String(yr2), String(lg2))) {
@@ -5036,6 +5045,7 @@ function refreshStreamingStatus() {
       // skipped and nothing in the Sheet UI showed it. Surface it in the
       // summary instead, same as a failed Gemini fallback above.
       uncertainTitles.push(String(title));
+      markStreamChecked_(ordered[n].key); // back of the line, so a row that keeps failing can't block every run
     }
   }
 
