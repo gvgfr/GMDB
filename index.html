@@ -793,7 +793,7 @@ footer span{color:var(--red);}
   </div>
 </div>
 
-<footer>Built with ❤️ · Powered by TMDB, OMDB & Gemini<br><span style="font-size:11px;color:var(--text3);">This product uses the TMDB API but is not endorsed or certified by TMDB.</span><br><span style="font-size:11px;color:var(--text3);display:inline-block;margin-top:8px;max-width:580px;">Scores are a weighted average across seven dimensions — writing, emotional impact, engagement, performances, rewatchability, critical consensus, and audience reception — drawn from reputation-weighted critics and anchored against benchmark films at every tier. Even so, taste is personal: you may love what scored low, or vice versa. A well-researched guide, not a verdict. 🍿</span></footer>
+<footer>Built with ❤️ · Powered by TMDB, OMDB & Gemini<br><span style="font-size:11px;color:var(--text3);">This product uses the TMDB API but is not endorsed or certified by TMDB.</span><br><span style="font-size:11px;color:var(--text3);display:inline-block;margin-top:8px;max-width:580px;">Scores are a weighted average across seven dimensions — writing, emotional impact, entertainment, performances, rewatchability, critical consensus, and audience reception — drawn from reputation-weighted critics and anchored against benchmark films at every tier. Even so, taste is personal: you may love what scored low, or vice versa. A well-researched guide, not a verdict. 🍿</span></footer>
 
 <!-- Movie Detail Modal -->
 <div class="modal-overlay" id="detailModal" onclick="closeModalOverlay(event,'detailModal')">
@@ -831,12 +831,12 @@ footer span{color:var(--red);}
       <p class="about-section-label">Scoring Methodology</p>
       <p style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:0.75rem;">Each score is a <b>weighted average across seven evaluative dimensions</b>, calculated identically for every film:</p>
       <div class="source-row"><span>Writing Quality</span><span class="source-weight">20%</span></div>
-      <div class="source-row"><span>Emotional Impact</span><span class="source-weight">20%</span></div>
-      <div class="source-row"><span>Engagement & Pacing</span><span class="source-weight">15%</span></div>
-      <div class="source-row"><span>Performances</span><span class="source-weight">15%</span></div>
-      <div class="source-row"><span>Rewatchability</span><span class="source-weight">15%</span></div>
+      <div class="source-row"><span>Entertainment & Pacing</span><span class="source-weight">20%</span></div>
+      <div class="source-row"><span>Emotional Impact</span><span class="source-weight">15%</span></div>
+      <div class="source-row"><span>Audience Reception</span><span class="source-weight">15%</span></div>
+      <div class="source-row"><span>Performances</span><span class="source-weight">10%</span></div>
+      <div class="source-row"><span>Rewatchability</span><span class="source-weight">10%</span></div>
       <div class="source-row"><span>Critical Consensus</span><span class="source-weight">10%</span></div>
-      <div class="source-row"><span>Audience Reception</span><span class="source-weight">5%</span></div>
       <p style="font-size:14px;color:var(--text);line-height:1.6;margin-top:0.75rem;">Each dimension is independently evaluated against source material — critic reviews, audience data, and box office reception — before the weighted formula is applied. Scores are anchored against benchmark films at every tier, producing a researched, consistent yardstick rather than an intuitive guess.</p>
       <div class="score-grid" style="margin-top:1rem;">
         <div class="score-card"><div class="score-range" style="color:#10D96A">85–100</div><div class="score-label">🔥🔥🔥🔥🔥 Vera Level</div><div class="score-translation">"On another level"</div><div class="score-bar" style="background:#10D96A"></div></div>
@@ -2050,7 +2050,7 @@ function buildScoreBreakdown(m) {
   const pillars = [
     {key:"WritingQuality", label:"Writing Quality"},
     {key:"EmotionalImpact", label:"Emotional Impact"},
-    {key:"EngagementPacing", label:"Engagement & Pacing"},
+    {key:"EngagementPacing", label:"Entertainment & Pacing"},
     {key:"Performances", label:"Performances"},
     {key:"Rewatchability", label:"Rewatchability"},
     {key:"CriticalConsensus", label:"Critical Consensus"},
