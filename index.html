@@ -793,7 +793,7 @@ footer span{color:var(--red);}
   </div>
 </div>
 
-<footer>Built with ❤️ · Powered by TMDB, OMDB & Gemini<br><span style="font-size:12.5px;color:var(--text3);">This product uses the TMDB API but is not endorsed or certified by TMDB.</span><br><span style="font-size:12.5px;color:var(--text3);display:inline-block;margin-top:8px;max-width:580px;">Scores are a weighted average across seven dimensions — writing, emotional impact, entertainment, performances, rewatchability, critical consensus, and audience reception — drawn from reputation-weighted critics and anchored against benchmark films at every tier. Even so, taste is personal: you may love what scored low, or vice versa. A well-researched guide, not a verdict. 🍿</span></footer>
+<footer>Built with ❤️ · Powered by TMDB, OMDB & Gemini<br><span style="font-size:12.5px;color:var(--text3);">This product uses the TMDB API but is not endorsed or certified by TMDB.</span><br><span style="font-size:12.5px;color:var(--text3);display:inline-block;margin-top:8px;max-width:580px;">Scores are a weighted average across seven dimensions — writing, emotional impact, entertainment, performances, rewatchability, critical consensus, and audience reception — drawn from critics and real audience response, and anchored against benchmark films at every tier. Even so, taste is personal: you may love what scored low, or vice versa. A well-researched guide, not a verdict. 🍿</span></footer>
 
 <!-- Movie Detail Modal -->
 <div class="modal-overlay" id="detailModal" onclick="closeModalOverlay(event,'detailModal')">
@@ -837,7 +837,7 @@ footer span{color:var(--red);}
       <div class="source-row"><span>Performances</span><span class="source-weight">10%</span></div>
       <div class="source-row"><span>Rewatchability</span><span class="source-weight">10%</span></div>
       <div class="source-row"><span>Critical Consensus</span><span class="source-weight">10%</span></div>
-      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-top:0.75rem;">Each dimension is independently evaluated against source material — critic reviews, audience data, and box office reception — before the weighted formula is applied. Scores are anchored against benchmark films at every tier, producing a researched, consistent yardstick rather than an intuitive guess.</p>
+      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-top:0.75rem;">The question behind every score: <b>will a regular moviegoer have a good time?</b> Critics count, but so does how real audiences responded — a film people genuinely enjoyed is a good watch. Each dimension is independently evaluated against source material — critic reviews, audience data, and box office reception — before the weighted formula is applied. Scores are anchored against benchmark films at every tier, producing a researched, consistent yardstick rather than an intuitive guess.</p>
       <div class="score-grid" style="margin-top:1rem;">
         <div class="score-card"><div class="score-range" style="color:#10D96A">85–100</div><div class="score-label">🔥🔥🔥🔥🔥 Vera Level</div><div class="score-translation">"On another level"</div><div class="score-bar" style="background:#10D96A"></div></div>
         <div class="score-card"><div class="score-range" style="color:#5BA8FF">75–84</div><div class="score-label">🔥🔥🔥🔥 Semma</div><div class="score-translation">"Awesome"</div><div class="score-bar" style="background:#5BA8FF"></div></div>
@@ -848,13 +848,18 @@ footer span{color:var(--red);}
     </div>
 
     <div class="about-section">
-      <p class="about-section-label">Critic Weighting Model</p>
-      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-bottom:0.75rem;">The critic panel is language-specific — Tamil, Telugu, Hindi, Malayalam, and Kannada releases each draw on a different roster of established critics local to that industry, rather than one fixed global list. A representative example for Tamil cinema:</p>
-      <div class="source-row"><span>Lead critic (e.g. Baradwaj Rangan)</span><span class="source-weight">~20%</span></div>
-      <div class="source-row"><span>Second lead critic</span><span class="source-weight">~20%</span></div>
-      <div class="source-row"><span>Additional reputable critics</span><span class="source-weight">~40%</span></div>
-      <div class="source-row"><span>Audience signal (Reddit, Letterboxd)</span><span class="source-weight">~20%</span></div>
-      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-top:0.75rem;">Weighting favors critics with an established reputation and track record in that specific film industry, on the same logic IMDb uses vote-weighting to prevent a small, unrepresentative sample from skewing a result.</p>
+      <p class="about-section-label">Audience Reception</p>
+      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-bottom:0.75rem;">Not one number from one source — several independent signals, combined so no single one can swing the result:</p>
+      <div class="source-row"><span>Box office staying power</span><span class="source-weight">Sleeper hit → Flop</span></div>
+      <div class="source-row"><span>Word of mouth from regular viewers</span><span class="source-weight">Very positive → Negative</span></div>
+      <div class="source-row"><span>Letterboxd, IMDb &amp; TMDB ratings</span><span class="source-weight">With safeguards</span></div>
+      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-top:0.75rem;">Box office is judged by how well a film <b>held</b> — its 2nd and 3rd weeks, against its budget and language market — not by a star-driven opening weekend, using trade trackers like Sacnilk, Track BO, Box Office India, Bollywood Hungama and MovezBox. Word of mouth comes from ordinary moviegoers, not fan accounts. Ratings with too few votes are skipped, a rating far out of line with everything else is treated as fan or hate voting and dropped, and the highest and lowest signals are trimmed before averaging.</p>
+    </div>
+
+    <div class="about-section">
+      <p class="about-section-label">Critic Panel (Critical Consensus)</p>
+      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-bottom:0.75rem;">Feeds the 10% Critical Consensus dimension, and informs the craft side of the others. The panel is language-specific — Tamil, Telugu, Hindi, Malayalam, and Kannada releases each draw on a different roster of established critics local to that industry (for Tamil, e.g. Baradwaj Rangan and Sudhir Srinivasan), rather than one fixed global list.</p>
+      <p style="font-size:16px;color:var(--text);line-height:1.6;margin-top:0.75rem;">Critics with an established reputation and track record in that specific film industry carry the most weight, so a single unrepresentative review can't skew the result.</p>
     </div>
 
     <div class="about-section">
