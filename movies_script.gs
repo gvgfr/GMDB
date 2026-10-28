@@ -2147,11 +2147,7 @@ function checkStreamingOnlyRecentReleases() {
   summary += found > 0 ? "Newly found streaming:\n" + foundTitles.join("\n") : "No new streaming found this run.";
   if (failedTitles.length) summary += "\n\nCheck failed (left unchanged) for:\n" + failedTitles.join("\n");
   summary += "\n\n(Full per-title results, including genuinely-unconfirmed ones, are in Extensions > Apps Script > Executions > this run's log.)";
-  try {
-    SpreadsheetApp.getUi().alert(summary);
-  } catch (err) {
-    Logger.log(summary); // triggerless execution (e.g. scheduled trigger) has no UI to alert
-  }
+  showRunSummary_(summary);
 }
 
 // Re-score 5 movies: if you HIGHLIGHT multiple rows first, re-scores exactly
@@ -4240,8 +4236,7 @@ function autoAddUpcomingReleasesCore() {
     (added.length ? added.map(a => "  " + a).join("\n") : "  (none)") +
     (stoppedEarly ? "\n\n(Stopped early to stay under the time limit — run again to screen more.)" : "") +
     "\n\nThese rows have no review yet — \"Fill next blank movie\" (or a re-score) will complete them once they've actually released.";
-  // getUi() throws in a scheduled run (no one to show a dialog to).
-  try { SpreadsheetApp.getUi().alert(summary); } catch (uiErr) { Logger.log(summary); }
+  showRunSummary_(summary);
 }
 
 // =============================================
@@ -4453,8 +4448,7 @@ function autoAddNewlyStreamingCore() {
     "Not yet streaming (will re-check in a few days): " + stillWaiting.length +
     (skipped.length ? "\n\nSkipped (scored below " + SCORE_THRESHOLD + "): " + skipped.length : "") +
     (stoppedEarly ? "\n\n(Stopped early to stay under the time limit — run again to screen more.)" : "");
-  // getUi() throws in a scheduled run (no one to show a dialog to).
-  try { SpreadsheetApp.getUi().alert(summary); } catch (uiErr) { Logger.log(summary); }
+  showRunSummary_(summary);
 }
 
 
@@ -4822,6 +4816,21 @@ function markStreamChecked_(key) {
   PropertiesService.getScriptProperties().setProperty(key, String(Date.now()));
 }
 
+// End-of-run summary for the long batch jobs. NOT getUi().alert(): an
+// alert keeps the script running until someone clicks OK, and that wait
+// counts toward Apps Script's 6-min limit — a run that finished its work
+// in ~3.5 min was then marked "Exceeded maximum execution time" if the
+// dialog sat open a couple of minutes. A toast doesn't block; it stays up
+// until dismissed. The full text always goes to the execution log.
+function showRunSummary_(summary) {
+  Logger.log(summary);
+  try {
+    const lines = summary.split("\n").filter(l => l.trim());
+    SpreadsheetApp.getActive().toast(lines.slice(0, 4).join(" ") +
+      (lines.length > 4 ? " (Full details: Extensions > Apps Script > Executions.)" : ""), "GMDB", -1);
+  } catch (e) { /* scheduled run: no one to show it to — the log has it */ }
+}
+
 function refreshStreamingStatus() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
   const lastRow = sheet.getLastRow();
@@ -5070,16 +5079,7 @@ function refreshStreamingStatus() {
     "Newly on streaming: " + newlyAdded + newlyAddedList +
     (finishedFullSweep ? "" : "\n\nRan out of time with " + (ordered.length - checked) + " recent movie(s) left — the next run starts with those.") +
     uncertainList + sweepList;
-  // SpreadsheetApp.getUi() throws when there's no user session to attach a
-  // dialog to — which is exactly the case for the daily trigger below. Fall
-  // back to a Logger entry (visible in Apps Script's execution log) instead
-  // of letting that throw mark every automatic run as a failed execution,
-  // even though every write above this point already completed fine.
-  try {
-    SpreadsheetApp.getUi().alert(summary);
-  } catch (e) {
-    Logger.log(summary);
-  }
+  showRunSummary_(summary);
 }
 
 // The auto-add bots (autoAddNewReleasesCore / autoAddNewlyStreamingCore)
