@@ -1810,7 +1810,7 @@ function onOpen() {
     .addItem("Re-score selected movie (click a row first)", "rescoreOneMovie")
     .addItem("Check streaming only for selected movie (cheap, click a row first)", "checkStreamingOnlyForSelectedRow")
     .addItem("Check streaming only — last 6 months, no Streaming yet (cheap batch)", "checkStreamingOnlyRecentReleases")
-    .addItem("Start automatic streaming check (recent releases, every 4 hrs)", "startAutoCheckStreamingRecentReleases")
+    .addItem("Start automatic streaming check (recent releases, hourly)", "startAutoCheckStreamingRecentReleases")
     .addItem("Stop automatic streaming check (recent releases)", "stopAutoCheckStreamingRecentReleases")
     .addItem("Re-score next 5 movies (batch)", "rescoreFiveMovies")
     .addItem("Re-score highlighted rows", "rescoreHighlightedRows")
@@ -2068,8 +2068,13 @@ function checkStreamingOnlyRecentReleases() {
     eligible.push({ key: streamCheckKey_("SCRECENT_", title, years[i][0]), row: i + 2, i: i });
   }
   // Least-recently-checked first, so rows at the bottom (newest additions)
-  // aren't starved by the same top rows every run.
-  const ordered = orderByLastStreamCheck_("SCRECENT_", eligible);
+  // aren't starved by the same top rows every run — and only rows not
+  // checked in the last RECHECK_HOURS. With the hourly trigger that
+  // works through a backlog a batch per hour on its own, then each run
+  // with nothing due finishes in seconds, so nobody has to keep clicking.
+  const RECHECK_HOURS = 12;
+  const ordered = orderByLastStreamCheck_("SCRECENT_", eligible)
+    .filter(it => Date.now() - it.lastChecked >= RECHECK_HOURS * 60 * 60 * 1000);
 
   let checked = 0, found = 0, failed = 0;
   const foundTitles = [];
@@ -2117,9 +2122,10 @@ function checkStreamingOnlyRecentReleases() {
     }
   }
 
-  let summary = "Checked " + checked + " of " + eligible.length + " eligible movie(s) with no Streaming value.\n";
+  let summary = "Checked " + checked + " of " + ordered.length + " movie(s) due (" + eligible.length +
+    " recent movie(s) with no Streaming value; each is re-checked every " + RECHECK_HOURS + " hours).\n";
   if (stoppedEarly) {
-    summary += "STOPPED EARLY (hit the 3-minute time limit) — " + (eligible.length - checked) + " eligible movie(s) not reached this run. The next run starts with those.\n\n";
+    summary += (ordered.length - checked) + " still due — the automatic hourly run continues with those, no need to run this again.\n\n";
   }
   summary += found > 0 ? "Newly found streaming:\n" + foundTitles.join("\n") : "No new streaming found this run.";
   if (failedTitles.length) summary += "\n\nCheck failed (left unchanged) for:\n" + failedTitles.join("\n");
@@ -4782,9 +4788,9 @@ function orderByLastStreamCheck_(prefix, items) {
   Object.keys(all).forEach(k => {
     if (k.indexOf(prefix) === 0 && !live[k]) props.deleteProperty(k);
   });
+  items.forEach(it => { it.lastChecked = Number(all[it.key] || 0); });
   return items.slice().sort((a, b) => {
-    const ta = Number(all[a.key] || 0), tb = Number(all[b.key] || 0);
-    if (ta !== tb) return ta - tb;
+    if (a.lastChecked !== b.lastChecked) return a.lastChecked - b.lastChecked;
     return b.row - a.row; // never-checked ties: newest (bottom) row first
   });
 }
@@ -5153,19 +5159,16 @@ function stopAutoRefreshStreamingStatus() {
 }
 
 // Same idea as startAutoRefreshStreamingStatus above, for
-// checkStreamingOnlyRecentReleases: that function already caps itself at 5
-// minutes and reports "STOPPED EARLY ... run again to continue" when a
-// backlog is bigger than one run can clear — which otherwise means someone
-// has to sit there clicking the menu item several times in a row to work
-// through it, and do that again every time a new backlog builds up. Every
-// 4 hours is cheap on Gemini quota (checkStreamingViaGemini_ is one small
-// call per movie) while still clearing a few-hundred-movie backlog within
-// a day and keeping pace with the normal day-to-day trickle afterward
-// without anyone needing to touch the menu again.
+// checkStreamingOnlyRecentReleases: one run only fits ~20 movies in its
+// 3-minute budget, and the backlog is ~100, so hand-clicking through it
+// isn't workable. Hourly, with each movie re-checked only every 12 hours
+// (RECHECK_HOURS there): a backlog clears in a few hours on its own, and
+// runs with nothing due finish in seconds — roughly 200 small Gemini calls
+// a day for ~100 movies.
 function startAutoCheckStreamingRecentReleases() {
   stopAutoCheckStreamingRecentReleases();
-  ScriptApp.newTrigger("checkStreamingOnlyRecentReleases").timeBased().everyHours(4).create();
-  SpreadsheetApp.getActive().toast("Will now check recent releases for new US streaming availability automatically every 4 hours — no need to click the menu or re-run it to work through a backlog.", "GMDB", 10);
+  ScriptApp.newTrigger("checkStreamingOnlyRecentReleases").timeBased().everyHours(1).create();
+  SpreadsheetApp.getActive().toast("Will now check recent releases for new US streaming automatically every hour — each movie gets re-checked about every 12 hours, and a backlog clears on its own within a few hours. No need to click anything.", "GMDB", 10);
 }
 
 function stopAutoCheckStreamingRecentReleases() {
