@@ -491,7 +491,7 @@ function fillMovieData(e) {
       reviewSources: "", scoreReasoning: "", confidence: "", ottInfo: "",
       cast: "", musicDirector: "", hitSongs: "", hitSongsDetails: [], takeaway: "",
       imdbRatingLive: "", imdbVotesLive: "", streamingLive: "", streamingLiveUK: "",
-      letterboxdRatingLive: ""
+      letterboxdRatingLive: "", boxOfficeVerdict: "", wordOfMouth: ""
     };
   }
 
@@ -560,6 +560,31 @@ function fillMovieData(e) {
     if (s >= 50) return "Parava illa";
     return "Mokkai";
   }
+  // --- Audience reception: combine several independent signals ---
+  // Gemini's single audienceReception number swung with whatever one search
+  // turned up. Combine it with ratings we already fetch and two fixed-label
+  // verdicts, so no single source (one bad search, one fan-brigaded IMDb
+  // rating) can move the result much. Only when Gemini actually answered —
+  // a failed review leaves this blank like every other dimension.
+  if (aiReview.audienceReception !== "" && aiReview.audienceReception != null) {
+    const audience = computeAudienceReception_({
+      gemini: aiReview.audienceReception,
+      letterboxd: aiReview.letterboxdRatingLive,
+      imdbRating: newImdbRating || existingImdbRating,
+      imdbVotes: newImdbVotes || existingImdbVotes,
+      tmdbRating: details.vote_average,
+      tmdbVotes: details.vote_count,
+      boxOfficeVerdict: aiReview.boxOfficeVerdict,
+      wordOfMouth: aiReview.wordOfMouth
+    });
+    if (audience.score) {
+      Logger.log("Audience reception for '" + officialTitle + "': " + audience.score +
+        " (Gemini said " + aiReview.audienceReception + ") from " + audience.used.join(", ") +
+        (audience.dropped.length ? "; ignored " + audience.dropped.join(", ") : ""));
+      aiReview.audienceReception = audience.score;
+    }
+  }
+
   // Compute the score here from the seven dimensions instead of trusting
   // Gemini's own gauthamScore: it's told the weights, but its arithmetic
   // isn't reliable, so the published weights wouldn't actually hold.
@@ -793,6 +818,65 @@ function fillMovieData(e) {
 // =============================================
 // GEMINI AI REVIEW
 // =============================================
+// Combines audience signals into one 0-100 audienceReception score.
+// Each signal is put on a 0-100 scale; public ratings with too few votes
+// are skipped, and a public rating far out of line with the rest is
+// treated as fan/hate voting and dropped. With 4+ signals the highest and
+// lowest are trimmed before averaging, so one outlier can't swing it.
+// Returns {score: "" when there's nothing to go on, used, dropped}.
+const BOX_OFFICE_SCORES = { "sleeper hit": 92, "strong hold": 82, "average": 62, "opened big then crashed": 45, "flop": 35 };
+const WORD_OF_MOUTH_SCORES = { "very positive": 90, "positive": 76, "mixed": 58, "negative": 38 };
+function parseVoteCount_(v) {
+  const m = String(v || "").replace(/,/g, "").trim().match(/^([\d.]+)\s*([km])?/i);
+  if (!m) return 0;
+  return Number(m[1]) * (/k/i.test(m[2] || "") ? 1000 : /m/i.test(m[2] || "") ? 1000000 : 1);
+}
+function computeAudienceReception_(src) {
+  const used = [], dropped = [];
+  const verdicts = [], ratings = [];
+  const g = Number(src.gemini);
+  if (isFinite(g) && g > 0 && g <= 100) verdicts.push({ name: "Gemini " + Math.round(g), v: g });
+  const bo = BOX_OFFICE_SCORES[String(src.boxOfficeVerdict || "").trim().toLowerCase()];
+  if (bo) verdicts.push({ name: "box office '" + src.boxOfficeVerdict + "'", v: bo });
+  const wom = WORD_OF_MOUTH_SCORES[String(src.wordOfMouth || "").trim().toLowerCase()];
+  if (wom) verdicts.push({ name: "word of mouth '" + src.wordOfMouth + "'", v: wom });
+
+  const lb = Number(String(src.letterboxd || "").replace(/[^\d.]/g, ""));
+  if (lb > 0 && lb <= 5) ratings.push({ name: "Letterboxd " + lb, v: lb * 20 });
+  const imdb = Number(String(src.imdbRating || "").replace(/\s*\/\s*10\s*$/, ""));
+  if (imdb > 0 && imdb <= 10) {
+    if (parseVoteCount_(src.imdbVotes) >= 500) ratings.push({ name: "IMDb " + imdb, v: imdb * 10 });
+    else dropped.push("IMDb " + imdb + " (too few votes)");
+  }
+  const tmdb = Number(src.tmdbRating);
+  if (tmdb > 0 && tmdb <= 10) {
+    if (Number(src.tmdbVotes) >= 50) ratings.push({ name: "TMDB " + tmdb, v: tmdb * 10 });
+    else dropped.push("TMDB " + tmdb + " (too few votes)");
+  }
+
+  // Public ratings are where brigading shows up: drop one that sits 20+
+  // points from the middle of the other signals.
+  let signals = verdicts.slice();
+  ratings.forEach(r => {
+    const others = verdicts.concat(ratings.filter(x => x !== r)).map(x => x.v).sort((a, b) => a - b);
+    if (others.length) {
+      const mid = others.length % 2 ? others[(others.length - 1) / 2] : (others[others.length / 2 - 1] + others[others.length / 2]) / 2;
+      if (Math.abs(r.v - mid) >= 20) { dropped.push(r.name + " (out of line)"); return; }
+    }
+    signals.push(r);
+  });
+
+  if (!signals.length) return { score: "", used: used, dropped: dropped };
+  let pool = signals.slice().sort((a, b) => a.v - b.v);
+  if (pool.length >= 4) {
+    dropped.push(pool[0].name + " (lowest, trimmed)", pool[pool.length - 1].name + " (highest, trimmed)");
+    pool = pool.slice(1, -1);
+  }
+  pool.forEach(x => used.push(x.name));
+  const avg = pool.reduce((sum, x) => sum + x.v, 0) / pool.length;
+  return { score: Math.round(avg), used: used, dropped: dropped };
+}
+
 function getGeminiMovieReview(title, year, filmLanguage) {
 
   const prompt = `
@@ -1197,7 +1281,9 @@ Return ONLY valid JSON. No markdown, no backticks, no explanation.
   "imdbVotesLive": "",
   "streamingLive": "",
   "streamingLiveUK": "",
-  "letterboxdRatingLive": ""
+  "letterboxdRatingLive": "",
+  "boxOfficeVerdict": "",
+  "wordOfMouth": ""
 }
 
 reviewSummary: Write a CONCISE, captivating hook — 2-3 sentences, about 40-55 words. This is the first thing people read, so make it engaging and specific, not a full breakdown. Capture the essence and the critical verdict (is it worth watching and why) WITHOUT spoilers. Do NOT dump the full plot here (that goes in storyline) and do NOT list every strength/weakness (that's the score breakdown). Make someone want to watch — or know to skip. Write naturally and specifically about THIS film.
@@ -1487,6 +1573,22 @@ film-watchers there, unlike Rotten Tomatoes' typically thin sample for Indian
 films. Return ONLY the number (e.g. "3.8"), not "3.8/5" or "3.8 stars".
 Return "N/A" if you cannot find a Letterboxd page for this specific film or
 aren't confident it's the correct match.
+
+boxOfficeVerdict: How the film actually did in theatres, judged by how well it
+HELD over its run against its budget and language market (use Sacnilk, Track BO,
+Box Office India, Bollywood Hungama, MovezBox — never compare raw crore figures
+across languages). Return EXACTLY one of:
+  "Sleeper hit" — modest opening, grew on word of mouth
+  "Strong hold" — held well in its 2nd/3rd week, a clear success
+  "Average" — recovered its budget, nothing more
+  "Opened big then crashed" — big (often star-driven) opening, steep drop after the first weekend
+  "Flop" — failed to recover its budget
+  "N/A" — direct-to-OTT, still in its first week, or no reliable figures found
+
+wordOfMouth: What REGULAR moviegoers (not star fan accounts, not critics) said
+after watching — Reddit (language-appropriate subreddit), Letterboxd reviews,
+general social media. Return EXACTLY one of: "Very positive", "Positive",
+"Mixed", "Negative", or "N/A" if you found too little to judge.
 `;
 
   const url =
