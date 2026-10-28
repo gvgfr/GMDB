@@ -797,11 +797,11 @@ SCORING — evaluate each dimension from 0-100:
 
 writingQuality: Story structure, screenplay, dialogue, originality
 emotionalImpact: Does the film move you? Emotional depth and resonance
-engagementPacing: Does it hold attention? Flow, editing, runtime justification
+engagementPacing: Entertainment & pacing — is it a good time? Fun, holds attention, flow, editing, runtime justification
 performances: Acting quality, chemistry, standout performances
 rewatchability: Would you watch again? Replay value
 criticalConsensus: What critics say (be generous if reviews are scarce)
-audienceReception: Word of mouth, box office, audience ratings
+audienceReception: How regular moviegoers (not star fans) responded — word of mouth, recommendations, box office staying power
 
 CALIBRATION ANCHORS — use these as your scoring reference for Tamil cinema.
 These are definitive benchmarks. Score all other movies relative to these.
@@ -944,10 +944,10 @@ emotionalImpact (does the film move you, emotional depth):
 - High score if: genuine emotional moments, relatable characters, memorable scenes
 - Low score if: forced emotions, melodrama without substance, unmemorable
 
-engagementPacing (holds attention, editing, runtime justified):
-- Signals: Critics mentioning pacing issues or praising tight editing
-- High score if: no dull moments, runtime feels justified, good second half
-- Low score if: slow second half, bloated runtime, unnecessary songs breaking momentum
+engagementPacing (ENTERTAINMENT & pacing — is it a good time? holds attention, editing, runtime justified):
+- Signals: Audiences calling it fun, gripping, a great theatre experience, "paisa vasool"; critics mentioning pacing issues or praising tight editing
+- High score if: genuinely entertaining, no dull moments, runtime feels justified, good second half — fun counts, whether it's a mass entertainer, a comedy or a thriller
+- Low score if: boring or tiring to sit through, slow second half, bloated runtime, unnecessary songs breaking momentum
 
 performances (acting quality, chemistry, standout moments):
 - Signals: Critic praise for specific actors, awards recognition, audience appreciation
@@ -1099,8 +1099,9 @@ CRITICAL — reviewSources field rules:
 CRITICAL — SCORE STABILITY:
 - Anchor every score to the calibration examples above
 - Before finalizing, ask: "Is this movie genuinely better than [Parava illa anchor] but worse than [Semma anchor]?"
-- A commercial masala film with mixed reviews should score 50-65, NOT 70+
-- If critics are divided or reviews are mediocre, lean LOWER not higher
+- A commercial masala film with mixed reviews AND a lukewarm audience response should score 50-65, NOT 70+
+- But if regular audiences genuinely loved it (strong word of mouth, held well in its 2nd-3rd week, ordinary moviegoers — not just star fans — recommending it), it can score 70+ even when critics were divided. Don't underestimate audiences: a film real viewers enjoyed is a good watch
+- If critics AND audiences are both lukewarm or mediocre, lean LOWER not higher
 - Do not let a film's box office success alone inflate the score — commercial success ≠ quality
 - A star-vehicle mass film (Suriya/Vijay/Ajith) with an engaging first half but a weak/dragging second half and "mixed reviews" = 55-62 (Parava illa, lower end)
 - Phrases in reviews like "flawed but watchable", "ambitious but uneven", "lost opportunity", "passable", "works in parts" = score 55-65
@@ -1111,10 +1112,14 @@ IMPORTANT:
 - Only use the named critics and credible publications listed above
 - If no formal reviews found, use box office run + Reddit word of mouth
 - A 100+ day theatrical run = strong audience signal
-- Weight critic reviews 70%, audience signals 30%
+- Judge every dimension from critic reviews AND genuine audience response together — critics for craft, audiences for whether it's actually an enjoyable watch. Neither alone decides
 
 audienceReception (real audience response, not star fan votes):
-- Signals: Box office run (100+ days = very strong), Reddit r/Kollywood word of mouth
+- Signals: genuine word of mouth (Reddit r/Kollywood and the language-appropriate subreddit, Letterboxd), and box office STAYING POWER
+- Box office sources: Sacnilk (all languages, day-wise India net/worldwide), Track BO (South Indian, state-wise), Box Office India and Bollywood Hungama (Hindi, overseas), MovezBox (day-wise breakdowns)
+- Judge box office by how well it HELD and against its budget and language market — never compare raw crore figures across languages (₹50 cr means very different things for a Malayalam and a Hindi film)
+- Strong 2nd/3rd-week hold, a small film turning into a sleeper hit, or a long theatrical run (100+ days) = very strong audience signal
+- A huge opening that collapses after the first weekend = fan hype, NOT audience love
 - Word of mouth longevity — still talked about years later = high score
 - Ignore IMDb vote counts — too manipulated for Indian films
 - High score if: genuine word of mouth, recommended by regular moviegoers
@@ -1131,12 +1136,12 @@ SCORE CALIBRATION:
 
 gauthamScore = weighted average:
 writingQuality x 0.20
-emotionalImpact x 0.20
-engagementPacing x 0.15
-performances x 0.15
-rewatchability x 0.15
+emotionalImpact x 0.15
+engagementPacing x 0.20
+performances x 0.10
+rewatchability x 0.10
 criticalConsensus x 0.10
-audienceReception x 0.05
+audienceReception x 0.15
 
 consensusTier is derived from gauthamScore:
 85-100 = Vera Level
