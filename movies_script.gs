@@ -80,7 +80,12 @@ function fillMovieData(e) {
   // that overwrites rows. A real trigger event carries fields like authMode/triggerUid;
   // our direct calls pass a hand-built {range:...} without them. If a bulk job is running
   // and THIS invocation came from the trigger, stand down — let the direct call handle it.
-  const bulkRunning = PropertiesService.getScriptProperties().getProperty("BULK_RUNNING") === "true";
+  // Stored as the job's start time: a run killed at the 6-min limit never
+  // reaches its finally, and the old plain "true" then stayed set forever,
+  // silently turning off auto-fill for titles typed into the sheet. A flag
+  // older than 10 min (or a leftover "true") is treated as stale.
+  const bulkFlag = Number(PropertiesService.getScriptProperties().getProperty("BULK_RUNNING"));
+  const bulkRunning = bulkFlag > 0 && Date.now() - bulkFlag < 10 * 60 * 1000;
   const isTriggerEvent = !!(e && (e.authMode || e.triggerUid));
   if (bulkRunning && isTriggerEvent) {
     Logger.log("Bulk in progress — ignoring trigger fire to avoid double-processing.");
@@ -1826,6 +1831,8 @@ function onOpen() {
     .addItem("Update streaming info (movies I already have)", "refreshStreamingStatus")
     .addItem("Start automatic daily streaming refresh", "startAutoRefreshStreamingStatus")
     .addItem("Stop automatic daily streaming refresh", "stopAutoRefreshStreamingStatus")
+    .addItem("Start automatic auto-add (new, upcoming & newly-streaming movies, daily)", "startAutoAddMovies")
+    .addItem("Stop automatic auto-add", "stopAutoAddMovies")
     .addItem("Clean up bogus streaming labels (e.g. \"In Theaters\")", "cleanupBogusStreamingLabels")
     .addSeparator()
     .addItem("Fix stuck auto-fill (clear flag)", "clearBulkRunningFlag")
@@ -3840,7 +3847,7 @@ function doGet(e) {
 // =============================================
 function autoAddNewReleases() {
   const props = PropertiesService.getScriptProperties();
-  props.setProperty("BULK_RUNNING", "true");
+  props.setProperty("BULK_RUNNING", String(Date.now()));
   try {
     autoAddNewReleasesCore();
   } finally {
@@ -3976,7 +3983,11 @@ function autoAddNewReleasesCore() {
   const added = [];
   const skipped = [];
   const startTime = Date.now();
-  const MAX_RUNTIME = 4.5 * 60 * 1000; // stop well before the 6-min hard limit
+  // 3 min, not 4.5: the check only runs before each film, and one film
+  // (full TMDB + Gemini review) can take 30-90s+ — 4.5 left too little
+  // room before Apps Script's hard 6-min kill, which also skips the
+  // finally that clears BULK_RUNNING.
+  const MAX_RUNTIME = 3 * 60 * 1000;
   let stoppedEarly = false;
 
   for (const c of candidates) {
@@ -4086,7 +4097,7 @@ function autoAddNewReleasesCore() {
 // =============================================
 function autoAddUpcomingReleases() {
   const props = PropertiesService.getScriptProperties();
-  props.setProperty("BULK_RUNNING", "true");
+  props.setProperty("BULK_RUNNING", String(Date.now()));
   try {
     autoAddUpcomingReleasesCore();
   } finally {
@@ -4157,7 +4168,7 @@ function autoAddUpcomingReleasesCore() {
 
   const added = [];
   const startTime = Date.now();
-  const MAX_RUNTIME = 4.5 * 60 * 1000; // stop well before the 6-min hard limit
+  const MAX_RUNTIME = 3 * 60 * 1000; // see autoAddNewReleasesCore
   let stoppedEarly = false;
 
   // Same adult-content guard as fillMovieData — an upcoming title shouldn't
@@ -4213,13 +4224,14 @@ function autoAddUpcomingReleasesCore() {
     }
   }
 
-  SpreadsheetApp.getUi().alert(
+  const summary =
     "Upcoming-releases sweep done.\n\n" +
     "Added " + added.length + " movie(s) releasing in the next " + WINDOW_DAYS + " days:\n" +
     (added.length ? added.map(a => "  " + a).join("\n") : "  (none)") +
     (stoppedEarly ? "\n\n(Stopped early to stay under the time limit — run again to screen more.)" : "") +
-    "\n\nThese rows have no review yet — \"Fill next blank movie\" (or a re-score) will complete them once they've actually released."
-  );
+    "\n\nThese rows have no review yet — \"Fill next blank movie\" (or a re-score) will complete them once they've actually released.";
+  // getUi() throws in a scheduled run (no one to show a dialog to).
+  try { SpreadsheetApp.getUi().alert(summary); } catch (uiErr) { Logger.log(summary); }
 }
 
 // =============================================
@@ -4239,7 +4251,7 @@ function autoAddUpcomingReleasesCore() {
 // =============================================
 function autoAddNewlyStreaming() {
   const props = PropertiesService.getScriptProperties();
-  props.setProperty("BULK_RUNNING", "true");
+  props.setProperty("BULK_RUNNING", String(Date.now()));
   try {
     autoAddNewlyStreamingCore();
   } finally {
@@ -4331,7 +4343,7 @@ function autoAddNewlyStreamingCore() {
   });
 
   const startTime = Date.now();
-  const MAX_RUNTIME = 4.5 * 60 * 1000;
+  const MAX_RUNTIME = 3 * 60 * 1000; // see autoAddNewReleasesCore
   // Lower than before (was 40) — each check can now also involve a Gemini
   // call when TMDB finds nothing, which takes several seconds instead of
   // under 1. Fewer checks per run, but each one is more accurate.
@@ -4420,7 +4432,7 @@ function autoAddNewlyStreamingCore() {
 
   try { props.setProperty("AUTOADD_NOT_STREAMING_YET", JSON.stringify(notStreamingCache)); } catch (e) {}
 
-  SpreadsheetApp.getUi().alert(
+  const summary =
     "Newly-streaming sweep done.\n\n" +
     "Discovered " + totalDiscovered + " Indian release(s) from the last 5 months.\n" +
     "  Already in your sheet: " + skippedAlreadyTracked + "\n" +
@@ -4430,8 +4442,9 @@ function autoAddNewlyStreamingCore() {
     "Added: " + added.length + (added.length ? "\n  " + added.join("\n  ") : "") + "\n\n" +
     "Not yet streaming (will re-check in a few days): " + stillWaiting.length +
     (skipped.length ? "\n\nSkipped (scored below " + SCORE_THRESHOLD + "): " + skipped.length : "") +
-    (stoppedEarly ? "\n\n(Stopped early to stay under the time limit — run again to screen more.)" : "")
-  );
+    (stoppedEarly ? "\n\n(Stopped early to stay under the time limit — run again to screen more.)" : "");
+  // getUi() throws in a scheduled run (no one to show a dialog to).
+  try { SpreadsheetApp.getUi().alert(summary); } catch (uiErr) { Logger.log(summary); }
 }
 
 
@@ -5144,6 +5157,29 @@ function sweepLowScoringMovies_() {
 // instead of depending on someone remembering to click the menu item.
 // Safe to run again later — clears any existing trigger for this function
 // first so it's never duplicated.
+// The three auto-add jobs only ever ran when someone clicked them in the
+// menu — no trigger existed — so a night with nobody clicking added
+// nothing. Daily, spread out so they don't overlap each other or the 3am
+// streaming refresh. Each stops itself at 3 minutes and remembers
+// rejections, so the next day's run picks up where this one left off.
+const AUTO_ADD_SCHEDULE = [
+  { fn: "autoAddNewReleases", hour: 1 },
+  { fn: "autoAddUpcomingReleases", hour: 2 },
+  { fn: "autoAddNewlyStreaming", hour: 5 }
+];
+function startAutoAddMovies() {
+  stopAutoAddMovies();
+  AUTO_ADD_SCHEDULE.forEach(j => ScriptApp.newTrigger(j.fn).timeBased().everyDays(1).atHour(j.hour).create());
+  SpreadsheetApp.getActive().toast("New releases (~1am), upcoming releases (~2am) and newly-streaming movies (~5am) will now be added automatically every day. You'll get an email when new releases are added.", "GMDB", 10);
+}
+
+function stopAutoAddMovies() {
+  const names = AUTO_ADD_SCHEDULE.map(j => j.fn);
+  const triggers = ScriptApp.getProjectTriggers().filter(t => names.indexOf(t.getHandlerFunction()) !== -1);
+  triggers.forEach(t => ScriptApp.deleteTrigger(t));
+  return triggers.length;
+}
+
 function startAutoRefreshStreamingStatus() {
   stopAutoRefreshStreamingStatus();
   ScriptApp.newTrigger("refreshStreamingStatus").timeBased().everyDays(1).atHour(3).create();
