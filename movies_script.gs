@@ -1815,7 +1815,7 @@ function onOpen() {
     .addItem("Re-score selected movie (click a row first)", "rescoreOneMovie")
     .addItem("Check streaming only for selected movie (cheap, click a row first)", "checkStreamingOnlyForSelectedRow")
     .addItem("Check streaming only — last 6 months, no Streaming yet (cheap batch)", "checkStreamingOnlyRecentReleases")
-    .addItem("Start automatic streaming check (recent releases, hourly)", "startAutoCheckStreamingRecentReleases")
+    .addItem("Start automatic streaming check (recent releases, every 4 hrs)", "startAutoCheckStreamingRecentReleases")
     .addItem("Stop automatic streaming check (recent releases)", "stopAutoCheckStreamingRecentReleases")
     .addItem("Re-score next 5 movies (batch)", "rescoreFiveMovies")
     .addItem("Re-score highlighted rows", "rescoreHighlightedRows")
@@ -2076,10 +2076,10 @@ function checkStreamingOnlyRecentReleases() {
   }
   // Least-recently-checked first, so rows at the bottom (newest additions)
   // aren't starved by the same top rows every run — and only rows not
-  // checked in the last RECHECK_HOURS. With the hourly trigger that
-  // works through a backlog a batch per hour on its own, then each run
-  // with nothing due finishes in seconds, so nobody has to keep clicking.
-  const RECHECK_HOURS = 12;
+  // checked in the last RECHECK_HOURS, so each movie costs one Gemini call
+  // a day. Six 4-hourly runs fit ~120 movies, so a backlog clears within a
+  // day without anyone clicking.
+  const RECHECK_HOURS = 24;
   const ordered = orderByLastStreamCheck_("SCRECENT_", eligible)
     .filter(it => Date.now() - it.lastChecked >= RECHECK_HOURS * 60 * 60 * 1000);
 
@@ -2132,7 +2132,7 @@ function checkStreamingOnlyRecentReleases() {
   let summary = "Checked " + checked + " of " + ordered.length + " movie(s) due (" + eligible.length +
     " recent movie(s) with no Streaming value; each is re-checked every " + RECHECK_HOURS + " hours).\n";
   if (stoppedEarly) {
-    summary += (ordered.length - checked) + " still due — the automatic hourly run continues with those, no need to run this again.\n\n";
+    summary += (ordered.length - checked) + " still due — the automatic run continues with those, no need to run this again.\n\n";
   }
   summary += found > 0 ? "Newly found streaming:\n" + foundTitles.join("\n") : "No new streaming found this run.";
   if (failedTitles.length) summary += "\n\nCheck failed (left unchanged) for:\n" + failedTitles.join("\n");
@@ -4928,54 +4928,15 @@ function refreshStreamingStatus() {
       const sinceCell = sheet.getRange(row, 32);
       const prevSince = sinceCell.getValue();
 
-      // relTime already read above (the 1-year skip) — reused here instead
-      // of re-fetching the same cell. Needed here because the widened
-      // Gemini fallback condition right below depends on it too.
+      // relTime already read above (the 1-year skip) — reused here.
       const relTime = releaseTime;
       const isRecent = !isNaN(relTime) && relTime <= Date.now() && relTime >= (Date.now() - 5 * 30 * 24 * 60 * 60 * 1000); // 5 months, matches the website's "New on Streaming" window
 
-      // Ask Gemini's lightweight live-search check as a second opinion
-      // whenever TMDB comes up empty for a movie that's plausibly actually
-      // streaming right now — not just "this movie left streaming"
-      // (prevStreaming set, now gone), but ALSO "this movie never had
-      // streaming data at all yet" for a recent release. TMDB's provider
-      // data (via JustWatch) routinely lags real-world releases by days to
-      // weeks, especially for regional Indian OTT drops — without the
-      // isRecent branch, a brand-new movie TMDB hasn't caught up on yet
-      // just sat blank forever, since this fallback was previously only
-      // reachable for movies that had ALREADY been confirmed streaming at
-      // some point. Bounded to isRecent so this doesn't fire forever on
-      // old catalog titles that are genuinely just not streaming anywhere.
-      // NOT for rows that already have streaming (prevStreaming): an empty
-      // answer can't clear them anyway (see the protect-existing write
-      // below), so that call bought nothing — and since TMDB never lists
-      // many Indian OTT drops at all, it fired a 10-20s Gemini search for
-      // every such film from the last year on every run, which is what ate
-      // this refresh's time budget and pushed it past the 6-min limit.
-      if (!streaming && !prevStreaming && isRecent) {
-        const yr = sheet.getRange(row, 2).getValue();
-        const lg = sheet.getRange(row, 30).getValue();
-        let confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
-        Utilities.sleep(1000); // pace Gemini calls between rows in this loop
-        // null means the check itself failed (rate limit, empty response,
-        // network hiccup) — NOT "confirmed not streaming". A bulk run fires
-        // dozens of these back-to-back and is far more likely to hit a
-        // transient failure than a single one-off re-score ever is, which
-        // is exactly what made this refresh silently disagree with a manual
-        // re-score run moments later on the same movie. One retry clears
-        // most of these; if it still fails, flag the row instead of quietly
-        // writing "not streaming".
-        if (confirmed === null && Date.now() - startTime < CUTOFF_MS) { // no retry once out of time
-          Utilities.sleep(2000);
-          confirmed = checkStreamingViaGemini_(String(title), String(yr), String(lg));
-          Utilities.sleep(1000);
-        }
-        if (confirmed === null) {
-          uncertainTitles.push(String(title));
-        } else if (confirmed) {
-          streaming = confirmed; // treat as if TMDB had found it — same downstream logic applies
-        }
-      }
+      // No Gemini fallback here: a recent movie with no streaming yet is
+      // exactly what checkStreamingOnlyRecentReleases checks (last 6
+      // months, no Streaming value) on its own schedule, so asking Gemini
+      // again here just paid twice for the same answer. This refresh sticks
+      // to TMDB, which is free.
 
       // Same protection as fillMovieData: only overwrite if we actually
       // found something this time. A transient TMDB/JustWatch data gap
@@ -5005,9 +4966,6 @@ function refreshStreamingStatus() {
       } else if (!prevStreaming) {
         sheet.getRange(row, 16).setValue("");
       }
-
-      // relTime/isRecent computed earlier now (needed by the widened
-      // Gemini fallback above) — reused here unchanged.
 
       // STAMP: if there's streaming right now, it's a recent release, and
       // the stamp itself is simply missing — set it. This does NOT require
@@ -5197,14 +5155,14 @@ function stopAutoRefreshStreamingStatus() {
 // Same idea as startAutoRefreshStreamingStatus above, for
 // checkStreamingOnlyRecentReleases: one run only fits ~20 movies in its
 // 3-minute budget, and the backlog is ~100, so hand-clicking through it
-// isn't workable. Hourly, with each movie re-checked only every 12 hours
-// (RECHECK_HOURS there): a backlog clears in a few hours on its own, and
-// runs with nothing due finish in seconds — roughly 200 small Gemini calls
-// a day for ~100 movies.
+// isn't workable. Every 4 hours, with each movie re-checked only once a
+// day (RECHECK_HOURS there): six runs fit ~120 movies, so ~100 clear
+// daily on their own for ~100 small Gemini calls a day. Hourly would buy
+// nothing — the cost is set by how often each movie is re-checked.
 function startAutoCheckStreamingRecentReleases() {
   stopAutoCheckStreamingRecentReleases();
-  ScriptApp.newTrigger("checkStreamingOnlyRecentReleases").timeBased().everyHours(1).create();
-  SpreadsheetApp.getActive().toast("Will now check recent releases for new US streaming automatically every hour — each movie gets re-checked about every 12 hours, and a backlog clears on its own within a few hours. No need to click anything.", "GMDB", 10);
+  ScriptApp.newTrigger("checkStreamingOnlyRecentReleases").timeBased().everyHours(4).create();
+  SpreadsheetApp.getActive().toast("Will now check recent releases for new US streaming automatically every 4 hours — each movie gets checked once a day. No need to click anything.", "GMDB", 10);
 }
 
 function stopAutoCheckStreamingRecentReleases() {
