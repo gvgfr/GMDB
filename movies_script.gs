@@ -560,7 +560,26 @@ function fillMovieData(e) {
     if (s >= 50) return "Parava illa";
     return "Mokkai";
   }
-  const roundedScore = Math.round(Number(aiReview.gauthamScore)) || "";
+  // Compute the score here from the seven dimensions instead of trusting
+  // Gemini's own gauthamScore: it's told the weights, but its arithmetic
+  // isn't reliable, so the published weights wouldn't actually hold.
+  // Falls back to Gemini's number only if a dimension is missing.
+  const SCORE_WEIGHTS = {
+    writingQuality: 0.20, engagementPacing: 0.20, emotionalImpact: 0.15,
+    audienceReception: 0.15, performances: 0.10, rewatchability: 0.10,
+    criticalConsensus: 0.10
+  };
+  let computedScore = 0, haveAllDims = true;
+  Object.keys(SCORE_WEIGHTS).forEach(k => {
+    const v = Number(aiReview[k]);
+    if (aiReview[k] === "" || aiReview[k] == null || !isFinite(v) || v <= 0 || v > 100) haveAllDims = false;
+    else computedScore += v * SCORE_WEIGHTS[k];
+  });
+  const geminiScore = Math.round(Number(aiReview.gauthamScore)) || "";
+  const roundedScore = haveAllDims ? Math.round(computedScore) : geminiScore;
+  if (haveAllDims && geminiScore && Math.abs(roundedScore - geminiScore) >= 3) {
+    Logger.log("Score for '" + officialTitle + "': computed " + roundedScore + " from dimensions, Gemini said " + geminiScore + " — using computed.");
+  }
   // getTierFromScore() always returns SOME tier (falls through to "Mokkai"
   // for 0/NaN) — only meaningful when there's an actual score to back it;
   // otherwise this would write "Mokkai" next to a blank score (e.g. the
