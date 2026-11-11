@@ -1,6 +1,6 @@
 # Masala Meter app (Capacitor wrapper)
 
-This is a thin native wrapper around the live site (https://gvgfr.github.io/GMDB/),
+This is a thin native wrapper around the live site (https://masalameterratings.com/),
 built with [Capacitor](https://capacitorjs.com/). The app just opens the live site
 in a native WebView (see `server.url` in `capacitor.config.json`) — there's no
 separate app build/content to keep in sync. Any change pushed to the site shows
@@ -58,7 +58,7 @@ from this environment. Here's the full path to an App Store submission.
   ```
   This generates every required icon size for both platforms from that one file.
 - **Privacy Policy URL**: App Store Connect requires one. A draft is already
-  live at `https://gvgfr.github.io/GMDB/privacy.html` — edit
+  live at `https://masalameterratings.com/privacy.html` — edit
   `privacy.html` at the repo root first to replace the placeholder contact
   email, then paste that URL into App Store Connect's "Privacy Policy URL" field.
 - **Screenshots**: at least one set at 6.9" (e.g. iPhone 16 Pro Max)

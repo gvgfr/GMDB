@@ -13,16 +13,16 @@
      chance (e.g. a crawler grabbing whatever movie poster happened to be
      on screen). Points to a dedicated branded share image. -->
 <meta property="og:type" content="website"/>
-<meta property="og:url" content="https://gvgfr.github.io/GMDB/"/>
+<meta property="og:url" content="https://masalameterratings.com/"/>
 <meta property="og:title" content="Masala Meter — Indian Movie Recommendations"/>
 <meta property="og:description" content="Find your next great Indian film — scored using critic reviews and audience data through the Masala Meter's weighted formula, anchored against benchmark films at every tier. Find where to stream, and get similar-film suggestions."/>
-<meta property="og:image" content="https://gvgfr.github.io/GMDB/share-preview.png"/>
+<meta property="og:image" content="https://masalameterratings.com/share-preview.png"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Masala Meter — Indian Movie Recommendations"/>
 <meta name="twitter:description" content="Find your next great Indian film — scored using critic reviews and audience data through the Masala Meter's weighted formula, anchored against benchmark films at every tier."/>
-<meta name="twitter:image" content="https://gvgfr.github.io/GMDB/share-preview.png"/>
+<meta name="twitter:image" content="https://masalameterratings.com/share-preview.png"/>
 
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -3670,7 +3670,7 @@ function slugifyMovie(title, year) {
 // movie may not have one yet — probe for it and fall back to the plain app
 // URL (single share item, no poster) if it 404s, so a share link never breaks.
 async function resolveShareUrl(title, year) {
-  const siteUrl = "https://gvgfr.github.io/GMDB/";
+  const siteUrl = "https://masalameterratings.com/";
   const fallback = siteUrl + "?movie=" + encodeURIComponentStrict(title);
   const candidate = siteUrl + "m/" + slugifyMovie(title, year) + ".html";
   try {
@@ -3709,7 +3709,7 @@ function slugifySong(title, movie) {
 // generate-song-pages.js), and only after the next scheduled run picks up
 // a just-added song, so this always has a working fallback.
 async function resolveSongShareUrl(title, movie) {
-  const siteUrl = "https://gvgfr.github.io/GMDB/";
+  const siteUrl = "https://masalameterratings.com/";
   const fallback = siteUrl + "?song=" + encodeURIComponentStrict(title);
   const candidate = siteUrl + "s/" + slugifySong(title, movie) + ".html";
   try {

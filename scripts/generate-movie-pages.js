@@ -8,7 +8,7 @@ const fs = require("fs");
 const path = require("path");
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz9ngvixIyBdUhi5caTheX74ppJyQtjFB_rvBbIfs4OS3nLJ-sY8vRLUDmSEZYbaEp2/exec";
-const SITE_URL = "https://gvgfr.github.io/GMDB/";
+const SITE_URL = "https://masalameterratings.com/";
 const OUT_DIR = path.join(__dirname, "..", "m");
 const FALLBACK_IMAGE = SITE_URL + "share-preview.png";
 

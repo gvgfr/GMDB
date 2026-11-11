@@ -3437,7 +3437,7 @@ function doGet(e) {
         }
       }
 
-      const SITE = "https://gvgfr.github.io/GMDB/";
+      const SITE = "https://masalameterratings.com/";
       const redirectUrl = SITE + "?movie=" + encodeURIComponentStrict_(e.parameter.title);
 
       // Movie not found — redirect straight through, no special preview.
@@ -3480,7 +3480,7 @@ function doGet(e) {
     } catch (err) {
       // Something went wrong generating the preview — still get the person
       // to the real site rather than showing them a broken page.
-      const SITE = "https://gvgfr.github.io/GMDB/";
+      const SITE = "https://masalameterratings.com/";
       const fallbackUrl = SITE + "?movie=" + encodeURIComponentStrict_(e.parameter.title);
       return HtmlService.createHtmlOutput(
         `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${fallbackUrl}"></head><body></body></html>`

@@ -3,7 +3,7 @@
   "appName": "Masala Meter",
   "webDir": "www",
   "server": {
-    "url": "https://gvgfr.github.io/GMDB/",
+    "url": "https://masalameterratings.com/",
     "androidScheme": "https",
     "cleartext": false
   },
