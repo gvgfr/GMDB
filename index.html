@@ -4117,12 +4117,25 @@ Promise.all([loadMovies(), loadSongs()]).then(handleSharedSongLink);
 // re-rendering when the fetched data is byte-identical to what's already
 // on screen (see lastRenderedMoviesRaw), so polling this often doesn't
 // cause visible flicker on every tick — only an actual change repaints.
-const BACKGROUND_REFRESH_MS = 15 * 1000; // 15 seconds
+//
+// 10 minutes, not 15 seconds: each refresh re-downloads the whole catalog
+// (~3 MB) from Apps Script, so a 15s poll cost a phone ~100 MB per 10
+// minutes on the page and sent every open tab's requests at a free Apps
+// Script account that only runs ~30 at once. The data only changes a few
+// times a day. Coming back to the tab still refreshes right away, unless
+// it last refreshed under a minute ago (quick app switches).
+const BACKGROUND_REFRESH_MS = 10 * 60 * 1000; // 10 minutes
+const RETURN_REFRESH_MIN_GAP_MS = 60 * 1000; // 1 minute
+let lastBackgroundRefreshAt = Date.now();
+function backgroundRefresh() {
+  lastBackgroundRefreshAt = Date.now();
+  loadMovies();
+}
 setInterval(() => {
-  if (document.visibilityState === "visible") loadMovies();
+  if (document.visibilityState === "visible") backgroundRefresh();
 }, BACKGROUND_REFRESH_MS);
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") loadMovies();
+  if (document.visibilityState === "visible" && Date.now() - lastBackgroundRefreshAt > RETURN_REFRESH_MIN_GAP_MS) backgroundRefresh();
 });
 </script>
 </body>
