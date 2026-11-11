@@ -6,7 +6,12 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Masala Meter — Indian Movie Recommendations</title>
+<title>Masala Meter Ratings — Indian Movie Recommendations</title>
+<meta name="description" content="Masala Meter Ratings: scores, verdicts and where to stream for Tamil, Telugu, Malayalam, Hindi and Kannada movies — what's worth watching in Indian cinema."/>
+<!-- Only the home page is meant to show up in search: deep links like
+     ?movie=X all point Google back here, and the /m/ and /s/ share pages
+     carry noindex (see scripts/generate-*-pages.js). -->
+<link rel="canonical" href="https://masalameterratings.com/"/>
 
 <!-- Open Graph / link-preview tags — controls what shows up when this site
      gets shared (iMessage, WhatsApp, Slack, etc.) instead of leaving it to
@@ -14,13 +19,13 @@
      on screen). Points to a dedicated branded share image. -->
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="https://masalameterratings.com/"/>
-<meta property="og:title" content="Masala Meter — Indian Movie Recommendations"/>
+<meta property="og:title" content="Masala Meter Ratings — Indian Movie Recommendations"/>
 <meta property="og:description" content="Find your next great Indian film — scored using critic reviews and audience data through the Masala Meter's weighted formula, anchored against benchmark films at every tier. Find where to stream, and get similar-film suggestions."/>
 <meta property="og:image" content="https://masalameterratings.com/share-preview.png"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Masala Meter — Indian Movie Recommendations"/>
+<meta name="twitter:title" content="Masala Meter Ratings — Indian Movie Recommendations"/>
 <meta name="twitter:description" content="Find your next great Indian film — scored using critic reviews and audience data through the Masala Meter's weighted formula, anchored against benchmark films at every tier."/>
 <meta name="twitter:image" content="https://masalameterratings.com/share-preview.png"/>
 
@@ -54,6 +59,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
 header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 1.5rem;height:60px;display:flex;align-items:center;justify-content:space-between;}
 .logo{font-family:'Bricolage Grotesque','Inter',sans-serif;font-size:26px;font-weight:800;letter-spacing:-0.5px;line-height:1;background:linear-gradient(135deg,#16C95E 0%,#6FE34A 50%,#C5F23B 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#16C95E;}
+/* Full subtitle on wide screens, a shorter one on phones so it stays at
+   two lines and doesn't push the logo out of the 56px header. */
+.logo span i{font-style:normal;}
+.logo-sub-short{display:none;}
 .logo span{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:#7B8F6E;display:block;letter-spacing:3.5px;text-transform:uppercase;margin-top:6px;-webkit-text-fill-color:#7B8F6E;}
 .header-actions{display:flex;gap:10px;align-items:center;}
 .btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all 0.2s;font-family:'Inter',sans-serif;}
@@ -593,8 +602,10 @@ footer span{color:var(--red);}
   .modal-section-value{font-size:16.5px;line-height:1.75;}
   .modal-section-label{font-size:12px;}
   header{padding:0 1rem;height:56px;}
-  .logo{font-size:21px;}
-  .logo span{font-size:8.5px;letter-spacing:2.5px;margin-top:5px;line-height:1.4;}
+  .logo{font-size:21px;white-space:nowrap;} /* keep "Masala Meter" on one line; only the subtitle wraps */
+  .logo span{font-size:8.5px;letter-spacing:2.5px;margin-top:5px;line-height:1.4;white-space:normal;}
+  .logo-sub-full{display:none;}
+  .logo-sub-short{display:inline;}
   .btn{padding:8px 12px;font-size:13px;}
   .modal-poster{max-height:38vh;border-radius:0;}
   .modal-poster-placeholder{border-radius:0;}
@@ -671,7 +682,7 @@ footer span{color:var(--red);}
 </div>
 
 <header>
-  <div class="logo">Masala Meter<span>Indian Movie Recommendations</span></div>
+  <div class="logo">Masala Meter<span><i class="logo-sub-full">Ratings · Indian Movie Recommendations</i><i class="logo-sub-short">Ratings · Indian Movies</i></span></div>
   <div class="header-actions">
     <button class="btn btn-howto" onclick="openHowTo()" aria-label="How to use this site" title="How to use this site">❓</button>
     <button class="btn btn-songs" onclick="openSongs()">♪ Songs</button>
@@ -816,7 +827,7 @@ footer span{color:var(--red);}
 <div class="modal-overlay" id="aboutModal" onclick="closeModalOverlay(event,'aboutModal')">
   <div class="about-modal">
     <div class="about-header">
-      <h2 class="about-title">Masala<br/><span>Meter</span></h2>
+      <h2 class="about-title">Masala Meter<br/><span>Ratings</span></h2>
       <button class="modal-close" style="position:relative;top:auto;right:auto;" onclick="document.getElementById('aboutModal').classList.remove('open')">✕</button>
     </div>
     <p style="font-size:16px;color:var(--text);margin-bottom:1.5rem;line-height:1.7;">A curated recommendation system for Indian cinema. Every film is run through the <b>same formula and process</b> — no score is assigned by one person's personal judgment or preference.</p>

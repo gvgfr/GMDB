@@ -1,0 +1,8 @@
+# Only the home page is meant to be listed in search. The /m/ and /s/
+# share pages stay crawlable (link-preview bots like Twitter's honour
+# robots.txt) but carry a noindex tag, so they don't show up in results.
+User-agent: *
+Disallow: /app/
+Disallow: /scripts/
+
+Sitemap: https://masalameterratings.com/sitemap.xml

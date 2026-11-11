@@ -68,6 +68,7 @@ function pageHtml(movie) {
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<meta name="robots" content="noindex"/>
 <meta http-equiv="refresh" content="0; url=${escapeHtml(appUrl)}"/>
 <title>${escapeHtml(pageTitle)}</title>
 <link rel="canonical" href="${escapeHtml(appUrl)}"/>
