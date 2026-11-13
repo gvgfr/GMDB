@@ -1193,7 +1193,9 @@ function buildStreamingButtons(m) {
   const found = [];
   KNOWN_PLATFORMS.forEach(p => {
     if (p.keys.some(k => ottLower.includes(k))) {
-      found.push(`<a href="${p.url(title)}" target="_blank" class="ott-btn" style="--ott-color:${p.color}">${p.label}</a>`);
+      // Same black-or-white text pick as the card badges, so a light brand
+      // color (SonyLIV's white, Hulu's green) never hides its own label.
+      found.push(`<a href="${p.url(title)}" target="_blank" class="ott-btn" style="--ott-color:${p.color};color:${getContrastTextColor_(p.color)}">${p.label}</a>`);
     }
   });
 
