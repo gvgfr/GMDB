@@ -895,6 +895,37 @@ function computeAudienceReception_(src) {
   return { score: Math.round(avg), used: used, dropped: dropped };
 }
 
+// Extra rules for every "is this streaming in the US now?" question (the
+// dedicated check below and the streamingLive field of a re-score):
+// - Today's date. Gemini has no clock, so "streams on SonyLIV from Nov 13"
+//   read on Nov 13 looked like a future date and got "N/A" (Anbil Avan,
+//   and Dorothy before it). With a postponement check, so an old
+//   announcement for a release that slipped doesn't count.
+// - SonyLIV, ZEE5, Sun NXT, Aha and Netflix run the same service in the
+//   US, but their Indian releases are only covered by Indian outlets, so
+//   the US-specific-source rule rejected them. Prime Video keeps the
+//   strict rule (its India and US catalogs really differ); JioHotstar
+//   never counts.
+function streamingDateAndPlatformRules_(title) {
+  const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MMMM d, yyyy");
+  return `TODAY'S DATE is ${today}.
+
+RELEASE DATES: an announced streaming date that is today or earlier means the
+film IS streaming now, but only after checking it wasn't delayed. Search
+"${title}" OTT postponed / delayed / new date. If newer coverage reports a
+postponement, use the new date instead. If the announced date is more than 2
+days ago and you find nothing at all from on or after that date (no "now
+streaming" article, no platform listing), treat it as unconfirmed ("N/A"). An
+announced date after today is NOT current availability.
+
+GLOBAL INDIAN STREAMING SERVICES: SonyLIV, ZEE5, Sun NXT, Aha and Netflix run
+the same service in the US as in India, so a confirmed release on one of them
+counts as US availability even when your sources are Indian outlets (two
+credible sources must still agree). This overrides the "US-specific source"
+rule for these five only. Amazon Prime Video still needs a US-specific source,
+and JioHotstar never counts as US availability.`;
+}
+
 function getGeminiMovieReview(title, year, filmLanguage) {
 
   const prompt = `
@@ -1527,6 +1558,8 @@ Treat a genuinely well-sourced streaming claim for an Indian film at face
 value under the normal cross-verification rules above; only the Hollywood-
 studio-specific slow-windowing caution above should make you doubt an
 otherwise well-sourced claim.
+
+${streamingDateAndPlatformRules_(title)}
 
 Return "N/A" if you cannot confirm current US streaming availability, if it's
 still theater-only, or if you're not confident it's the correct film.
@@ -4475,6 +4508,9 @@ SEARCH STRATEGY — try several angles, not just one query, before giving up:
 
 IMPORTANT: JioHotstar (formerly Hotstar/Disney+ Hotstar) is confirmed geo-blocked outside India entirely — finding news that a film streams there almost always means India availability, NOT the US. Do not report it as a US confirmation. Also beware Amazon Prime Video specifically — it has SEPARATE regional catalogs, so "on Prime Video" in a general source often means Prime Video India, not the US. Only confirm a platform if the source is clearly US-specific. Require at least two credible sources to agree (e.g. JustWatch, Reelgood, or the platform's own US site) — a single vague mention isn't enough; return "N/A" if you can't cross-verify.
 HOLLYWOOD STUDIO THEATRICAL RELEASES ONLY: if (and only if) ${filmLanguage || "Indian"} is English/Hollywood and this had a wide US theatrical opening within roughly the last 30-45 days, be extra skeptical of any streaming claim — the real-world Hollywood norm is a 45+ day exclusivity window before any digital release, longer still before a subscription service. Don't confuse the studio's own streaming service being its eventual home (e.g. a Warner Bros. film will eventually reach HBO Max) or an announced future date with current availability. This does NOT apply to Indian-language films (Tamil, Telugu, Hindi, Malayalam, Kannada, etc.) — Indian OTT platforms routinely pay for much faster exclusive windows (often 3-8 weeks) even for big-budget hits, so a large Indian film streaming within a month of release is normal, not suspicious; evaluate those under the normal cross-verification rules above only.
+
+${streamingDateAndPlatformRules_(title)}
+
 Return ONLY the platform name if you can confirm it (e.g. "Netflix"), or exactly "N/A" if you cannot confirm current US streaming availability. Return ONLY that single word or phrase, nothing else — no explanation, no punctuation.`;
 
   const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
