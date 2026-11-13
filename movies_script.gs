@@ -4816,18 +4816,24 @@ function markStreamChecked_(key) {
   PropertiesService.getScriptProperties().setProperty(key, String(Date.now()));
 }
 
-// End-of-run summary for the long batch jobs. NOT getUi().alert(): an
-// alert keeps the script running until someone clicks OK, and that wait
-// counts toward Apps Script's 6-min limit — a run that finished its work
-// in ~3.5 min was then marked "Exceeded maximum execution time" if the
-// dialog sat open a couple of minutes. A toast doesn't block; it stays up
-// until dismissed. The full text always goes to the execution log.
+// End-of-run summary for the long batch jobs, shown in the middle of the
+// sheet. NOT getUi().alert(): an alert keeps the script running until
+// someone clicks OK, and that wait counts toward Apps Script's 6-min
+// limit — a run that finished its work in ~3.5 min was then marked
+// "Exceeded maximum execution time" if the dialog sat open a couple of
+// minutes. A modeless dialog shows the same way but the script ends
+// straight away. (A corner toast was tried first; too easy to miss.)
+// Scheduled runs have no one to show it to; the execution log has it.
 function showRunSummary_(summary) {
   Logger.log(summary);
   try {
-    const lines = summary.split("\n").filter(l => l.trim());
-    SpreadsheetApp.getActive().toast(lines.slice(0, 4).join(" ") +
-      (lines.length > 4 ? " (Full details: Extensions > Apps Script > Executions.)" : ""), "GMDB", -1);
+    const html = HtmlService.createHtmlOutput(
+      '<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;white-space:pre-wrap;">' +
+      escapeHtml_(summary) + '</div>' +
+      '<div style="margin-top:16px;text-align:right;"><button onclick="google.script.host.close()" ' +
+      'style="font-size:14px;padding:6px 18px;">OK</button></div>'
+    ).setWidth(520).setHeight(360);
+    SpreadsheetApp.getUi().showModelessDialog(html, "GMDB");
   } catch (e) { /* scheduled run: no one to show it to — the log has it */ }
 }
 
