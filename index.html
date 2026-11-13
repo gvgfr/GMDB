@@ -1102,21 +1102,24 @@ function getPlatformLabel(m) {
 }
 
 // Known platforms: short display name, brand color, search URL builder.
+// No pure-black colors: a black badge disappears on the site's black
+// background (SonyLIV and BBC iPlayer looked like plain text), so SonyLIV
+// uses white (its logo is white-on-black) and iPlayer its pink.
 // Shared between the "Where to Watch" buttons (buildStreamingButtons) and
 // the colored platform badge on New on Streaming carousel cards
 // (getPlatformBadge) — one list, so both always agree on name/color.
 const KNOWN_PLATFORMS = [
   { keys:["netflix"], label:"Netflix", color:"#E50914", url:t=>`https://www.netflix.com/search?q=${encodeURIComponent(t)}` },
-  { keys:["prime","amazon"], label:"Prime Video", color:"#00A8E1", url:t=>`https://www.primevideo.com/search?phrase=${encodeURIComponent(t)}` },
+  { keys:["prime","amazon"], label:"Prime", color:"#00A8E1", url:t=>`https://www.primevideo.com/search?phrase=${encodeURIComponent(t)}` },
   { keys:["hotstar","disney"], label:"Hotstar", color:"#1F80E0", url:t=>`https://www.hotstar.com/in/search?q=${encodeURIComponent(t)}` },
   { keys:["sun nxt","sunnxt"], label:"Sun NXT", color:"#E8442C", url:t=>`https://www.sunnxt.com/search/${encodeURIComponent(t)}` },
   { keys:["zee","zee5"], label:"ZEE5", color:"#6A1B9A", url:t=>`https://www.zee5.com/search?q=${encodeURIComponent(t)}` },
-  { keys:["sony","liv"], label:"Sony LIV", color:"#000000", url:t=>`https://www.sonyliv.com/search?searchTerm=${encodeURIComponent(t)}` },
+  { keys:["sony","liv"], label:"SonyLIV", color:"#FFFFFF", url:t=>`https://www.sonyliv.com/search?searchTerm=${encodeURIComponent(t)}` },
   { keys:["aha"], label:"aha", color:"#FF7E00", url:t=>`https://www.aha.video/search?q=${encodeURIComponent(t)}` },
   { keys:["jiocinema","jio"], label:"JioCinema", color:"#A020F0", url:t=>`https://www.jiocinema.com/search/${encodeURIComponent(t)}` },
   { keys:["hulu"], label:"Hulu", color:"#1CE783", url:t=>`https://www.hulu.com/search?q=${encodeURIComponent(t)}` },
   { keys:["youtube"], label:"YouTube", color:"#FF0000", url:t=>`https://www.youtube.com/results?search_query=${encodeURIComponent(t+" full movie")}` },
-  { keys:["bbc iplayer","iplayer"], label:"BBC iPlayer", color:"#000000", url:t=>`https://www.bbc.co.uk/iplayer/search?q=${encodeURIComponent(t)}` },
+  { keys:["bbc iplayer","iplayer"], label:"BBC iPlayer", color:"#FF4C98", url:t=>`https://www.bbc.co.uk/iplayer/search?q=${encodeURIComponent(t)}` },
   { keys:["itvx"], label:"ITVX", color:"#FF0055", url:t=>`https://www.itv.com/watch?q=${encodeURIComponent(t)}` },
   { keys:["channel 4","channel4","my4"], label:"Channel 4", color:"#00C8B4", url:t=>`https://www.channel4.com/search?q=${encodeURIComponent(t)}` },
   { keys:["sky","nowtv","now tv"], label:"Sky / NOW", color:"#0072C9", url:t=>`https://www.nowtv.com/search?q=${encodeURIComponent(t)}` },
@@ -1134,7 +1137,7 @@ function getContrastTextColor_(hex) {
 }
 
 // A single compact badge for the carousel card — brand color/name for a
-// recognized platform (just "Prime Video", not "Amazon Prime Video" —
+// recognized platform (just "Prime", not "Amazon Prime Video" —
 // everyone already knows the name and color), or a plain neutral chip with
 // whatever name is on file for anything not in KNOWN_PLATFORMS. Only the
 // first platform when several are listed — there's only room for one badge
