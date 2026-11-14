@@ -2330,9 +2330,19 @@ function rescoreHighlightedRows() {
 // =============================================
 // WEB APP — POST endpoint (called by the website's "Add Movie" feature)
 // =============================================
+// Visitors can no longer add movies or songs: the site is curated now that
+// it's public on its own domain. The website no longer shows any add
+// buttons, but this endpoint is public, so it refuses adds itself too.
+// Add films from the sheet instead (type a title in column A, or use the
+// GMDB menu). Set to true to turn visitor adds back on.
+const VISITOR_ADDS_ENABLED = false;
+
 function doPost(e) {
   const raw = e && e.postData ? e.postData.contents : "{}";
   Logger.log(raw);
+  if (!VISITOR_ADDS_ENABLED) {
+    return ContentService.createTextOutput("Adding is turned off.");
+  }
 
   const data = JSON.parse(raw);
 

@@ -704,8 +704,7 @@ footer span{color:var(--red);}
   <h1 class="hero-title">Find your next<br/><span>great Indian film</span></h1>
   <p class="hero-desc">Find your next great Indian film — scored using critic reviews and audience data through the <span class="inline-about-link" onclick="openAbout()">Masala Meter</span>'s weighted formula, anchored against benchmark films at every tier. Find where to stream, and get similar-film suggestions — so you always know what's worth watching.</p>
   <div class="hero-actions">
-    <button class="btn-hero btn-hero-primary" onclick="openAddModal()">+ Add a Movie</button>
-    <button class="btn-hero btn-hero-secondary" onclick="scrollToFilters()">Browse Database ↓</button>
+    <button class="btn-hero btn-hero-primary" onclick="scrollToFilters()">Browse Database ↓</button>
   </div>
 </div>
 
@@ -777,7 +776,6 @@ footer span{color:var(--red);}
     <div id="suggestions" class="suggestions"></div>
     <button class="search-icon" onclick="filterMovies();hideSuggestions();" title="Search" aria-label="Search"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
   </div>
-  <p class="search-hint">Can't find a movie? Tap "<span class="hint-add-link" onclick="openAddModal()">+ Add Movie</span>" to add any film.</p>
 </div>
 
 <div class="grid-wrap">
@@ -959,18 +957,13 @@ footer span{color:var(--red);}
     </div>
 
     <div class="about-section">
-      <p class="about-section-label">➕ Add a Movie</p>
-      <p style="font-size:17px;color:var(--text);line-height:1.75;">Can't find something? Type its name and this site will look it up, review it, and score it — usually ready within a minute or two.</p>
-    </div>
-
-    <div class="about-section">
       <p class="about-section-label">↗ Share</p>
       <p style="font-size:17px;color:var(--text);line-height:1.75;">On any movie, gets you a link with that film's own poster and score attached — so it previews properly when you send it, instead of showing a generic card.</p>
     </div>
 
     <div class="about-section">
       <p class="about-section-label">♪ Songs</p>
-      <p style="font-size:17px;color:var(--text);line-height:1.75;">A separate catalog of song-only reviews — browse or search independently of the movie it's from, and you can request a song be reviewed the same way you'd add a movie.</p>
+      <p style="font-size:17px;color:var(--text);line-height:1.75;">A separate catalog of song-only reviews — browse or search independently of the movie it's from.</p>
     </div>
   </div>
 </div>
@@ -982,14 +975,14 @@ footer span{color:var(--red);}
       <h2 class="about-title" style="font-size:1.8rem;">♪ Songs</h2>
       <button class="modal-close" style="position:relative;top:auto;right:auto;" onclick="document.getElementById('songsModal').classList.remove('open')">✕</button>
     </div>
-    <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;line-height:1.6;">Every song already scored across the catalog, in one place — search for a song directly without needing to find its movie first. Can't find one? You can get it reviewed and added.</p>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;line-height:1.6;">Every song already scored across the catalog, in one place — search for a song directly without needing to find its movie first.</p>
     <div style="position:relative;">
       <input class="search-input" type="text" id="songSearchInput" placeholder="Search for a song..." oninput="renderSongsList()" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" name="song-search-field"/>
     </div>
     <div id="songsListWrap" class="songs-wrap" style="margin-top:1rem;max-height:50vh;overflow-y:auto;"></div>
     <div id="songNotFoundWrap" style="display:none;text-align:center;margin-top:1rem;padding:1rem;background:var(--bg3);border-radius:10px;">
       <p style="font-size:14px;color:var(--text2);margin-bottom:0.75rem;">Can't find <b id="songNotFoundQuery"></b>?</p>
-      <button class="btn btn-primary" onclick="openAddSongModal()">Get It Reviewed →</button>
+      <p style="font-size:13px;color:var(--text3);">It hasn't been reviewed yet.</p>
     </div>
   </div>
 </div>
@@ -2648,7 +2641,6 @@ function renderMovies(movies) {
       <div class="empty-icon">🎬</div>
       <div class="empty-title">No movies found</div>
       <p>Try a different search or filter.</p>
-      ${currentQuery ? `<button class="btn btn-primary" style="margin-top:1rem;" onclick="openAddModal('${safeQuery}')">+ Add "${currentQuery}"</button>` : ""}
     </div>`;
     return;
   }
@@ -3319,12 +3311,10 @@ async function loadTMDBRecommendations(title, year, lang, director, genre) {
       const inList = haveTitles.has(String(r.title||"").toLowerCase());
       const poster = r.poster ? `<img src="${r.poster}" alt=""/>` : `<div class="similar-noposter">🎬</div>`;
       const safeTitle = jsAttrEscape(r.title);
-      const badge = inList
-        ? `<div class="rec-badge rec-have">✓ In list</div>`
-        : `<div class="rec-badge rec-add">+ Add</div>`;
-      const action = inList
-        ? `onclick="openMovieByTitle('${safeTitle}')"`
-        : `onclick="addFromRec('${safeTitle}','${r.year||""}', this)"`;
+      // Visitors can't add films any more (site is curated): a suggestion
+      // that isn't reviewed yet is shown for reference only, no "+ Add".
+      const badge = inList ? `<div class="rec-badge rec-have">✓ In list</div>` : "";
+      const action = inList ? `onclick="openMovieByTitle('${safeTitle}')"` : "";
       const reasonAttr = r.reason ? `title="${(r.reason||"").replace(/"/g,"&quot;")}"` : "";
       const reasonText = r.reason ? `<div class="similar-reason">${r.reason}</div>` : "";
       return `<div class="similar-card" ${action} ${reasonAttr}>
