@@ -499,6 +499,7 @@ footer span{color:var(--red);}
 .recs-loading{grid-column:1/-1;color:var(--text3);font-size:13px;padding:12px 0;}
 .rec-badge{font-size:11px;font-weight:700;display:inline-block;padding:2px 8px;border-radius:4px;margin-top:3px;}
 .rec-have{background:rgba(16,185,90,0.2);color:#10D96A;}
+.rec-not-reviewed{background:var(--bg3);color:var(--text3);}
 .rec-add{background:rgba(229,32,32,0.2);color:var(--red);}
 .ott-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
 .ott-btn{display:inline-flex;align-items:center;font-size:13px;font-weight:600;color:#fff;text-decoration:none;background:var(--ott-color);padding:7px 16px;border-radius:8px;transition:all 0.2s;opacity:0.92;}
@@ -3313,7 +3314,7 @@ async function loadTMDBRecommendations(title, year, lang, director, genre) {
       const safeTitle = jsAttrEscape(r.title);
       // Visitors can't add films any more (site is curated): a suggestion
       // that isn't reviewed yet is shown for reference only, no "+ Add".
-      const badge = inList ? `<div class="rec-badge rec-have">✓ In list</div>` : "";
+      const badge = inList ? `<div class="rec-badge rec-have">✓ In list</div>` : `<div class="rec-badge rec-not-reviewed">Not reviewed yet</div>`;
       const action = inList ? `onclick="openMovieByTitle('${safeTitle}')"` : "";
       const reasonAttr = r.reason ? `title="${(r.reason||"").replace(/"/g,"&quot;")}"` : "";
       const reasonText = r.reason ? `<div class="similar-reason">${r.reason}</div>` : "";
