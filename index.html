@@ -4133,5 +4133,17 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && Date.now() - lastBackgroundRefreshAt > RETURN_REFRESH_MIN_GAP_MS) backgroundRefresh();
 });
 </script>
+<!-- Cloudflare Web Analytics: cookie-free, aggregate visit counts for the
+     website only. Skipped inside the native app, whose privacy policy and
+     App Store listing say it has no analytics. -->
+<script>
+if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) {
+  const cfBeacon = document.createElement("script");
+  cfBeacon.type = "module";
+  cfBeacon.src = "https://static.cloudflareinsights.com/beacon.min.js";
+  cfBeacon.setAttribute("data-cf-beacon", '{"token": "eb2011183e934fa4a46d71478287c1b4"}');
+  document.body.appendChild(cfBeacon);
+}
+</script>
 </body>
 </html>
