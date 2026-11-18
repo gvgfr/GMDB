@@ -136,9 +136,13 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .btn-hero-secondary:hover{border-color:var(--red);}
 
 .search-wrap{max-width:520px;margin:0 auto;position:relative;}
+.search-clear{position:absolute;right:52px;top:50%;transform:translateY(-50%);display:none;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:none;background:#3a2f42;color:var(--text);font-size:14px;font-weight:800;cursor:pointer;}
+.search-clear.show{display:flex;}
+.search-clear:hover{background:#4d3f58;}
+.show-all-link{white-space:nowrap;display:inline-block;font-size:12px;letter-spacing:0;text-transform:none;color:#F2C94C;cursor:pointer;text-decoration:underline;margin-left:10px;font-weight:700;}
 .search-wrap-below-filters{margin-top:1.5rem;}
 .search-wrap-outer{padding:0 1.5rem;}
-.search-input{width:100%;padding:15px 54px 15px 20px;background:#2a2030;border:2px solid #FFE600;border-radius:10px;color:var(--text);font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:all 0.2s;box-shadow:0 0 0 0 rgba(255,230,0,0);scroll-margin-top:76px;}
+.search-input{width:100%;padding:15px 90px 15px 20px;background:#2a2030;border:2px solid #FFE600;border-radius:10px;color:var(--text);font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:all 0.2s;box-shadow:0 0 0 0 rgba(255,230,0,0);scroll-margin-top:76px;}
 .search-input:focus{box-shadow:0 0 0 3px rgba(255,230,0,0.25);border-color:#FFE600;}
 .search-input::placeholder{color:rgba(255,255,255,0.75);}
 .search-hint{font-size:12.5px;color:#FFB020;margin-top:10px;margin-bottom:1.5rem;text-align:center;opacity:0.85;}
@@ -575,7 +579,7 @@ footer span{color:var(--red);}
   .filter-btn .tier-emoji{font-size:13px;}
   .hero h1{font-size:2.2rem;}
   .stats{gap:1.5rem;}
-  .search-input{font-size:16px;padding:13px 50px 13px 16px;}
+  .search-input{font-size:16px;padding:13px 86px 13px 16px;}
   .similar-wrap{grid-template-columns:repeat(2,1fr);}
 
   /* --- Mobile modal: full-screen sheet; poster + content scroll together,
@@ -807,6 +811,7 @@ footer span{color:var(--red);}
   <div class="search-wrap search-wrap-below-filters">
     <input class="search-input" type="text" placeholder="Search a movie… or ask: funny like Doctor" id="searchInput" oninput="handleSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter();}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" name="movie-search-field"/>
     <div id="suggestions" class="suggestions"></div>
+    <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Clear search" aria-label="Clear search">✕</button>
     <button class="search-icon" onclick="searchEnter();" title="Search" aria-label="Search"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
   </div>
 </div>
@@ -2897,6 +2902,7 @@ document.addEventListener("click", e => {
 
 function filterMovies() {
   const q = document.getElementById("searchInput").value.toLowerCase().trim();
+  updateSearchClear_(); // ✕ in the box whenever there's text, however it got there
 
   let filtered = allMovies;
 
@@ -2975,8 +2981,14 @@ function filterMovies() {
   }
 
   filtered = sortMovies(filtered);
-  document.getElementById("gridLabel").textContent =
-    filtered.length + " movie" + (filtered.length !== 1 ? "s" : "");
+  const countText = filtered.length + " movie" + (filtered.length !== 1 ? "s" : "");
+  const label = document.getElementById("gridLabel");
+  if (q) {
+    // A search ignores the filters above it, so make the way back obvious.
+    label.innerHTML = `${countText} for "${escapeAskHtml_(q)}" <span class="show-all-link" onclick="clearSearch()">✕ Show all movies</span>`;
+  } else {
+    label.textContent = countText;
+  }
 
   renderMovies(filtered);
 }
@@ -3065,6 +3077,8 @@ function scrollToFilters() {
 }
 
 function showAllMoviesNewest() {
+  clearSearchText_();
+  clearAsk();
   currentFilter = "all";
   currentTierFilter = "all";
   currentSort = "year-new";
@@ -3494,6 +3508,25 @@ function searchEnter() {
   hideSuggestions();
   const q = document.getElementById("searchInput").value.trim();
   if (q && looksLikeAskRequest_(q) && !(window._currentMovies || []).length) askMasalaMeter(q);
+}
+
+// Back to the full list: empties the search box (a search otherwise keeps
+// the grid narrowed whatever filter is tapped) and closes any AI answer.
+function clearSearchText_() {
+  const input = document.getElementById("searchInput");
+  if (input) input.value = "";
+  hideSuggestions();
+  updateSearchClear_();
+}
+function updateSearchClear_() {
+  const btn = document.getElementById("searchClear");
+  const input = document.getElementById("searchInput");
+  if (btn && input) btn.classList.toggle("show", !!input.value);
+}
+function clearSearch() {
+  clearSearchText_();
+  clearAsk();
+  filterMovies();
 }
 
 function clearAsk() {
