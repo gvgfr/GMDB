@@ -735,13 +735,7 @@ footer span{color:var(--red);}
   <h1 class="hero-title">Find your next<br/><span>great Indian film</span></h1>
   <div class="hero-actions">
     <button class="btn-hero btn-hero-primary" onclick="scrollToFilters()">Browse Database ↓</button>
-    <button class="btn-hero btn-hero-ask" onclick="openHeroAsk()">✨ Ask Masala Meter</button>
-  </div>
-  <div class="hero-ask" id="heroAsk">
-    <div class="ask-box">
-      <input id="heroAskInput" type="text" maxlength="200" placeholder="What do you feel like watching?" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();askFromHero();}"/>
-      <button onclick="askFromHero()" aria-label="Ask">✨</button>
-    </div>
+    <button class="btn-hero btn-hero-ask" onclick="focusSearchToAsk()">✨ Ask Masala Meter</button>
   </div>
 </div>
 
@@ -3488,13 +3482,14 @@ function looksLikeAskRequest_(q) {
   return t.split(/\s+/).length >= 3;
 }
 
-function openHeroAsk() {
-  document.getElementById("heroAsk").classList.add("show");
-  setTimeout(() => document.getElementById("heroAskInput").focus(), 50);
-}
-function askFromHero() {
-  const q = document.getElementById("heroAskInput").value.trim();
-  if (q) askMasalaMeter(q);
+// One box for everything: the hero's "✨ Ask Masala Meter" button just
+// takes you to the main search box, which searches the catalog as you type
+// and asks the AI for requests (Enter with no catalog match, or the ✨ row).
+function focusSearchToAsk() {
+  const input = document.getElementById("searchInput");
+  input.placeholder = "What do you feel like watching? Or search a movie…";
+  input.scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => input.focus(), 350);
 }
 function askFromSearch() {
   const q = document.getElementById("searchInput").value.trim();
