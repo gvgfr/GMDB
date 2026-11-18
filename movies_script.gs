@@ -2338,12 +2338,14 @@ function rescoreHighlightedRows() {
 // checked against the catalog before it's returned, so nothing outside
 // the site is ever suggested. Simple "what's on Netflix" questions are
 // answered in the browser without calling this at all.
-// Cost control: Flash-Lite, no search grounding, no thinking, and a hard
-// daily cap across all visitors.
+// Cost control: no search grounding, no thinking, and a hard daily cap
+// across all visitors.
 // =============================================
 const ASK_DAILY_LIMIT = 200;
 const ASK_MAX_QUESTION_CHARS = 200;
-const ASK_MODEL = "gemini-2.5-flash-lite";
+// Same model the reviews and streaming checks use (Flash-Lite came back
+// "busy" on this account). ~half a cent a question; the daily cap bounds it.
+const ASK_MODEL = "gemini-2.5-flash";
 
 // Profanity / adult-content filter, checked on the question (before any
 // Gemini call, so a blocked question costs nothing) and again on Gemini's
@@ -2438,7 +2440,11 @@ ${catalog.map(c => c.line).join("\n")}`;
     });
     if (res.getResponseCode() !== 200) {
       Logger.log("askMasalaMeter_ HTTP " + res.getResponseCode() + ": " + res.getContentText().slice(0, 300));
-      return { ok: false, error: "busy" };
+      // "detail" isn't shown on the site; it's there so opening the
+      // ?action=ask link directly says why it failed.
+      let reason = "";
+      try { reason = (JSON.parse(res.getContentText()).error || {}).message || ""; } catch (e) { /* not JSON */ }
+      return { ok: false, error: "busy", detail: "HTTP " + res.getResponseCode() + (reason ? ": " + reason.slice(0, 200) : "") };
     }
     const body = JSON.parse(res.getContentText());
     const cand = (body.candidates || [])[0] || {};
@@ -2461,7 +2467,7 @@ ${catalog.map(c => c.line).join("\n")}`;
     return { ok: true, intro: askIsBlocked_(intro) ? "" : intro, picks: picks };
   } catch (err) {
     Logger.log("askMasalaMeter_ failed: " + err);
-    return { ok: false, error: "busy" };
+    return { ok: false, error: "busy", detail: String(err).slice(0, 200) };
   }
 }
 
