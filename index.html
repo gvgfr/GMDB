@@ -2818,7 +2818,8 @@ function showSuggestions() {
       <div class="suggestion-info"><div class="suggestion-title"><b>Ask Masala Meter:</b> ${escapeAskHtml_(looksLikeAskRequest_(rawQ) ? rawQ : 'movies like "' + rawQ + '"')}</div>
       <div class="suggestion-meta">AI picks from our reviewed movies</div></div></div>`;
 
-  if(matches.length === 0) { box.innerHTML = askRow; box.style.display = "block"; return; }
+  const showAsk = !askIsBlocked_(rawQ);
+  if(matches.length === 0) { if (!showAsk) { box.style.display="none"; box.innerHTML=""; return; } box.innerHTML = askRow; box.style.display = "block"; return; }
 
   const rows = matches.map((m) => {
     const poster = m.PosterURL ? `<img class="suggestion-poster" src="${m.PosterURL}" alt=""/>` : `<div class="suggestion-poster"></div>`;
@@ -2832,7 +2833,7 @@ function showSuggestions() {
       <span class="suggestion-score ${tierClass}">${m.GauthamScore||"—"}</span>
     </div>`;
   }).join("");
-  box.innerHTML = looksLikeAskRequest_(rawQ) ? askRow + rows : rows + askRow;
+  box.innerHTML = !showAsk ? rows : looksLikeAskRequest_(rawQ) ? askRow + rows : rows + askRow;
 
   // Absolute positioning (CSS) keeps the dropdown attached to the search box
   // and scrolling with the page, so taps land correctly on mobile.
@@ -3430,6 +3431,19 @@ function openMovieByTitle(title) {
 // =============================================
 const ASK_DEVICE_DAILY_LIMIT = 15; // soft per-device limit; the hard cap is server-side
 
+// Profanity / adult-content filter: a blocked question is never shown
+// back or sent anywhere. Same list and rules as askIsBlocked_ in the
+// Apps Script (which checks again, in case someone skips the website).
+const ASK_BLOCKED_RE = new RegExp("\\b(" + "motherfuckers|masturbation|motherfucker|pornographic|bhosdiwale|madarchodd|masturbate|behenchod|bhenchodd|haramkhor|madarchod|maderchod|thevidiya|thevudiya|arsehole|assholes|bastards|bhenchod|bhosdike|bullshit|onlyfans|stripper|thevdiya|asshole|bastard|bitches|blowjob|chutiya|chutiye|erotica|fuckers|fucking|handjob|jerkoff|pussies|titties|bhosdi|biatch|chutia|erotic|fucked|fucker|harami|hentai|incest|koodhi|koothi|nudity|ommala|orgasm|pundai|rapist|sexual|shitty|wanker|whores|baadu|bitch|boobs|cocks|cunts|dicks|fucks|gandu|horny|lauda|lavda|naked|nudes|oombu|phuck|porno|punda|pussy|randi|shits|sluts|sunni|whore|arse|boob|bsdk|btch|cock|cunt|dick|fcuk|fuck|loda|lodu|lund|milf|nsfw|nude|porn|rape|sexy|shit|slut|stfu|tits|twat|fck|fuk|fuq|sex|sht|wtf|xxx" + ")s?\\b", "i");
+const ASK_BLOCKED_MSG = "Let's keep it to movies 🙂 — try something like \"a feel-good family film\" or \"a gripping Tamil thriller\".";
+function askIsBlocked_(text) {
+  const n = String(text || "").toLowerCase()
+    .replace(/[@4]/g, "a").replace(/3/g, "e").replace(/[1!|]/g, "i").replace(/0/g, "o").replace(/[$5]/g, "s").replace(/7/g, "t")
+    .replace(/(\w)[*.\-_]+(?=\w)/g, "$1")
+    .replace(/(\w)\1{2,}/g, "$1$1");
+  return ASK_BLOCKED_RE.test(String(text || "").toLowerCase()) || ASK_BLOCKED_RE.test(n) || ASK_BLOCKED_RE.test(n.replace(/(\w)\1+/g, "$1"));
+}
+
 function escapeAskHtml_(str) {
   return String(str == null ? "" : str).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -3505,7 +3519,7 @@ function localPlatformAnswer_(q) {
 function renderAskPanel_(question, bodyHtml) {
   const panel = document.getElementById("askPanel");
   panel.innerHTML = `<div class="ask-head">✨ Ask Masala Meter<button class="ask-clear" onclick="clearAsk()">✕ Clear</button></div>
-    <div class="ask-q">${escapeAskHtml_(question)}</div>${bodyHtml}`;
+    ${question ? `<div class="ask-q">${escapeAskHtml_(question)}</div>` : ""}${bodyHtml}`;
   panel.classList.add("show");
 }
 
@@ -3535,6 +3549,11 @@ async function askMasalaMeter(question) {
   question = String(question || "").replace(/\s+/g, " ").trim().slice(0, 200);
   if (!question) return;
   const panel = document.getElementById("askPanel");
+  if (askIsBlocked_(question)) {
+    renderAskPanel_("", `<div class="ask-intro">${escapeAskHtml_(ASK_BLOCKED_MSG)}</div>`);
+    panel.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
   // Leave room for the sticky header so the question line isn't hidden under it.
   const scrollToPanel = () => {
     const header = document.querySelector("header");
@@ -3555,6 +3574,7 @@ async function askMasalaMeter(question) {
     const res = await fetch(API_URL + "?action=ask&q=" + encodeURIComponent(question));
     const data = await res.json();
     if (!data.ok) {
+      if (data.error === "blocked") { renderAskPanel_("", `<div class="ask-intro">${escapeAskHtml_(ASK_BLOCKED_MSG)}</div>`); return; }
       const msg = data.error === "limit" ? "Ask Masala Meter has answered as many questions as it can today — please try again tomorrow."
         : data.error === "too_long" ? "That's a bit long — try a shorter question."
         : "Couldn't get an answer right now — please try again in a moment.";
@@ -3563,13 +3583,13 @@ async function askMasalaMeter(question) {
     }
     const picks = (data.picks || []).map(p => {
       const movie = allMovies.find(m => m.Title === p.title && String(m.Year || "") === String(p.year || "")) || allMovies.find(m => m.Title === p.title);
-      return movie ? { movie, why: p.why } : null;
+      return movie ? { movie, why: askIsBlocked_(p.why) ? "" : p.why } : null;
     }).filter(Boolean);
     if (!picks.length) {
       renderAskPanel_(question, `<div class="ask-intro">${escapeAskHtml_(data.intro || "Nothing in Masala Meter fits that yet — try a different mood, language or service.")}</div>`);
       return;
     }
-    renderAskPicks_(question, data.intro || "Here's what fits:", picks);
+    renderAskPicks_(question, (!askIsBlocked_(data.intro) && data.intro) || "Here's what fits:", picks);
   } catch (err) {
     renderAskPanel_(question, `<div class="ask-intro">Couldn't get an answer right now — please try again in a moment.</div>`);
   }

@@ -2345,10 +2345,29 @@ const ASK_DAILY_LIMIT = 200;
 const ASK_MAX_QUESTION_CHARS = 200;
 const ASK_MODEL = "gemini-2.5-flash-lite";
 
+// Profanity / adult-content filter, checked on the question (before any
+// Gemini call, so a blocked question costs nothing) and again on Gemini's
+// wording. Whole words only, after undoing common disguises (f*ck, s3x,
+// sh!t), so innocent words that merely contain one aren't caught. English
+// plus common Hindi/Tamil terms written in English letters. Kept in sync
+// by hand with ASK_BLOCKED_RE in index.html.
+const ASK_BLOCKED_RE = new RegExp("\\b(" + "motherfuckers|masturbation|motherfucker|pornographic|bhosdiwale|madarchodd|masturbate|behenchod|bhenchodd|haramkhor|madarchod|maderchod|thevidiya|thevudiya|arsehole|assholes|bastards|bhenchod|bhosdike|bullshit|onlyfans|stripper|thevdiya|asshole|bastard|bitches|blowjob|chutiya|chutiye|erotica|fuckers|fucking|handjob|jerkoff|pussies|titties|bhosdi|biatch|chutia|erotic|fucked|fucker|harami|hentai|incest|koodhi|koothi|nudity|ommala|orgasm|pundai|rapist|sexual|shitty|wanker|whores|baadu|bitch|boobs|cocks|cunts|dicks|fucks|gandu|horny|lauda|lavda|naked|nudes|oombu|phuck|porno|punda|pussy|randi|shits|sluts|sunni|whore|arse|boob|bsdk|btch|cock|cunt|dick|fcuk|fuck|loda|lodu|lund|milf|nsfw|nude|porn|rape|sexy|shit|slut|stfu|tits|twat|fck|fuk|fuq|sex|sht|wtf|xxx" + ")s?\\b", "i");
+function askNormalizeForFilter_(text) {
+  return String(text || "").toLowerCase()
+    .replace(/[@4]/g, "a").replace(/3/g, "e").replace(/[1!|]/g, "i").replace(/0/g, "o").replace(/[$5]/g, "s").replace(/7/g, "t")
+    .replace(/(\w)[*.\-_]+(?=\w)/g, "$1") // f*ck, s.e.x, s-h-i-t
+    .replace(/(\w)\1{2,}/g, "$1$1");     // fuuuuck -> fuuck
+}
+function askIsBlocked_(text) {
+  const n = askNormalizeForFilter_(text);
+  return ASK_BLOCKED_RE.test(String(text || "").toLowerCase()) || ASK_BLOCKED_RE.test(n) || ASK_BLOCKED_RE.test(n.replace(/(\w)\1+/g, "$1"));
+}
+
 function askMasalaMeter_(rawQuestion) {
   const question = String(rawQuestion || "").replace(/\s+/g, " ").trim();
   if (!question) return { ok: false, error: "empty" };
   if (question.length > ASK_MAX_QUESTION_CHARS) return { ok: false, error: "too_long" };
+  if (askIsBlocked_(question)) return { ok: false, error: "blocked" };
 
   // Daily cap, counted per calendar day in the script's time zone. The
   // lock keeps two simultaneous questions from both reading the same count.
@@ -2395,6 +2414,7 @@ function askMasalaMeter_(rawQuestion) {
 
 Recommend films ONLY from the catalog below. Each line is: id|title|year|language|Masala Meter score (0-100)|optional one-line takeaway (given for recent films you may not know).
 Use your own knowledge of these films (tone, genre, humour, darkness, family-friendliness) to judge the fit, plus the takeaway for recent ones. Prefer higher scores when fits are similar. If the visitor names a film, don't recommend that same film. If the question isn't about choosing a film to watch, or nothing in the catalog fits, return no picks and say so briefly in "intro".
+Keep every word you write family-friendly: no profanity, slurs or sexual language, and never repeat crude words from the question. If the visitor asks for sexual, explicit or adult content, return no picks and a polite one-line "intro" suggesting they ask about a mood, genre or language instead. Mature but mainstream requests (a dark, violent or intense thriller) are fine.
 
 Reply with JSON only, in this exact shape:
 {"intro": "one short friendly sentence", "picks": [{"id": 12, "why": "one short sentence on why it fits"}]}
@@ -2410,7 +2430,10 @@ ${catalog.map(c => c.line).join("\n")}`;
       muteHttpExceptions: true,
       payload: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 800, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
+        generationConfig: { temperature: 0.4, maxOutputTokens: 800, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
+        // Google's own content filters at their strictest.
+        safetySettings: ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]
+          .map(category => ({ category: category, threshold: "BLOCK_LOW_AND_ABOVE" }))
       })
     });
     if (res.getResponseCode() !== 200) {
@@ -2418,7 +2441,11 @@ ${catalog.map(c => c.line).join("\n")}`;
       return { ok: false, error: "busy" };
     }
     const body = JSON.parse(res.getContentText());
-    const parts = (((body.candidates || [])[0] || {}).content || {}).parts || [];
+    const cand = (body.candidates || [])[0] || {};
+    if ((body.promptFeedback && body.promptFeedback.blockReason) || cand.finishReason === "SAFETY" || cand.finishReason === "PROHIBITED_CONTENT") {
+      return { ok: false, error: "blocked" };
+    }
+    const parts = (cand.content || {}).parts || [];
     const text = parts.map(p => p.text || "").join("");
     const answer = parseGeminiJsonObject_(text);
     // Only ever return films that are really in the catalog.
@@ -2427,9 +2454,11 @@ ${catalog.map(c => c.line).join("\n")}`;
       const c = catalog[Number(p && p.id)];
       if (!c || seen[c.title + "|" + c.year]) return null;
       seen[c.title + "|" + c.year] = true;
-      return { title: c.title, year: c.year, why: String(p.why || "").slice(0, 220) };
+      const why = String(p.why || "").slice(0, 220);
+      return { title: c.title, year: c.year, why: askIsBlocked_(why) ? "" : why }; // drop wording that slipped past
     }).filter(Boolean).slice(0, 5);
-    return { ok: true, intro: String(answer.intro || "").slice(0, 300), picks: picks };
+    const intro = String(answer.intro || "").slice(0, 300);
+    return { ok: true, intro: askIsBlocked_(intro) ? "" : intro, picks: picks };
   } catch (err) {
     Logger.log("askMasalaMeter_ failed: " + err);
     return { ok: false, error: "busy" };
