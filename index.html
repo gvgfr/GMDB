@@ -106,6 +106,32 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .btn-hero{padding:14px 28px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all 0.2s;}
 .btn-hero-primary{background:var(--red);color:white;}
 .btn-hero-primary:hover{background:var(--red2);transform:translateY(-1px);}
+.btn-hero-ask{background:#16121f;color:#e9dcff;border:1px solid #6b4bd1;box-shadow:0 0 18px rgba(124,92,252,0.25);font-weight:700;}
+.btn-hero-ask:hover{border-color:#9b80ff;transform:translateY(-1px);}
+.hero-ask{display:none;max-width:560px;margin:18px auto 0;}
+.hero-ask.show{display:block;}
+.ask-box{display:flex;align-items:center;border:2px solid #7C5CFC;border-radius:12px;background:#120f1a;}
+.ask-box input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:16px;padding:13px 14px;font-family:'Inter',sans-serif;min-width:0;}
+.ask-box button{background:none;border:none;font-size:20px;padding:0 14px;cursor:pointer;}
+.ask-suggestion{background:linear-gradient(90deg,rgba(124,92,252,0.18),rgba(124,92,252,0.04));}
+.ask-suggestion b{color:#c9b8ff;}
+.ask-spark{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#7C5CFC,#E52020);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.ask-panel{display:none;background:var(--bg2);border:1px solid #3b2d6b;border-radius:14px;padding:16px;margin:0 0 1.5rem;max-width:760px;}
+.ask-panel.show{display:block;}
+.ask-head{display:flex;align-items:center;gap:8px;font-size:13px;color:#c9b8ff;font-weight:700;margin-bottom:6px;}
+.ask-clear{margin-left:auto;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:14px;padding:5px 11px;font-size:12px;cursor:pointer;}
+.ask-q{font-size:17px;font-weight:700;margin-bottom:8px;color:var(--text);}
+.ask-intro{font-size:14.5px;color:var(--text2);line-height:1.55;margin-bottom:12px;}
+.ask-thinking{font-size:14px;color:var(--text3);display:flex;align-items:center;gap:8px;padding:6px 0;}
+.ask-pick{display:flex;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px;cursor:pointer;}
+.ask-pick:hover{border-color:#6b4bd1;}
+.ask-pick img,.ask-pick .ask-noposter{width:60px;height:90px;border-radius:7px;object-fit:cover;background:#262626;flex-shrink:0;}
+.ask-pick-title{font-size:15.5px;font-weight:700;color:var(--text);}
+.ask-pick-meta{font-size:12.5px;color:var(--text3);margin-top:1px;}
+.ask-pick-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;}
+.ask-score{font-size:12px;font-weight:800;padding:3px 8px;border-radius:6px;}
+.ask-why{font-size:13.5px;color:var(--text2);margin-top:6px;line-height:1.45;}
+.ask-foot{font-size:11.5px;color:var(--text3);margin-top:6px;}
 .btn-hero-secondary{background:var(--bg3);color:#F2C94C;border:1px solid var(--border);}
 .btn-hero-secondary:hover{border-color:var(--red);}
 
@@ -703,9 +729,15 @@ footer span{color:var(--red);}
 
 <div class="hero">
   <h1 class="hero-title">Find your next<br/><span>great Indian film</span></h1>
-  <p class="hero-desc">Find your next great Indian film — scored using critic reviews and audience data through the <span class="inline-about-link" onclick="openAbout()">Masala Meter</span>'s weighted formula, anchored against benchmark films at every tier. Find where to stream, and get similar-film suggestions — so you always know what's worth watching.</p>
   <div class="hero-actions">
     <button class="btn-hero btn-hero-primary" onclick="scrollToFilters()">Browse Database ↓</button>
+    <button class="btn-hero btn-hero-ask" onclick="openHeroAsk()">✨ Ask Masala Meter</button>
+  </div>
+  <div class="hero-ask" id="heroAsk">
+    <div class="ask-box">
+      <input id="heroAskInput" type="text" maxlength="200" placeholder="What do you feel like watching?" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();askFromHero();}"/>
+      <button onclick="askFromHero()" aria-label="Ask">✨</button>
+    </div>
   </div>
 </div>
 
@@ -773,13 +805,14 @@ footer span{color:var(--red);}
 
 <div class="search-wrap-outer">
   <div class="search-wrap search-wrap-below-filters">
-    <input class="search-input" type="text" placeholder="Search the database by title, actor, genre..." id="searchInput" oninput="handleSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();filterMovies();hideSuggestions();}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" name="movie-search-field"/>
+    <input class="search-input" type="text" placeholder="Search a movie… or ask: funny like Doctor" id="searchInput" oninput="handleSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter();}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" name="movie-search-field"/>
     <div id="suggestions" class="suggestions"></div>
-    <button class="search-icon" onclick="filterMovies();hideSuggestions();" title="Search" aria-label="Search"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
+    <button class="search-icon" onclick="searchEnter();" title="Search" aria-label="Search"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
   </div>
 </div>
 
 <div class="grid-wrap">
+  <div class="ask-panel" id="askPanel"></div>
   <div class="grid-header">
     <p class="section-title" id="gridLabel">All Movies</p>
     <div class="score-legend">
@@ -2777,9 +2810,17 @@ function showSuggestions() {
     .slice(0, 8)
     .map(x => x.m);
 
-  if(matches.length === 0) { box.style.display="none"; box.innerHTML=""; return; }
+  // "✨ Ask Masala Meter" row: first when the text reads like a request
+  // (several words), last when it's probably a title/actor search.
+  const rawQ = input.value.trim();
+  const askRow = `<div class="suggestion-item ask-suggestion" onclick="askFromSearch()">
+      <div class="ask-spark">✨</div>
+      <div class="suggestion-info"><div class="suggestion-title"><b>Ask Masala Meter:</b> ${escapeAskHtml_(looksLikeAskRequest_(rawQ) ? rawQ : 'movies like "' + rawQ + '"')}</div>
+      <div class="suggestion-meta">AI picks from our reviewed movies</div></div></div>`;
 
-  box.innerHTML = matches.map((m) => {
+  if(matches.length === 0) { box.innerHTML = askRow; box.style.display = "block"; return; }
+
+  const rows = matches.map((m) => {
     const poster = m.PosterURL ? `<img class="suggestion-poster" src="${m.PosterURL}" alt=""/>` : `<div class="suggestion-poster"></div>`;
     const tierClass = getTierClass(m.ConsensusTier, m.GauthamScore);
     return `<div class="suggestion-item" onclick="pickSuggestion('${jsAttrEscape(m.Title)}')">
@@ -2791,6 +2832,7 @@ function showSuggestions() {
       <span class="suggestion-score ${tierClass}">${m.GauthamScore||"—"}</span>
     </div>`;
   }).join("");
+  box.innerHTML = looksLikeAskRequest_(rawQ) ? askRow + rows : rows + askRow;
 
   // Absolute positioning (CSS) keeps the dropdown attached to the search box
   // and scrolling with the page, so taps land correctly on mobile.
@@ -3375,6 +3417,161 @@ function openMovieByTitle(title) {
   if(allIdx >= 0) {
     window._currentMovies = allMovies;
     openMovie(allIdx);
+  }
+}
+
+// =============================================
+// ✨ ASK MASALA METER
+// Free-text "what should I watch" box, in the hero and in the search box.
+// Simple "what's on <service>" questions are answered right here from the
+// catalog (free); anything else goes to the Apps Script ?action=ask, which
+// asks Gemini to pick ONLY from this catalog and checks every pick. Typing
+// alone never calls it: only Enter / the ✨ button / the ✨ dropdown row.
+// =============================================
+const ASK_DEVICE_DAILY_LIMIT = 15; // soft per-device limit; the hard cap is server-side
+
+function escapeAskHtml_(str) {
+  return String(str == null ? "" : str).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// Reads like a request rather than a title/actor search.
+function looksLikeAskRequest_(q) {
+  const t = String(q || "").trim().toLowerCase();
+  if (!t) return false;
+  if (t.includes("?")) return true;
+  if (/^(like|something|suggest|recommend|movies?|films?|what|which|best|good|funny|feel|any|show|top|a |an |i want|i'm in|im in|looking for)/.test(t)) return true;
+  return t.split(/\s+/).length >= 3;
+}
+
+function openHeroAsk() {
+  document.getElementById("heroAsk").classList.add("show");
+  setTimeout(() => document.getElementById("heroAskInput").focus(), 50);
+}
+function askFromHero() {
+  const q = document.getElementById("heroAskInput").value.trim();
+  if (q) askMasalaMeter(q);
+}
+function askFromSearch() {
+  const q = document.getElementById("searchInput").value.trim();
+  hideSuggestions();
+  if (q) askMasalaMeter(looksLikeAskRequest_(q) ? q : `movies like "${q}"`);
+}
+// Enter in the search box: normal search first; if nothing matches and it
+// reads like a request, ask instead of showing an empty grid.
+function searchEnter() {
+  filterMovies();
+  hideSuggestions();
+  const q = document.getElementById("searchInput").value.trim();
+  if (q && looksLikeAskRequest_(q) && !(window._currentMovies || []).length) askMasalaMeter(q);
+}
+
+function clearAsk() {
+  const panel = document.getElementById("askPanel");
+  panel.classList.remove("show");
+  panel.innerHTML = "";
+}
+
+function askDeviceCountOk_() {
+  try {
+    const key = "gmdb_ask_" + new Date().toISOString().slice(0, 10);
+    const n = Number(localStorage.getItem(key) || 0);
+    if (n >= ASK_DEVICE_DAILY_LIMIT) return false;
+    localStorage.setItem(key, String(n + 1));
+  } catch (e) { /* storage blocked — rely on the server cap */ }
+  return true;
+}
+
+// "What's on Netflix?"-style questions: nothing but a service name and
+// filler words. Answered from the catalog, no AI call.
+function localPlatformAnswer_(q) {
+  const lower = q.toLowerCase();
+  const platform = KNOWN_PLATFORMS.find(p => p.keys.some(k => new RegExp("\\b" + k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(lower)));
+  if (!platform) return null;
+  let rest = lower;
+  platform.keys.concat([platform.label.toLowerCase()]).forEach(k => { rest = rest.split(k).join(" "); });
+  rest = rest.replace(/[?!.,']/g, " ").replace(/\b(what|whats|what's|s|is|are|on|streaming|stream|now|right|today|new|latest|movies?|films?|show|me|the|in|us|uk|available|to|watch|list|of|all|good|best|top|video)\b/g, " ").trim();
+  if (rest) return null; // there's more to the question than a service name
+  const onIt = allMovies.filter(m => Number(m.GauthamScore) > 0 && platform.keys.some(k => getPlatformLabel(m).toLowerCase().includes(k)));
+  if (!onIt.length) return { intro: `None of our reviewed movies are listed on ${platform.label} (${getSelectedRegion()}) right now.`, picks: [] };
+  const fresh = onIt.filter(isNewOnStreaming).sort((a, b) => String(b.StreamingSince || "").localeCompare(String(a.StreamingSince || ""))).slice(0, 2);
+  const best = onIt.filter(m => fresh.indexOf(m) === -1).sort((a, b) => Number(b.GauthamScore) - Number(a.GauthamScore)).slice(0, 5 - fresh.length);
+  return {
+    intro: `${onIt.length} of our reviewed movies are on ${platform.label} (${getSelectedRegion()}).${fresh.length ? " New arrivals first, then the best-rated:" : " The best-rated:"}`,
+    picks: fresh.map(m => ({ movie: m, why: "New on " + platform.label + "." + (m.Takeaway ? " " + m.Takeaway : "") }))
+      .concat(best.map(m => ({ movie: m, why: m.Takeaway || "" })))
+  };
+}
+
+function renderAskPanel_(question, bodyHtml) {
+  const panel = document.getElementById("askPanel");
+  panel.innerHTML = `<div class="ask-head">✨ Ask Masala Meter<button class="ask-clear" onclick="clearAsk()">✕ Clear</button></div>
+    <div class="ask-q">${escapeAskHtml_(question)}</div>${bodyHtml}`;
+  panel.classList.add("show");
+}
+
+function renderAskPicks_(question, intro, picks) {
+  const cards = picks.map(({ movie: m, why }) => {
+    const tier = getMasalaTier(m.GauthamScore);
+    const badge = getPlatformBadge(m);
+    const poster = m.PosterURL ? `<img src="${escapeAskHtml_(m.PosterURL)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;ask-noposter&quot;></div>'"/>` : `<div class="ask-noposter"></div>`;
+    return `<div class="ask-pick" onclick="openMovieByTitle('${jsAttrEscape(m.Title)}')">
+      ${poster}
+      <div>
+        <div class="ask-pick-title">${escapeAskHtml_(m.Title)}</div>
+        <div class="ask-pick-meta">${escapeAskHtml_([m.Language, m.Year].filter(Boolean).join(" · "))}</div>
+        <div class="ask-pick-row">
+          ${tier ? `<span class="ask-score" style="background:${tier.color}22;color:${tier.color}">${m.GauthamScore} ${tier.emoji} ${tier.name}</span>` : ""}
+          ${badge ? `<span class="carousel-platform-badge" style="background:${badge.color};color:${badge.text}">${escapeAskHtml_(badge.label)}</span>` : ""}
+        </div>
+        ${why ? `<div class="ask-why">${escapeAskHtml_(why)}</div>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+  renderAskPanel_(question, `<div class="ask-intro">${escapeAskHtml_(intro)}</div>${cards}
+    <div class="ask-foot">Picks come only from Masala Meter's reviews · streaming changes, check JustWatch</div>`);
+}
+
+async function askMasalaMeter(question) {
+  question = String(question || "").replace(/\s+/g, " ").trim().slice(0, 200);
+  if (!question) return;
+  const panel = document.getElementById("askPanel");
+  // Leave room for the sticky header so the question line isn't hidden under it.
+  const scrollToPanel = () => {
+    const header = document.querySelector("header");
+    const offset = (header ? header.getBoundingClientRect().height : 60) + 12;
+    window.scrollTo({ top: panel.getBoundingClientRect().top + window.scrollY - offset, behavior: "smooth" });
+  };
+
+  const local = localPlatformAnswer_(question);
+  if (local) { renderAskPicks_(question, local.intro, local.picks); scrollToPanel(); return; }
+
+  if (!askDeviceCountOk_()) {
+    renderAskPanel_(question, `<div class="ask-intro">You've asked a lot today — try again tomorrow, or browse and search the movies below.</div>`);
+    scrollToPanel(); return;
+  }
+  renderAskPanel_(question, `<div class="ask-thinking"><span class="toast-spinner"></span> Finding picks from our reviews…</div>`);
+  scrollToPanel();
+  try {
+    const res = await fetch(API_URL + "?action=ask&q=" + encodeURIComponent(question));
+    const data = await res.json();
+    if (!data.ok) {
+      const msg = data.error === "limit" ? "Ask Masala Meter has answered as many questions as it can today — please try again tomorrow."
+        : data.error === "too_long" ? "That's a bit long — try a shorter question."
+        : "Couldn't get an answer right now — please try again in a moment.";
+      renderAskPanel_(question, `<div class="ask-intro">${msg}</div>`);
+      return;
+    }
+    const picks = (data.picks || []).map(p => {
+      const movie = allMovies.find(m => m.Title === p.title && String(m.Year || "") === String(p.year || "")) || allMovies.find(m => m.Title === p.title);
+      return movie ? { movie, why: p.why } : null;
+    }).filter(Boolean);
+    if (!picks.length) {
+      renderAskPanel_(question, `<div class="ask-intro">${escapeAskHtml_(data.intro || "Nothing in Masala Meter fits that yet — try a different mood, language or service.")}</div>`);
+      return;
+    }
+    renderAskPicks_(question, data.intro || "Here's what fits:", picks);
+  } catch (err) {
+    renderAskPanel_(question, `<div class="ask-intro">Couldn't get an answer right now — please try again in a moment.</div>`);
   }
 }
 

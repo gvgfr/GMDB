@@ -2330,6 +2330,112 @@ function rescoreHighlightedRows() {
 // =============================================
 // WEB APP — POST endpoint (called by the website's "Add Movie" feature)
 // =============================================
+// =============================================
+// ASK MASALA METER — the website's "✨ Ask Masala Meter" box.
+// A visitor describes what they feel like watching; Gemini picks from
+// THIS catalog only (title/year/language/score, plus the one-line
+// takeaway for recent films Gemini may not know yet) and every pick is
+// checked against the catalog before it's returned, so nothing outside
+// the site is ever suggested. Simple "what's on Netflix" questions are
+// answered in the browser without calling this at all.
+// Cost control: Flash-Lite, no search grounding, no thinking, and a hard
+// daily cap across all visitors.
+// =============================================
+const ASK_DAILY_LIMIT = 200;
+const ASK_MAX_QUESTION_CHARS = 200;
+const ASK_MODEL = "gemini-2.5-flash-lite";
+
+function askMasalaMeter_(rawQuestion) {
+  const question = String(rawQuestion || "").replace(/\s+/g, " ").trim();
+  if (!question) return { ok: false, error: "empty" };
+  if (question.length > ASK_MAX_QUESTION_CHARS) return { ok: false, error: "too_long" };
+
+  // Daily cap, counted per calendar day in the script's time zone. The
+  // lock keeps two simultaneous questions from both reading the same count.
+  const props = PropertiesService.getScriptProperties();
+  const dayKey = "ASK_COUNT_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyyMMdd");
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(5000);
+    const used = Number(props.getProperty(dayKey) || 0);
+    if (used >= ASK_DAILY_LIMIT) return { ok: false, error: "limit" };
+    props.setProperty(dayKey, String(used + 1));
+    props.getKeys().forEach(k => { if (k.indexOf("ASK_COUNT_") === 0 && k !== dayKey) props.deleteProperty(k); });
+  } catch (lockErr) {
+    return { ok: false, error: "busy" };
+  } finally {
+    try { lock.releaseLock(); } catch (e) { /* not held */ }
+  }
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Movies");
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const col = name => headers.indexOf(name);
+  const cTitle = col("Title"), cYear = col("Year"), cLang = col("Language"), cScore = col("GauthamScore"),
+        cTake = col("Takeaway"), cRel = col("ReleaseDate");
+  const recentCutoff = Date.now() - 18 * 30 * 24 * 60 * 60 * 1000; // ~18 months: Gemini may not know these yet
+  const catalog = [];
+  for (let r = 1; r < data.length; r++) {
+    const row = data[r];
+    const title = String(row[cTitle] || "").trim();
+    const score = Number(row[cScore]);
+    if (!title || !(score > 0)) continue;
+    const rel = new Date(row[cRel] || "").getTime();
+    const recent = !isNaN(rel) && rel >= recentCutoff;
+    catalog.push({
+      title: title,
+      year: String(row[cYear] || "").trim(),
+      line: catalog.length + "|" + title + "|" + String(row[cYear] || "").trim() + "|" + String(row[cLang] || "").trim() + "|" + score +
+        (recent && row[cTake] ? "|" + String(row[cTake]).replace(/\s+/g, " ").trim() : "")
+    });
+  }
+
+  const prompt = `You are Masala Meter, a friendly Indian-cinema guide. A visitor asked:
+"""${question.replace(/"""/g, "'")}"""
+
+Recommend films ONLY from the catalog below. Each line is: id|title|year|language|Masala Meter score (0-100)|optional one-line takeaway (given for recent films you may not know).
+Use your own knowledge of these films (tone, genre, humour, darkness, family-friendliness) to judge the fit, plus the takeaway for recent ones. Prefer higher scores when fits are similar. If the visitor names a film, don't recommend that same film. If the question isn't about choosing a film to watch, or nothing in the catalog fits, return no picks and say so briefly in "intro".
+
+Reply with JSON only, in this exact shape:
+{"intro": "one short friendly sentence", "picks": [{"id": 12, "why": "one short sentence on why it fits"}]}
+Give 3 to 5 picks when possible.
+
+CATALOG:
+${catalog.map(c => c.line).join("\n")}`;
+
+  try {
+    const res = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models/" + ASK_MODEL + ":generateContent?key=" + GEMINI_API_KEY, {
+      method: "post",
+      contentType: "application/json",
+      muteHttpExceptions: true,
+      payload: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 800, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
+      })
+    });
+    if (res.getResponseCode() !== 200) {
+      Logger.log("askMasalaMeter_ HTTP " + res.getResponseCode() + ": " + res.getContentText().slice(0, 300));
+      return { ok: false, error: "busy" };
+    }
+    const body = JSON.parse(res.getContentText());
+    const parts = (((body.candidates || [])[0] || {}).content || {}).parts || [];
+    const text = parts.map(p => p.text || "").join("");
+    const answer = parseGeminiJsonObject_(text);
+    // Only ever return films that are really in the catalog.
+    const seen = {};
+    const picks = (answer.picks || []).map(p => {
+      const c = catalog[Number(p && p.id)];
+      if (!c || seen[c.title + "|" + c.year]) return null;
+      seen[c.title + "|" + c.year] = true;
+      return { title: c.title, year: c.year, why: String(p.why || "").slice(0, 220) };
+    }).filter(Boolean).slice(0, 5);
+    return { ok: true, intro: String(answer.intro || "").slice(0, 300), picks: picks };
+  } catch (err) {
+    Logger.log("askMasalaMeter_ failed: " + err);
+    return { ok: false, error: "busy" };
+  }
+}
+
 // Visitors can no longer add movies or songs: the site is curated now that
 // it's public on its own domain. The website no longer shows any add
 // buttons, but this endpoint is public, so it refuses adds itself too.
@@ -3532,6 +3638,12 @@ function doGet(e) {
   }
 
   // Return movies as JSON for the website
+  if (e && e.parameter && e.parameter.action === "ask") {
+    return ContentService
+      .createTextOutput(JSON.stringify(askMasalaMeter_(e.parameter.q)))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (e && e.parameter && e.parameter.action === "movies") {
     // This is the single most-hit endpoint on the site — every page load
     // AND every 15-second background poll from every open tab rebuild the
