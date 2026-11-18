@@ -2784,10 +2784,12 @@ function handleSearchInput() {
 // when the whole phrase matches no single field, every word has to match
 // some field on its own (language, genre, cast, year…) — so all the
 // words count, not just one.
+// Words that describe the search rather than the film ("surya movies").
+const SEARCH_FILLER_WORDS = new Set(["movie", "movies", "film", "films", "padam", "song", "songs", "the", "with", "and", "of", "by", "a", "an", "in", "starring", "best", "good", "top"]);
 function relevanceScore(m, q) {
   const whole = relevanceScoreSingle_(m, q);
-  const words = String(q || "").split(/\s+/).filter(w => w.length > 1);
-  if (whole > 0 || words.length < 2) return whole;
+  const words = String(q || "").split(/\s+/).filter(w => w.length > 1 && !SEARCH_FILLER_WORDS.has(w));
+  if (whole >= 25 || !words.length) return whole; // a weak phrase hit (review text) still gets the word-by-word check
   for (const w of words) {
     if (relevanceScoreSingle_(m, w) < 25) return 0;
   }
@@ -3464,7 +3466,18 @@ function openMovieByTitle(title) {
 // asks Gemini to pick ONLY from this catalog and checks every pick. Typing
 // alone never calls it: only Enter / the ✨ button / the ✨ dropdown row.
 // =============================================
-const ASK_DEVICE_DAILY_LIMIT = 15; // soft per-device limit; the hard cap is server-side
+const ASK_DEVICE_DAILY_LIMIT = 25; // soft per-device limit; the hard cap is server-side
+
+// Owner pass: opening the site once with ?unlimited=1 lifts the per-device
+// limit on that device (it's remembered); ?unlimited=0 turns it back on.
+// The server's daily cap still applies to everyone.
+(function () {
+  try {
+    const flag = new URLSearchParams(location.search).get("unlimited");
+    if (flag === "1") localStorage.setItem("gmdb_ask_unlimited", "1");
+    if (flag === "0") localStorage.removeItem("gmdb_ask_unlimited");
+  } catch (e) { /* storage blocked */ }
+})();
 
 // Profanity / adult-content filter: a blocked question is never shown
 // back or sent anywhere. Same list and rules as askIsBlocked_ in the
@@ -3548,6 +3561,7 @@ function clearAsk() {
 
 function askDeviceCountOk_() {
   try {
+    if (localStorage.getItem("gmdb_ask_unlimited") === "1") return true;
     const key = "gmdb_ask_" + new Date().toISOString().slice(0, 10);
     const n = Number(localStorage.getItem(key) || 0);
     if (n >= ASK_DEVICE_DAILY_LIMIT) return false;
