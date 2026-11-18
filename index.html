@@ -803,7 +803,7 @@ footer span{color:var(--red);}
 
 <div class="search-wrap-outer">
   <div class="search-wrap search-wrap-below-filters">
-    <input class="search-input" type="text" placeholder="Search a movie… or ask: funny like Doctor" id="searchInput" oninput="handleSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter();}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" name="movie-search-field"/>
+    <input class="search-input" type="text" placeholder="Search a movie… or ✨ Ask Masala Meter for a suggestion" id="searchInput" oninput="handleSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter();}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" name="movie-search-field"/>
     <div id="suggestions" class="suggestions"></div>
     <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Clear search" aria-label="Clear search">✕</button>
     <button class="search-icon" onclick="searchEnter();" title="Search" aria-label="Search"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
@@ -2831,7 +2831,7 @@ function showSuggestions() {
   const rawQ = input.value.trim();
   const askRow = `<div class="suggestion-item ask-suggestion" onclick="askFromSearch()">
       <div class="ask-spark">✨</div>
-      <div class="suggestion-info"><div class="suggestion-title"><b>Ask Masala Meter:</b> ${escapeAskHtml_(looksLikeAskRequest_(rawQ) ? rawQ : 'movies like "' + rawQ + '"')}</div>
+      <div class="suggestion-info"><div class="suggestion-title"><b>Ask Masala Meter:</b> ${escapeAskHtml_(rawQ)}</div>
       <div class="suggestion-meta">AI picks from our reviewed movies</div></div></div>`;
 
   const showAsk = !askIsBlocked_(rawQ);
@@ -2849,7 +2849,7 @@ function showSuggestions() {
       <span class="suggestion-score ${tierClass}">${m.GauthamScore||"—"}</span>
     </div>`;
   }).join("");
-  box.innerHTML = !showAsk ? rows : looksLikeAskRequest_(rawQ) ? askRow + rows : rows + askRow;
+  box.innerHTML = !showAsk ? rows : strongTitleMatch_(rawQ) ? rows + askRow : askRow + rows;
 
   // Absolute positioning (CSS) keeps the dropdown attached to the search box
   // and scrolling with the page, so taps land correctly on mobile.
@@ -3473,36 +3473,35 @@ function escapeAskHtml_(str) {
   return String(str == null ? "" : str).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-// Reads like a request rather than a title/actor search.
-function looksLikeAskRequest_(q) {
-  const t = String(q || "").trim().toLowerCase();
-  if (!t) return false;
-  if (t.includes("?")) return true;
-  if (/^(like|something|suggest|recommend|movies?|films?|what|which|best|good|funny|feel|any|show|top|a |an |i want|i'm in|im in|looking for)/.test(t)) return true;
-  return t.split(/\s+/).length >= 3;
-}
-
 // One box for everything: the hero's "✨ Ask Masala Meter" button just
 // takes you to the main search box, which searches the catalog as you type
 // and asks the AI for requests (Enter with no catalog match, or the ✨ row).
 function focusSearchToAsk() {
   const input = document.getElementById("searchInput");
-  input.placeholder = "What do you feel like watching? Or search a movie…";
+  clearSearchText_();
   input.scrollIntoView({ behavior: "smooth", block: "center" });
   setTimeout(() => input.focus(), 350);
 }
 function askFromSearch() {
   const q = document.getElementById("searchInput").value.trim();
   hideSuggestions();
-  if (q) askMasalaMeter(looksLikeAskRequest_(q) ? q : `movies like "${q}"`);
+  if (q) askMasalaMeter(q);
 }
-// Enter in the search box: normal search first; if nothing matches and it
-// reads like a request, ask instead of showing an empty grid.
+// A clear title hit ("doctor", "kantara") — the only case where Enter
+// skips the AI. Names, misspellings ("mani rathnam" was matching Aadai via
+// its director Rathna Kumar), genres and moods go to the AI too.
+function strongTitleMatch_(q) {
+  const t = String(q || "").toLowerCase().trim();
+  return !!t && allMovies.some(m => relevanceScore(m, t) >= 80);
+}
+
+// Enter: the grid always shows the catalog matches; unless it's a clear
+// title, the AI answer appears above them as well.
 function searchEnter() {
   filterMovies();
   hideSuggestions();
   const q = document.getElementById("searchInput").value.trim();
-  if (q && looksLikeAskRequest_(q) && !(window._currentMovies || []).length) askMasalaMeter(q);
+  if (q && !askIsBlocked_(q) && !strongTitleMatch_(q)) askMasalaMeter(q);
 }
 
 // Back to the full list: empties the search box (a search otherwise keeps
