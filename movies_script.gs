@@ -2365,8 +2365,13 @@ function askIsBlocked_(text) {
   return ASK_BLOCKED_RE.test(String(text || "").toLowerCase()) || ASK_BLOCKED_RE.test(n) || ASK_BLOCKED_RE.test(n.replace(/(\w)\1+/g, "$1"));
 }
 
-function askMasalaMeter_(rawQuestion) {
+function askMasalaMeter_(rawQuestion, rawExclude) {
   const question = String(rawQuestion || "").replace(/\s+/g, " ").trim();
+  // "Show more picks": titles already shown for this question, so the
+  // next batch is different.
+  const exclude = String(rawExclude || "").split("|").map(t => t.trim()).filter(Boolean).slice(0, 40);
+  const excluded = {};
+  exclude.forEach(t => { excluded[t.toLowerCase()] = true; });
   if (!question) return { ok: false, error: "empty" };
   if (question.length > ASK_MAX_QUESTION_CHARS) return { ok: false, error: "too_long" };
   if (askIsBlocked_(question)) return { ok: false, error: "blocked" };
@@ -2420,7 +2425,7 @@ Recommend films ONLY from the catalog below. Each line is: id|title|year|languag
 Use your own knowledge of these films (tone, genre, humour, darkness, family-friendliness) to judge the fit, plus the takeaway for recent ones. Prefer higher scores when fits are similar. If the visitor names a film, don't recommend that same film. If the question isn't about choosing a film to watch, or nothing in the catalog fits, return no picks and say so briefly in "intro".
 Keep every word you write family-friendly: no profanity, slurs or sexual language, and never repeat crude words from the question. If the visitor asks for sexual, explicit or adult content, return no picks and a polite one-line "intro" suggesting they ask about a mood, genre or language instead. Mature but mainstream requests (a dark, violent or intense thriller) are fine.
 
-Reply with JSON only, in this exact shape:
+${exclude.length ? "The visitor already saw these picks, so DON'T include them again; give the next best ones instead: " + exclude.join("; ") + "\n\n" : ""}Reply with JSON only, in this exact shape:
 {"intro": "one short friendly sentence", "picks": [{"id": 12, "why": "one short sentence on why it fits"}]}
 Give 3 to 5 picks when possible.
 
@@ -2460,7 +2465,7 @@ ${catalog.map(c => c.line).join("\n")}`;
     const seen = {};
     const picks = (answer.picks || []).map(p => {
       const c = catalog[Number(p && p.id)];
-      if (!c || seen[c.title + "|" + c.year]) return null;
+      if (!c || seen[c.title + "|" + c.year] || excluded[c.title.toLowerCase()]) return null;
       seen[c.title + "|" + c.year] = true;
       const why = String(p.why || "").slice(0, 220);
       return { title: c.title, year: c.year, why: askIsBlocked_(why) ? "" : why }; // drop wording that slipped past
@@ -3677,7 +3682,7 @@ function doGet(e) {
   // Return movies as JSON for the website
   if (e && e.parameter && e.parameter.action === "ask") {
     return ContentService
-      .createTextOutput(JSON.stringify(askMasalaMeter_(e.parameter.q)))
+      .createTextOutput(JSON.stringify(askMasalaMeter_(e.parameter.q, e.parameter.exclude)))
       .setMimeType(ContentService.MimeType.JSON);
   }
 

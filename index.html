@@ -132,6 +132,8 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .ask-pick-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;}
 .ask-score{font-size:12px;font-weight:800;padding:3px 8px;border-radius:6px;}
 .ask-why{font-size:13.5px;color:var(--text2);margin-top:6px;line-height:1.45;}
+.ask-more{display:block;width:100%;margin:2px 0 6px;padding:11px;border-radius:10px;border:1px solid #6b4bd1;background:#16121f;color:#e9dcff;font-size:14.5px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 0 14px rgba(124,92,252,0.2);}
+.ask-more:hover{border-color:#9b80ff;}
 .ask-foot{font-size:11.5px;color:var(--text3);margin-top:6px;}
 .btn-hero-secondary{background:var(--bg3);color:#F2C94C;border:1px solid var(--border);}
 .btn-hero-secondary:hover{border-color:var(--red);}
@@ -3565,12 +3567,13 @@ function localPlatformAnswer_(q) {
   rest = rest.replace(/[?!.,']/g, " ").replace(/\b(what|whats|what's|s|is|are|on|streaming|stream|now|right|today|new|latest|movies?|films?|show|me|the|in|us|uk|available|to|watch|list|of|all|good|best|top|video)\b/g, " ").trim();
   if (rest) return null; // there's more to the question than a service name
   const onIt = allMovies.filter(m => Number(m.GauthamScore) > 0 && platform.keys.some(k => getPlatformLabel(m).toLowerCase().includes(k)));
-  if (!onIt.length) return { intro: `None of our reviewed movies are listed on ${platform.label} (${getSelectedRegion()}) right now.`, picks: [] };
+  if (!onIt.length) return { intro: `None of our reviewed movies are listed on ${platform.label} (${getSelectedRegion()}) right now.`, all: [] };
   const fresh = onIt.filter(isNewOnStreaming).sort((a, b) => String(b.StreamingSince || "").localeCompare(String(a.StreamingSince || ""))).slice(0, 2);
-  const best = onIt.filter(m => fresh.indexOf(m) === -1).sort((a, b) => Number(b.GauthamScore) - Number(a.GauthamScore)).slice(0, 5 - fresh.length);
+  const best = onIt.filter(m => fresh.indexOf(m) === -1).sort((a, b) => Number(b.GauthamScore) - Number(a.GauthamScore));
   return {
     intro: `${onIt.length} of our reviewed movies are on ${platform.label} (${getSelectedRegion()}).${fresh.length ? " New arrivals first, then the best-rated:" : " The best-rated:"}`,
-    picks: fresh.map(m => ({ movie: m, why: "New on " + platform.label + "." + (m.Takeaway ? " " + m.Takeaway : "") }))
+    // The whole ordered list: the first 5 show, "Show more" pages through the rest for free.
+    all: fresh.map(m => ({ movie: m, why: "New on " + platform.label + "." + (m.Takeaway ? " " + m.Takeaway : "") }))
       .concat(best.map(m => ({ movie: m, why: m.Takeaway || "" })))
   };
 }
@@ -3582,26 +3585,91 @@ function renderAskPanel_(question, bodyHtml) {
   panel.classList.add("show");
 }
 
-function renderAskPicks_(question, intro, picks) {
-  const cards = picks.map(({ movie: m, why }) => {
-    const tier = getMasalaTier(m.GauthamScore);
-    const badge = getPlatformBadge(m);
-    const poster = m.PosterURL ? `<img src="${escapeAskHtml_(m.PosterURL)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;ask-noposter&quot;></div>'"/>` : `<div class="ask-noposter"></div>`;
-    return `<div class="ask-pick" onclick="openMovieByTitle('${jsAttrEscape(m.Title)}')">
-      ${poster}
-      <div>
-        <div class="ask-pick-title">${escapeAskHtml_(m.Title)}</div>
-        <div class="ask-pick-meta">${escapeAskHtml_([m.Language, m.Year].filter(Boolean).join(" · "))}</div>
-        <div class="ask-pick-row">
-          ${tier ? `<span class="ask-score" style="background:${tier.color}22;color:${tier.color}">${m.GauthamScore} ${tier.emoji} ${tier.name}</span>` : ""}
-          ${badge ? `<span class="carousel-platform-badge" style="background:${badge.color};color:${badge.text}">${escapeAskHtml_(badge.label)}</span>` : ""}
-        </div>
-        ${why ? `<div class="ask-why">${escapeAskHtml_(why)}</div>` : ""}
+function askPickCardHtml_({ movie: m, why }) {
+  const tier = getMasalaTier(m.GauthamScore);
+  const badge = getPlatformBadge(m);
+  const poster = m.PosterURL ? `<img src="${escapeAskHtml_(m.PosterURL)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;ask-noposter&quot;></div>'"/>` : `<div class="ask-noposter"></div>`;
+  return `<div class="ask-pick" onclick="openMovieByTitle('${jsAttrEscape(m.Title)}')">
+    ${poster}
+    <div>
+      <div class="ask-pick-title">${escapeAskHtml_(m.Title)}</div>
+      <div class="ask-pick-meta">${escapeAskHtml_([m.Language, m.Year].filter(Boolean).join(" · "))}</div>
+      <div class="ask-pick-row">
+        ${tier ? `<span class="ask-score" style="background:${tier.color}22;color:${tier.color}">${m.GauthamScore} ${tier.emoji} ${tier.name}</span>` : ""}
+        ${badge ? `<span class="carousel-platform-badge" style="background:${badge.color};color:${badge.text}">${escapeAskHtml_(badge.label)}</span>` : ""}
       </div>
-    </div>`;
-  }).join("");
-  renderAskPanel_(question, `<div class="ask-intro">${escapeAskHtml_(intro)}</div>${cards}
+      ${why ? `<div class="ask-why">${escapeAskHtml_(why)}</div>` : ""}
+    </div>
+  </div>`;
+}
+
+// What the current answer is, so "Show more picks" can continue it.
+// local: the free service list being paged; otherwise more come from the AI,
+// told which titles were already shown.
+let askState = null;
+const ASK_PAGE_SIZE = 5;
+
+function renderAskPicks_(question, intro, picks) {
+  renderAskPanel_(question, `<div class="ask-intro">${escapeAskHtml_(intro)}</div>
+    <div id="askPicks">${picks.map(askPickCardHtml_).join("")}</div>
+    <div id="askMore"></div>
     <div class="ask-foot">Picks come only from Masala Meter's reviews · streaming changes, check JustWatch</div>`);
+  askState.shown = picks.map(p => p.movie.Title);
+  renderAskMoreButton_();
+}
+
+function renderAskMoreButton_(message) {
+  const box = document.getElementById("askMore");
+  if (!box) return;
+  const moreLocal = askState.local && askState.shown.length < askState.local.length;
+  if (message) box.innerHTML = `<div class="ask-intro" style="margin:4px 0 0;">${escapeAskHtml_(message)}</div>`;
+  else if (askState.local && !moreLocal) box.innerHTML = "";
+  else box.innerHTML = `<button class="ask-more" onclick="askShowMore()">✨ Show more picks</button>`;
+}
+
+async function askShowMore() {
+  if (!askState || askState.loading) return;
+  const picksBox = document.getElementById("askPicks");
+  if (askState.local) {
+    const next = askState.local.slice(askState.shown.length, askState.shown.length + ASK_PAGE_SIZE);
+    picksBox.insertAdjacentHTML("beforeend", next.map(askPickCardHtml_).join(""));
+    askState.shown = askState.shown.concat(next.map(p => p.movie.Title));
+    renderAskMoreButton_();
+    return;
+  }
+  if (!askDeviceCountOk_()) { renderAskMoreButton_("You've asked a lot today — try again tomorrow."); return; }
+  askState.loading = true;
+  document.getElementById("askMore").innerHTML = `<div class="ask-thinking"><span class="toast-spinner"></span> Finding more picks…</div>`;
+  const data = await fetchAskAnswer_(askState.question, askState.shown);
+  askState.loading = false;
+  if (!data.ok) { renderAskMoreButton_(data.message); return; }
+  const fresh = data.picks.filter(p => askState.shown.indexOf(p.movie.Title) === -1);
+  if (!fresh.length) { renderAskMoreButton_("That's all we have for this — try a different question."); return; }
+  picksBox.insertAdjacentHTML("beforeend", fresh.map(askPickCardHtml_).join(""));
+  askState.shown = askState.shown.concat(fresh.map(p => p.movie.Title));
+  renderAskMoreButton_();
+}
+
+// One server call; returns {ok, intro, picks:[{movie, why}]} or {ok:false, message, blocked}.
+async function fetchAskAnswer_(question, exclude) {
+  try {
+    let url = API_URL + "?action=ask&q=" + encodeURIComponent(question);
+    if (exclude && exclude.length) url += "&exclude=" + encodeURIComponent(exclude.slice(-40).join("|"));
+    const data = await (await fetch(url)).json();
+    if (!data.ok) {
+      if (data.error === "blocked") return { ok: false, blocked: true, message: ASK_BLOCKED_MSG };
+      return { ok: false, message: data.error === "limit" ? "Ask Masala Meter has answered as many questions as it can today — please try again tomorrow."
+        : data.error === "too_long" ? "That's a bit long — try a shorter question."
+        : "Couldn't get an answer right now — please try again in a moment." };
+    }
+    const picks = (data.picks || []).map(p => {
+      const movie = allMovies.find(m => m.Title === p.title && String(m.Year || "") === String(p.year || "")) || allMovies.find(m => m.Title === p.title);
+      return movie ? { movie, why: askIsBlocked_(p.why) ? "" : p.why } : null;
+    }).filter(Boolean);
+    return { ok: true, intro: (!askIsBlocked_(data.intro) && data.intro) || "", picks };
+  } catch (err) {
+    return { ok: false, message: "Couldn't get an answer right now — please try again in a moment." };
+  }
 }
 
 async function askMasalaMeter(question) {
@@ -3621,37 +3689,28 @@ async function askMasalaMeter(question) {
   };
 
   const local = localPlatformAnswer_(question);
-  if (local) { renderAskPicks_(question, local.intro, local.picks); scrollToPanel(); return; }
+  if (local) {
+    askState = { question, local: local.all, shown: [] };
+    if (!local.all.length) { renderAskPanel_(question, `<div class="ask-intro">${escapeAskHtml_(local.intro)}</div>`); scrollToPanel(); return; }
+    renderAskPicks_(question, local.intro, local.all.slice(0, ASK_PAGE_SIZE));
+    scrollToPanel(); return;
+  }
 
   if (!askDeviceCountOk_()) {
     renderAskPanel_(question, `<div class="ask-intro">You've asked a lot today — try again tomorrow, or browse and search the movies below.</div>`);
     scrollToPanel(); return;
   }
+  askState = { question, local: null, shown: [], loading: true };
   renderAskPanel_(question, `<div class="ask-thinking"><span class="toast-spinner"></span> Finding picks from our reviews…</div>`);
   scrollToPanel();
-  try {
-    const res = await fetch(API_URL + "?action=ask&q=" + encodeURIComponent(question));
-    const data = await res.json();
-    if (!data.ok) {
-      if (data.error === "blocked") { renderAskPanel_("", `<div class="ask-intro">${escapeAskHtml_(ASK_BLOCKED_MSG)}</div>`); return; }
-      const msg = data.error === "limit" ? "Ask Masala Meter has answered as many questions as it can today — please try again tomorrow."
-        : data.error === "too_long" ? "That's a bit long — try a shorter question."
-        : "Couldn't get an answer right now — please try again in a moment.";
-      renderAskPanel_(question, `<div class="ask-intro">${msg}</div>`);
-      return;
-    }
-    const picks = (data.picks || []).map(p => {
-      const movie = allMovies.find(m => m.Title === p.title && String(m.Year || "") === String(p.year || "")) || allMovies.find(m => m.Title === p.title);
-      return movie ? { movie, why: askIsBlocked_(p.why) ? "" : p.why } : null;
-    }).filter(Boolean);
-    if (!picks.length) {
-      renderAskPanel_(question, `<div class="ask-intro">${escapeAskHtml_(data.intro || "Nothing in Masala Meter fits that yet — try a different mood, language or service.")}</div>`);
-      return;
-    }
-    renderAskPicks_(question, (!askIsBlocked_(data.intro) && data.intro) || "Here's what fits:", picks);
-  } catch (err) {
-    renderAskPanel_(question, `<div class="ask-intro">Couldn't get an answer right now — please try again in a moment.</div>`);
+  const data = await fetchAskAnswer_(question);
+  askState.loading = false;
+  if (!data.ok) { renderAskPanel_(data.blocked ? "" : question, `<div class="ask-intro">${escapeAskHtml_(data.message)}</div>`); return; }
+  if (!data.picks.length) {
+    renderAskPanel_(question, `<div class="ask-intro">${escapeAskHtml_(data.intro || "Nothing in Masala Meter fits that yet — try a different mood, language or service.")}</div>`);
+    return;
   }
+  renderAskPicks_(question, data.intro || "Here's what fits:", data.picks);
 }
 
 // True only when this page is running inside the native Capacitor app
