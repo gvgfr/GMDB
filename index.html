@@ -2675,6 +2675,7 @@ function renderMovies(movies) {
       <div class="empty-icon">🎬</div>
       <div class="empty-title">No movies found</div>
       <p>Try a different search or filter.</p>
+      ${currentQuery && !askIsBlocked_(currentQuery) ? `<button class="btn-hero btn-hero-ask" style="margin-top:1rem;" onclick="askFromSearch()">✨ Ask Masala Meter about "${escapeAskHtml_(currentQuery)}"</button>` : ""}
     </div>`;
     return;
   }
@@ -2776,7 +2777,23 @@ function handleSearchInput() {
 // paragraph. Without this, common words (e.g. "with") match almost the
 // entire catalog via description text alone, making search feel broken
 // even though it's technically "working."
+// Multi-word searches like "tamil drama" or "2024 malayalam thriller":
+// when the whole phrase matches no single field, every word has to match
+// some field on its own (language, genre, cast, year…) — so all the
+// words count, not just one.
 function relevanceScore(m, q) {
+  const whole = relevanceScoreSingle_(m, q);
+  const words = String(q || "").split(/\s+/).filter(w => w.length > 1);
+  if (whole > 0 || words.length < 2) return whole;
+  for (const w of words) {
+    if (relevanceScoreSingle_(m, w) < 25) return 0;
+  }
+  // Same rank for every all-words match, so the grid's tie-break (Masala
+  // Meter score) lists the best films first.
+  return 30;
+}
+
+function relevanceScoreSingle_(m, q) {
   const title = String(m.Title || "").toLowerCase();
   if (title === q) return 100;                    // exact title match
   if (title.startsWith(q)) return 90;              // title starts with query
@@ -2806,7 +2823,7 @@ function showSuggestions() {
   const matches = allMovies
     .map(m => ({ m, score: relevanceScore(m, q) }))
     .filter(x => x.score >= 25)
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => (b.score - a.score) || (Number(b.m.GauthamScore) || 0) - (Number(a.m.GauthamScore) || 0))
     .slice(0, 8)
     .map(x => x.m);
 
@@ -2894,7 +2911,7 @@ function filterMovies() {
     filtered = allMovies
       .map(m => ({ m, score: relevanceScore(m, q) }))
       .filter(x => x.score >= 25)   // drop weak description-only matches
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => (b.score - a.score) || (Number(b.m.GauthamScore) || 0) - (Number(a.m.GauthamScore) || 0))
       .map(x => x.m);
   } else {
     if (currentFilter === "coming-soon") {
