@@ -2769,7 +2769,7 @@ function fuzzyMatch(str, query) {
 }
 
 function handleSearchInput() {
-  filterMovies();
+  filterMovies(true);
   showSuggestions();
 }
 
@@ -2896,7 +2896,7 @@ document.addEventListener("click", e => {
   }
 })();
 
-function filterMovies() {
+function filterMovies(whileTyping) {
   const q = document.getElementById("searchInput").value.toLowerCase().trim();
   updateSearchClear_(); // ✕ in the box whenever there's text, however it got there
 
@@ -2977,8 +2977,14 @@ function filterMovies() {
   }
 
   filtered = sortMovies(filtered);
-  const countText = filtered.length + " movie" + (filtered.length !== 1 ? "s" : "");
   const label = document.getElementById("gridLabel");
+  // Mid-typing ("nice" on the way to "nice tamil romance"), don't flash
+  // "0 movies / No movies found": keep the current grid and point at Enter.
+  if (whileTyping && q && !filtered.length) {
+    label.innerHTML = `Keep typing, or press Enter to ✨ Ask Masala Meter <span class="show-all-link" onclick="clearSearch()">✕ Show all movies</span>`;
+    return;
+  }
+  const countText = filtered.length + " movie" + (filtered.length !== 1 ? "s" : "");
   if (q) {
     // A search ignores the filters above it, so make the way back obvious.
     label.innerHTML = `${countText} for "${escapeAskHtml_(q)}" <span class="show-all-link" onclick="clearSearch()">✕ Show all movies</span>`;
@@ -3503,7 +3509,14 @@ function searchEnter() {
   filterMovies();
   hideSuggestions();
   const q = document.getElementById("searchInput").value.trim();
-  if (q && !askIsBlocked_(q) && !strongTitleMatch_(q)) askMasalaMeter(q);
+  if (q && !askIsBlocked_(q) && !strongTitleMatch_(q)) {
+    // The AI answer above replaces the big "No movies found" screen.
+    if (!(window._currentMovies || []).length) {
+      document.getElementById("gridLabel").innerHTML = `No direct matches in the list — see the ✨ picks above <span class="show-all-link" onclick="clearSearch()">✕ Show all movies</span>`;
+      document.getElementById("moviesGrid").innerHTML = "";
+    }
+    askMasalaMeter(q);
+  }
 }
 
 // Back to the full list: empties the search box (a search otherwise keeps
