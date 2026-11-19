@@ -288,7 +288,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .movies-grid.list-view .card{display:flex;flex-direction:row;align-items:center;height:auto;}
 .movies-grid.list-view .card-poster,.movies-grid.list-view .card-poster-placeholder{width:60px;height:90px;flex-shrink:0;border-radius:8px;}
 .movies-grid.list-view .card-body{flex:1;padding:0 0 0 16px;display:flex;align-items:center;justify-content:space-between;}
-.movies-grid.list-view .card-title{font-size:17px;margin-bottom:2px;white-space:normal;}
+.movies-grid.list-view .card-title{font-size:19px;margin-bottom:2px;white-space:normal;}
 .movies-grid.list-view .card-meta{margin-bottom:0;}
 .movies-grid.list-view .card-info{flex:1;}
 @media(min-width:640px){.movies-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));}}
@@ -311,8 +311,8 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .new-stream-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#1DD3B0;color:#04241d;font-size:11px;font-weight:800;}
 .card-poster-placeholder{width:100%;aspect-ratio:2/3;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--text3);}
 .card-body{padding:12px 14px 14px;}
-.card-title{font-size:16px;font-weight:700;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.card-meta{font-size:13px;color:var(--text2);margin-bottom:10px;}
+.card-title{font-size:18px;font-weight:800;color:#fff;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-meta{font-size:14.5px;color:#c4c0b7;margin-bottom:10px;}
 .card-score{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;font-size:16px;font-weight:700;}
 .tier-vera{background:rgba(16,185,90,0.22);color:#10D96A;}
 .tier-semma{background:rgba(56,150,255,0.22);color:#5BA8FF;}
@@ -336,25 +336,25 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .shared-link-banner:hover{filter:brightness(1.05);}
 .modal-body{padding:1.5rem;}
 .modal-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;margin-bottom:4px;}
-.modal-meta{font-size:13px;color:var(--text2);margin-bottom:1.25rem;}
+.modal-meta{font-size:15px;color:#c4c0b7;margin-bottom:1.25rem;}
 .meta-language{color:#1DB954;font-weight:600;}
 .meta-genre{color:#B36AE2;font-weight:600;}
 .modal-score-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center;}
 .modal-score-big{font-family:'Playfair Display',serif;font-size:42px;font-weight:900;color:var(--red);line-height:1;}
-.modal-score-label{font-size:11px;color:var(--text2);letter-spacing:1px;}
+.modal-score-label{font-size:12.5px;color:#c4c0b7;letter-spacing:1px;}
 .modal-badge{padding:6px 12px;border-radius:6px;font-size:13px;font-weight:600;}
 .modal-section{margin-bottom:1.25rem;}
-.modal-section-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#C9A24B;font-weight:700;margin-bottom:6px;}
-.modal-section-value{font-size:16px;color:var(--text);line-height:1.7;}
+.modal-section-label{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#C9A24B;font-weight:700;margin-bottom:6px;}
+.modal-section-value{font-size:17.5px;color:#f0ede6;line-height:1.7;}
 .story-clamp{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
 .story-clamp.story-open{-webkit-line-clamp:unset;overflow:visible;}
-.story-toggle{background:none;border:none;color:#FFB020;font-size:14px;font-weight:600;cursor:pointer;padding:6px 0 0;font-family:inherit;}
+.story-toggle{background:none;border:none;color:#FFB020;font-size:15px;font-weight:600;cursor:pointer;padding:6px 0 0;font-family:inherit;}
 .story-toggle:hover{text-decoration:underline;}
 .trivia-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;}
-.trivia-item{position:relative;padding-left:26px;font-size:15px;color:var(--text);line-height:1.55;}
+.trivia-item{position:relative;padding-left:26px;font-size:16.5px;color:var(--text);line-height:1.55;}
 .trivia-item::before{content:"🎬";position:absolute;left:0;top:1px;font-size:14px;}
 .modal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:1.5rem;position:sticky;bottom:0;background:linear-gradient(to top, var(--bg2) 70%, transparent);padding:16px 0 4px;z-index:5;}
-.modal-btn{flex:1;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;}
+.modal-btn{flex:1;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;font-family:'Inter',sans-serif;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;}
 .modal-btn-primary{background:var(--red);color:white;}
 .modal-btn-primary:hover{background:var(--red2);}
 .modal-btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
@@ -448,8 +448,8 @@ footer span{color:var(--red);}
 /* TAKEAWAY QUOTE */
 .takeaway{
   font-family:'Playfair Display',serif;
-  font-size:18px;font-style:italic;font-weight:600;
-  color:var(--text);line-height:1.55;
+  font-size:19.5px;font-style:italic;font-weight:600;
+  color:#fff;line-height:1.55;
   border-left:3px solid var(--red);
   padding:6px 0 6px 18px;margin:1rem 0 1.25rem;
 }
@@ -466,11 +466,11 @@ footer span{color:var(--red);}
 .cast-photo-item{flex:0 0 auto;width:72px;text-align:center;}
 .cast-photo-img{width:64px;height:64px;border-radius:50%;object-fit:cover;object-position:top center;background:var(--bg3);border:2px solid rgba(255,255,255,0.1);}
 .cast-photo-placeholder{width:64px;height:64px;border-radius:50%;background:var(--bg3);border:2px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:22px;}
-.cast-photo-name{margin-top:6px;font-size:11px;line-height:1.25;color:var(--text2);word-break:break-word;display:block;text-decoration:none;}
+.cast-photo-name{margin-top:6px;font-size:12.5px;line-height:1.25;color:#d6d2c9;word-break:break-word;display:block;text-decoration:none;}
 .cast-photo-name:hover{color:#1DD3B0;text-decoration:underline;}
 .meta-block{flex:1;min-width:120px;}
-.meta-block-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#FFB020;margin-bottom:4px;font-weight:600;}
-.meta-block-value{font-size:14px;color:var(--text);line-height:1.5;}
+.meta-block-label{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#FFB020;margin-bottom:4px;font-weight:600;}
+.meta-block-value{font-size:16px;color:var(--text);line-height:1.5;}
 .songs-value{font-size:13px;color:var(--red);font-weight:500;}
 .songs-wrap{display:flex;flex-direction:column;gap:8px;}
 .song-card{display:flex;gap:12px;background:rgba(29,185,84,0.06);border:1px solid rgba(29,185,84,0.25);border-radius:10px;padding:10px 14px;transition:border-color 0.2s;cursor:pointer;}
@@ -478,20 +478,24 @@ footer span{color:var(--red);}
 .song-poster{width:52px;height:74px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--bg3);}
 .song-poster-placeholder{display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text3);}
 .song-card-body{flex:1;min-width:0;}
-.song-title{font-size:14px;color:var(--text);font-weight:700;}
-.song-link{font-size:14px;color:var(--text);font-weight:700;text-decoration:none;display:inline-block;}
+/* Review-popup song cards have no body wrapper: stack title, singers, why-it's-a-hit and footer
+   top to bottom so the text gets the full card width instead of four narrow columns. */
+.movie-songs .song-card{flex-direction:column;gap:2px;}
+.movie-songs .song-card-footer{margin-top:8px;}
+.song-title{font-size:15.5px;color:var(--text);font-weight:700;}
+.song-link{font-size:15.5px;color:var(--text);font-weight:700;text-decoration:none;display:inline-block;}
 .song-link:hover{text-decoration:underline;}
-.song-singers{font-size:12px;color:var(--text3);margin-top:2px;}
-.song-why{font-size:13px;color:var(--text2);line-height:1.5;margin-top:5px;}
+.song-singers{font-size:13.5px;color:#b4b0a7;margin-top:2px;}
+.song-why{font-size:14.5px;color:#d6d2c9;line-height:1.5;margin-top:5px;}
 .song-why b{color:var(--text);font-weight:600;}
-.song-score{font-size:12px;color:#1DB954;font-weight:700;}
+.song-score{font-size:13px;color:#1DB954;font-weight:700;}
 .song-card-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:6px;}
 .song-spotify-badge{display:inline-flex;align-items:center;gap:5px;background:#1DB954;color:#04231d;font-size:11px;font-weight:800;padding:5px 10px;border-radius:20px;text-decoration:none;flex-shrink:0;}
 .song-spotify-badge:hover{background:#1ED760;}
 .song-detail-modal{max-width:420px;margin:1rem auto;padding:2rem;text-align:center;}
 .song-detail-poster{width:160px;height:230px;border-radius:10px;object-fit:cover;margin:0 auto 1rem;display:block;box-shadow:0 8px 24px rgba(0,0,0,0.5);}
 .song-detail-title{font-size:1.4rem;margin:0 0 4px;}
-.song-detail-meta{font-size:13px;color:var(--text2);margin:2px 0;}
+.song-detail-meta{font-size:14.5px;color:#c4c0b7;margin:2px 0;}
 .song-detail-links{display:flex;flex-direction:column;gap:10px;margin-top:1.25rem;}
 .add-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid var(--red);border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;display:flex;align-items:center;gap:10px;max-width:90vw;}
 .simple-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid #FFB020;border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;max-width:90vw;text-align:center;}
@@ -529,18 +533,18 @@ footer span{color:var(--red);}
 .similar-card{cursor:pointer;transition:transform 0.2s;}
 .similar-card:hover{transform:translateY(-3px);}
 .similar-card img,.similar-noposter{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;}
-.similar-title{font-size:12px;font-weight:600;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.similar-reason{font-size:10px;color:var(--text3);line-height:1.3;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.similar-score{font-size:11px;font-weight:700;display:inline-block;padding:1px 6px;border-radius:4px;margin-top:3px;}
+.similar-title{font-size:13.5px;font-weight:700;color:#fff;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.similar-reason{font-size:12px;color:#c4c0b7;line-height:1.3;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.similar-score{font-size:12px;font-weight:700;display:inline-block;padding:1px 6px;border-radius:4px;margin-top:3px;}
 .recs-loading{grid-column:1/-1;color:var(--text3);font-size:13px;padding:12px 0;}
-.rec-badge{font-size:11px;font-weight:700;display:inline-block;padding:2px 8px;border-radius:4px;margin-top:3px;}
+.rec-badge{font-size:12px;font-weight:700;display:inline-block;padding:2px 8px;border-radius:4px;margin-top:3px;}
 .rec-have{background:rgba(16,185,90,0.2);color:#10D96A;}
 .rec-not-reviewed{background:var(--bg3);color:var(--text3);}
 .rec-add{background:rgba(229,32,32,0.2);color:var(--red);}
 .ott-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
-.ott-btn{display:inline-flex;align-items:center;font-size:13px;font-weight:600;color:#fff;text-decoration:none;background:var(--ott-color);padding:7px 16px;border-radius:8px;transition:all 0.2s;opacity:0.92;}
+.ott-btn{display:inline-flex;align-items:center;font-size:14.5px;font-weight:600;color:#fff;text-decoration:none;background:var(--ott-color);padding:7px 16px;border-radius:8px;transition:all 0.2s;opacity:0.92;}
 .ott-btn:hover{opacity:1;transform:translateY(-1px);}
-.ott-note{font-size:11px;color:var(--text3);}
+.ott-note{font-size:13px;color:#b4b0a7;}
 
 /* MASALA SCORE BADGE */
 .gmdb-badge{
@@ -554,12 +558,12 @@ footer span{color:var(--red);}
 
 /* SCORE BREAKDOWN */
 .score-breakdown{margin:1.25rem 0;}
-.breakdown-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
+.breakdown-title{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#b4b0a7;margin-bottom:12px;}
 .breakdown-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
-.breakdown-label{font-size:14px;color:var(--text2);width:150px;flex-shrink:0;}
+.breakdown-label{font-size:15px;color:#d6d2c9;width:150px;flex-shrink:0;}
 .breakdown-bar-wrap{flex:1;height:9px;background:rgba(255,255,255,0.08);border-radius:5px;overflow:hidden;}
 .breakdown-bar{height:100%;border-radius:5px;transition:width 1.6s cubic-bezier(0.22,1,0.36,1);}
-.breakdown-score{font-size:14px;font-weight:700;width:32px;text-align:right;flex-shrink:0;}
+.breakdown-score{font-size:15px;font-weight:700;width:32px;text-align:right;flex-shrink:0;}
 
 /* Mobile: declutter the filter/sort bar */
 @media(max-width:640px){
@@ -629,15 +633,15 @@ footer span{color:var(--red);}
   .modal-close{width:44px;height:44px;font-size:24px;top:10px;right:10px;}
   /* Toast sits above the pinned footer so it never covers Close */
   .add-toast{bottom:90px;}
-  .modal-btn{padding:15px;font-size:15px;}
+  .modal-btn{padding:15px;font-size:16px;}
   .add-modal-title, .add-title{font-size:1.4rem;}
   .similar-card img, .similar-noposter{height:auto;}
   .meta-grid{grid-template-columns:1fr 1fr;}
   .breakdown-row{font-size:14px;}
-  .breakdown-label{font-size:14px;width:130px;}
-  .breakdown-score{font-size:15px;}
-  .modal-section-value{font-size:16.5px;line-height:1.75;}
-  .modal-section-label{font-size:12px;}
+  .breakdown-label{font-size:15px;width:130px;}
+  .breakdown-score{font-size:16px;}
+  .modal-section-value{font-size:17.5px;line-height:1.7;}
+  .modal-section-label{font-size:13px;}
   header{padding:0 1rem;height:56px;}
   .logo{font-size:21px;white-space:nowrap;} /* keep "Masala Meter" on one line; only the subtitle wraps */
   .logo span{font-size:8.5px;letter-spacing:2.5px;margin-top:5px;line-height:1.4;white-space:normal;}
@@ -1377,7 +1381,7 @@ function buildHitSongs(m) {
       </div>
     </div>`;
   }).join("");
-  return `<div class="modal-section"><div class="modal-section-label">Hit Songs</div><div class="songs-wrap">${songCards}</div></div>`;
+  return `<div class="modal-section"><div class="modal-section-label">Hit Songs</div><div class="songs-wrap movie-songs">${songCards}</div></div>`;
 }
 
 // =============================================
