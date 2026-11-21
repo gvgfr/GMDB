@@ -17,9 +17,14 @@
       </div>
       <button type="button" id="lang-toggle" class="btn-ghost" aria-label="Switch language"></button>
     </div>
+    <nav class="wrap tabs" aria-label="Sections">
+      <a href="#jathagam" data-view="jathagam" data-i18n="tabJathagam"></a>
+      <a href="#porutham" data-view="porutham" data-i18n="tabPorutham"></a>
+    </nav>
   </header>
 
   <main class="wrap">
+   <div id="jathagam-view">
     <form id="birth-form" class="card form-card" novalidate>
       <div class="field">
         <label for="f-name" data-i18n="name"></label>
@@ -46,7 +51,7 @@
       <div class="field place-field">
         <label for="f-place" data-i18n="pob"></label>
         <input id="f-place" name="place" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="place-list" data-i18n-placeholder="placeHint" />
-        <ul id="place-list" role="listbox" hidden></ul>
+        <ul id="place-list" class="place-list" role="listbox" hidden></ul>
         <p id="place-picked" class="hint"></p>
       </div>
 
@@ -91,6 +96,8 @@
     </form>
 
     <section id="results" hidden aria-live="polite"></section>
+   </div>
+   <div id="porutham-view" hidden></div>
   </main>
 
   <footer class="site-footer">

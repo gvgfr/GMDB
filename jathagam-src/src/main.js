@@ -4,10 +4,11 @@ import '@fontsource/noto-sans-tamil/700.css';
 import './style.css';
 import { DateTime } from 'luxon';
 import { computeChart, localToUtc, zoneFor, offsetZone, activePeriod, yearsToYMD, dms } from './engine/index.js';
-import { NAMES, UI, thithiName } from './i18n.js';
+import { NAMES, UI, PUI, thithiName } from './i18n.js';
 import { southIndianChart } from './ui/chart.js';
 import { attachAutocomplete } from './ui/geocode.js';
 import { generatePalan } from './palan/index.js';
+import { initPorutham } from './ui/porutham.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -18,7 +19,7 @@ const state = {
   last: null, // last computed {chart, meta}
   showPalan: false,
 };
-const t = (k) => UI[state.lang][k] ?? k;
+const t = (k) => UI[state.lang][k] ?? PUI[state.lang][k] ?? k;
 // Matches the 640px breakpoint in style.css: palan sections start collapsed below it.
 const isMobile = () => window.matchMedia('(max-width: 639px)').matches;
 const nm = (table, i) => NAMES[table][state.lang][i];
@@ -30,6 +31,7 @@ function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach((el) => (el.textContent = t(el.dataset.i18n)));
   document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => (el.placeholder = t(el.dataset.i18nPlaceholder)));
   $('lang-toggle').textContent = t('lang');
+  porutham.relabel();
   if (state.last) renderResults(state.last);
 }
 $('lang-toggle').addEventListener('click', () => {
@@ -44,6 +46,17 @@ window.addEventListener('afterprint', () => closedForPrint.forEach((d) => (d.ope
 
 applyLang();
 });
+
+// ---------------------------------------------------------------- views
+const porutham = initPorutham($('porutham-view'), { lang: () => state.lang, t });
+function route() {
+  const view = location.hash === '#porutham' ? 'porutham' : 'jathagam';
+  $('jathagam-view').hidden = view !== 'jathagam';
+  $('porutham-view').hidden = view !== 'porutham';
+  document.querySelectorAll('.tabs a').forEach((a) => a.setAttribute('aria-current', a.dataset.view === view ? 'page' : 'false'));
+}
+window.addEventListener('hashchange', route);
+route();
 
 // ---------------------------------------------------------------- place
 attachAutocomplete(

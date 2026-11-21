@@ -19,6 +19,29 @@ phrased as what tradition says, with a note that these are cultural beliefs, not
 proven predictions. Health, lifespan and dosham verdicts are deliberately left
 out (a test checks this).
 
+## Thirumana porutham (marriage matching)
+The **Marriage porutham** tab (`#porutham`) runs the ten traditional Tamil
+checks for a bride and groom, from birth details or directly from a known
+nakshatram + rasi. Code: `src/engine/porutham.js`, UI `src/ui/porutham.js`.
+Counts are inclusive, from the girl's star/sign to the boy's.
+
+| Porutham | Rule used |
+|---|---|
+| Dinam | star count mod 9 ∈ {2,4,6,8,0} |
+| Ganam | same ganam, or deva girl + manushya boy = good; manushya girl + deva boy = fair; any rakshasa mismatch = no |
+| Mahendram | star count ∈ {4,7,10,13,16,19,22,25} |
+| Stree deergham | star count > 13 good, > 7 fair |
+| Yoni | enemy animals (horse–buffalo, elephant–lion, goat–monkey, serpent–mongoose, dog–deer, cat–rat, cow–tiger) = no; same animal good; else fair |
+| Rasi | sign count 1 or 7 good; 9–12 fair; 2–6, 8 no |
+| Rasi adhipathi | lords friendly both ways good; any enmity no; else fair |
+| Vasyam | Tamil almanac vasya table, either direction |
+| Rajju | stars must be in different rajju (pada/ooru/naabhi/kanta/siro) |
+| Vedhai | the 13 vedha pairs (incl. Mirugaseeridam–Chithirai–Avittam) |
+
+Rules vary between families and almanacs; same-nakshatram exceptions and
+Sevvai dosham are not applied. The result is shown as a traditional guide
+(score out of 10, rajju highlighted), never as a verdict.
+
 ## Privacy
 Everything runs in the browser. No storage (no cookies/localStorage), no
 analytics. The only network request is the place-name search to the
@@ -92,7 +115,6 @@ time → UTC for them is done independently with Python's `zoneinfo`.
   nakshatra/padam boundaries, dasa sequence and naming.
 
 ## Phase 2 hooks (not built)
-* **Porutham:** `computeChart().summary` already exposes rasi/nakshatra keys.
 * **Today's panchangam + rahu kalam:** `panchangam(date, lat, lon)` and the
   sunrise helpers in `astro.js` take any instant/location.
 * **Vakya vs Thirukanitha:** `SYSTEMS` in `engine/index.js`; `computeChart`

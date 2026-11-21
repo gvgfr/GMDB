@@ -37,7 +37,7 @@ export function attachAutocomplete(input, list, onPick, onError) {
     items.forEach((p, i) => {
       const li = document.createElement('li');
       li.role = 'option';
-      li.id = `place-opt-${i}`;
+      li.id = `${list.id}-opt-${i}`;
       li.textContent = p.label;
       const sub = document.createElement('small');
       sub.textContent = ` ${p.lat.toFixed(3)}, ${p.lon.toFixed(3)}`;
@@ -51,7 +51,7 @@ export function attachAutocomplete(input, list, onPick, onError) {
     });
     list.hidden = items.length === 0;
     input.setAttribute('aria-expanded', String(!list.hidden));
-    if (active >= 0) input.setAttribute('aria-activedescendant', `place-opt-${active}`);
+    if (active >= 0) input.setAttribute('aria-activedescendant', `${list.id}-opt-${active}`);
     else input.removeAttribute('aria-activedescendant');
   };
   const pick = (i) => {

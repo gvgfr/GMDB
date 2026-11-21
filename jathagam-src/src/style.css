@@ -77,14 +77,14 @@ input:focus, select:focus { border-color: var(--saffron); outline: none; box-sha
 .time-inputs select { width: auto; flex: 1; }
 label.inline { display: inline-flex; align-items: center; gap: 6px; margin-right: 16px; font-weight: 400; color: var(--ink); }
 .place-field { position: relative; }
-#place-list {
+#place-list, .place-list {
   position: absolute; z-index: 10; left: 0; right: 0; top: 100%; margin: 2px 0 0; padding: 4px 0;
   list-style: none; background: #fff; border: 1.5px solid var(--saffron); border-radius: 8px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); max-height: 300px; overflow-y: auto;
 }
-#place-list li { padding: 10px 12px; cursor: pointer; }
-#place-list li small { color: var(--muted); }
-#place-list li[aria-selected='true'], #place-list li:hover { background: #fdebd0; }
+#place-list li, .place-list li { padding: 10px 12px; cursor: pointer; }
+#place-list li small, .place-list li small { color: var(--muted); }
+.place-list li[aria-selected='true'], .place-list li:hover { background: #fdebd0; }
 .hint { color: var(--muted); font-size: 0.82rem; margin: 4px 0 0; }
 .error { color: #a01818; font-weight: 600; min-height: 1em; margin: 0 0 8px; }
 .warn { background: #fff1d6; border-left: 4px solid var(--saffron); padding: 8px 10px; margin: 10px 0 0; font-size: 0.9rem; }
@@ -176,6 +176,45 @@ details.palan-sec ul { padding-bottom: 8px; }
 .palan ul { margin: 0; padding-left: 1.2em; }
 .palan li { margin-bottom: 8px; line-height: 1.6; }
 
+/* tabs */
+.tabs { display: flex; gap: 4px; margin-top: 10px; }
+.tabs a {
+  color: var(--cream); text-decoration: none; padding: 8px 14px; border-radius: 8px 8px 0 0;
+  font-weight: 600; font-size: 0.92rem; opacity: 0.8; min-height: 40px; display: inline-flex; align-items: center;
+}
+.tabs a[aria-current='page'] { background: var(--cream); color: var(--maroon); opacity: 1; }
+.site-header { padding-bottom: 0; }
+
+/* porutham */
+.persons { display: grid; grid-template-columns: 1fr; gap: 0 16px; }
+fieldset.person { min-width: 0; }
+.person .mode-birth .row-2 { grid-template-columns: 1fr; }
+fieldset.person > legend {
+  font-weight: 700; color: var(--maroon); font-size: 1.05rem; padding: 0 6px;
+  background: var(--paper); border-radius: 6px;
+}
+.seg { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 14px; }
+.seg label {
+  display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--line);
+  border-radius: 999px; padding: 6px 12px; font-size: 0.88rem; cursor: pointer; background: #fff;
+}
+.seg label:has(input:checked) { border-color: var(--saffron); background: #fff1d6; font-weight: 600; }
+.tiles.two { grid-template-columns: 1fr; margin-bottom: 12px; }
+.tiles.two em { display: block; margin-top: 2px; }
+.score { display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 10px; margin-bottom: 12px; background: #fff; border: 2px solid var(--line); }
+.score strong { font-size: 2rem; color: var(--maroon); line-height: 1; }
+.score.ok { border-color: var(--ok); }
+.score.no { border-color: #a01818; }
+table.porutham { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.porutham th, .porutham td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.porutham thead th { color: var(--maroon); font-size: 0.8rem; background: #fbefd8; }
+.porutham small { display: block; color: var(--muted); font-weight: 400; font-size: 0.78rem; }
+.porutham .lv { font-weight: 700; }
+.lv-uthamam .lv { color: var(--ok); }
+.lv-madhyamam .lv { color: #b5650e; }
+.lv-illai .lv { color: #a01818; }
+.porutham .key-row th { color: var(--maroon); }
+
 /* footer */
 .site-footer { background: #3d1010; color: #f3e3c8; font-size: 0.85rem; padding: 16px 0 24px; }
 .site-footer a { color: var(--gold); }
@@ -186,6 +225,8 @@ details.palan-sec ul { padding-bottom: 8px; }
   .row-2 { grid-template-columns: 1fr 1fr; }
   .tiles { grid-template-columns: repeat(5, 1fr); }
   .charts { grid-template-columns: 1fr 1fr; }
+  .persons { grid-template-columns: 1fr 1fr; }
+  .tiles.two { grid-template-columns: 1fr 1fr; }
   .si-sign { font-size: 0.66rem; }
   .si-items { font-size: 0.9rem; }
   .form-card { max-width: 720px; margin-left: auto; margin-right: auto; }
@@ -197,7 +238,7 @@ details.palan-sec ul { padding-bottom: 8px; }
   body { background: #fff; font-size: 11pt; }
   .site-header { background: none; color: var(--maroon); border-bottom: 2px solid var(--maroon); padding: 0 0 6px; }
   .site-header h1 { color: var(--maroon); }
-  #lang-toggle, .form-card, .no-print, .tagline { display: none !important; }
+  #lang-toggle, .form-card, .no-print, .tagline, .tabs, #porutham-form { display: none !important; }
   .card { box-shadow: none; break-inside: avoid; border-color: #bbb; padding: 10px; margin-bottom: 10px; }
   .charts { grid-template-columns: 1fr 1fr; }
   .si-chart { max-width: 85mm; }

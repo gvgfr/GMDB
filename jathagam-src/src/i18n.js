@@ -192,3 +192,78 @@ export function thithiName(thithi, lang) {
   if (thithi === 29) return t.new[lang];
   return t[lang][thithi % 15];
 }
+
+export const PORUTHAM = {
+  names: {
+    ta: { dinam: 'தினம்', ganam: 'கணம்', mahendram: 'மகேந்திரம்', streeDeergham: 'ஸ்திரீ தீர்க்கம்', yoni: 'யோனி', rasi: 'ராசி', rasiAdhipathi: 'ராசி அதிபதி', vasyam: 'வசியம்', rajju: 'ரஜ்ஜு', vedhai: 'வேதை' },
+    en: { dinam: 'Dinam', ganam: 'Ganam', mahendram: 'Mahendram', streeDeergham: 'Stree Deergham', yoni: 'Yoni', rasi: 'Rasi', rasiAdhipathi: 'Rasi Adhipathi', vasyam: 'Vasyam', rajju: 'Rajju', vedhai: 'Vedhai' },
+  },
+  // What each check traditionally stands for
+  meaning: {
+    ta: { dinam: 'அன்றாட இணக்கம், நலம்', ganam: 'குண ஒற்றுமை', mahendram: 'செல்வமும் சந்ததியும்', streeDeergham: 'பெண்ணின் நலமும் செழிப்பும்', yoni: 'தாம்பத்திய ஒற்றுமை', rasi: 'வம்ச விருத்தி, குடும்ப இணக்கம்', rasiAdhipathi: 'பரஸ்பர புரிதல்', vasyam: 'பரஸ்பர ஈர்ப்பு', rajju: 'திருமண பந்தத்தின் உறுதி (மிக முக்கியமானதாகக் கருதப்படுகிறது)', vedhai: 'இல்லற வாழ்வில் தடைகள் இன்மை' },
+    en: { dinam: 'day-to-day harmony and well-being', ganam: 'compatibility of temperament', mahendram: 'prosperity and progeny', streeDeergham: 'well-being and prosperity of the bride', yoni: 'physical compatibility', rasi: 'growth and harmony of the family', rasiAdhipathi: 'mutual understanding', vasyam: 'mutual attraction', rajju: 'strength of the marriage bond (traditionally the most important)', vedhai: 'freedom from obstacles in married life' },
+  },
+  level: {
+    ta: { uthamam: 'உத்தமம்', madhyamam: 'மத்திமம்', illai: 'பொருத்தம் இல்லை' },
+    en: { uthamam: 'Uthamam (good)', madhyamam: 'Madhyamam (fair)', illai: 'No match' },
+  },
+  ganam: { ta: ['தேவ கணம்', 'மனித கணம்', 'ராட்சச கணம்'], en: ['Deva', 'Manushya', 'Rakshasa'] },
+  yoni: {
+    ta: { horse: 'குதிரை', elephant: 'யானை', goat: 'ஆடு', serpent: 'பாம்பு', dog: 'நாய்', cat: 'பூனை', rat: 'எலி', cow: 'பசு', buffalo: 'எருமை', tiger: 'புலி', deer: 'மான்', monkey: 'குரங்கு', mongoose: 'கீரி', lion: 'சிங்கம்' },
+    en: { horse: 'horse', elephant: 'elephant', goat: 'goat', serpent: 'serpent', dog: 'dog', cat: 'cat', rat: 'rat', cow: 'cow', buffalo: 'buffalo', tiger: 'tiger', deer: 'deer', monkey: 'monkey', mongoose: 'mongoose', lion: 'lion' },
+  },
+  rajju: { ta: ['பாத ரஜ்ஜு', 'தொடை ரஜ்ஜு', 'நாபி ரஜ்ஜு', 'கண்ட ரஜ்ஜு', 'சிரசு ரஜ்ஜு'], en: ['Pada (foot)', 'Ooru (thigh)', 'Naabhi (navel)', 'Kanta (neck)', 'Siro (head)'] },
+};
+
+export const PUI = {
+  ta: {
+    tabJathagam: 'ஜாதகம்',
+    tabPorutham: 'திருமணப் பொருத்தம்',
+    pTitle: 'திருமணப் பொருத்தம் (10 பொருத்தங்கள்)',
+    pIntro: 'மணமகள், மணமகன் இருவரின் பிறப்பு விவரங்களை அல்லது நட்சத்திரம், ராசியை உள்ளிடவும்.',
+    girl: 'மணமகள் (பெண்)',
+    boy: 'மணமகன் (ஆண்)',
+    modeBirth: 'பிறப்பு விவரம்',
+    modeStar: 'நட்சத்திரம் / ராசி தெரியும்',
+    selectStar: 'நட்சத்திரம்',
+    selectRasi: 'ராசி',
+    check: 'பொருத்தம் பார்',
+    result: 'பொருத்த முடிவு',
+    porutham: 'பொருத்தம்',
+    meaning: 'பாரம்பரியப் பொருள்',
+    level: 'நிலை',
+    score: (s) => `10-க்கு ${s} பொருத்தங்கள் உள்ளன.`,
+    rajjuOk: 'ரஜ்ஜு பொருந்துகிறது.',
+    rajjuNo: 'ரஜ்ஜு பொருந்தவில்லை.',
+    count: (n) => `எண்ணிக்கை ${n}`,
+    lords: (a, b) => `${a} – ${b}`,
+    guide: 'பாரம்பரியமாக பல குடும்பங்கள் ரஜ்ஜு பொருந்துவதுடன் குறைந்தது 6 பொருத்தங்களை எதிர்பார்க்கின்றன; முழு ஜாதகத்தையும் ஒப்பிடுகின்றன. இது பாரம்பரிய வழிகாட்டி மட்டுமே — இரு நபர்களின் உறவைப் பற்றிய தீர்ப்பு அல்ல.',
+    rulesVary: 'விதிகள் குடும்பத்துக்கும் பஞ்சாங்கத்துக்கும் ஏற்ப மாறுபடும்; ஒரே நட்சத்திரம் போன்ற விதிவிலக்குகள் இங்கு கணக்கில் கொள்ளப்படவில்லை. செவ்வாய் தோஷம் சேர்க்கப்படவில்லை.',
+    needBoth: 'இருவரின் விவரங்களையும் முழுமையாக உள்ளிடவும்.',
+  },
+  en: {
+    tabJathagam: 'Jathagam',
+    tabPorutham: 'Marriage porutham',
+    pTitle: 'Thirumana porutham (10-point matching)',
+    pIntro: 'Enter the birth details of the bride and groom, or their nakshatram and rasi if you know them.',
+    girl: 'Bride (girl)',
+    boy: 'Groom (boy)',
+    modeBirth: 'Birth details',
+    modeStar: 'I know the nakshatram / rasi',
+    selectStar: 'Nakshatram',
+    selectRasi: 'Rasi',
+    check: 'Check porutham',
+    result: 'Porutham result',
+    porutham: 'Porutham',
+    meaning: 'Traditional meaning',
+    level: 'Result',
+    score: (s) => `${s} of 10 poruthams match.`,
+    rajjuOk: 'Rajju matches.',
+    rajjuNo: 'Rajju does not match.',
+    count: (n) => `count ${n}`,
+    lords: (a, b) => `${a} – ${b}`,
+    guide: 'Traditionally many families look for at least 6 matches with rajju agreeing, and also compare the full charts. This is a traditional guide only — not a verdict on two people’s relationship.',
+    rulesVary: 'Rules vary between families and almanacs; exceptions such as both having the same nakshatram are not applied here. Sevvai dosham is not included.',
+    needBoth: 'Please complete the details for both people.',
+  },
+};
