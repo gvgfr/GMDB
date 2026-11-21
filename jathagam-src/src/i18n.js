@@ -47,7 +47,7 @@ export const NAMES = {
 
 export const UI = {
   ta: {
-    title: 'ஜாதகம்',
+    title: 'GV ஜாதகம்',
     tagline: 'தமிழ் ஜோதிட ஜனன ஜாதகம் — உங்கள் உலாவியிலேயே கணிக்கப்படுகிறது',
     name: 'பெயர் (விருப்பம்)',
     dob: 'பிறந்த தேதி',
@@ -113,7 +113,7 @@ export const UI = {
     lang: 'English',
   },
   en: {
-    title: 'Jathagam',
+    title: 'GV Jathagam',
     tagline: 'Tamil birth chart (jothidam) — computed entirely in your browser',
     name: 'Name (optional)',
     dob: 'Date of birth',

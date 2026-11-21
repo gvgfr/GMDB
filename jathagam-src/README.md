@@ -1,4 +1,4 @@
-# Jathagam — Tamil birth chart (jothidam)
+# GV Jathagam — Tamil birth chart (jothidam)
 
 A client-side Tamil astrology site: rasi and navamsam charts in the South Indian
 square format, nakshatram/padam, lagnam, planet table with vakram, Vimshottari

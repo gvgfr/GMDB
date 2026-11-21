@@ -2,7 +2,7 @@
   "name": "jathagam",
   "private": true,
   "version": "1.0.0",
-  "description": "Jathagam - Tamil astrology (jothidam) birth chart, computed entirely in the browser",
+  "description": "GV Jathagam - Tamil astrology (jothidam) birth chart, computed entirely in the browser",
   "type": "module",
   "license": "MIT",
   "scripts": {
