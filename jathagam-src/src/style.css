@@ -162,7 +162,17 @@ ol.bhukti li.current { background: #fff1d6; font-weight: 700; margin: 0 -12px; p
 }
 .btn-palan:hover { background: var(--maroon-2); }
 .palan .warn { margin: 0 0 6px; }
-.palan h3 { font-size: 1rem; color: var(--maroon); margin: 16px 0 6px; }
+.palan h3 { font-size: 1rem; color: var(--maroon); margin: 0; display: inline; }
+details.palan-sec { border-top: 1px solid var(--line); }
+details.palan-sec:first-of-type { border-top: 0; }
+details.palan-sec summary {
+  cursor: pointer; padding: 12px 0; min-height: 44px; list-style: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+details.palan-sec summary::-webkit-details-marker { display: none; }
+details.palan-sec summary::after { content: '+'; font-size: 1.3rem; line-height: 1; color: var(--saffron); font-weight: 700; }
+details.palan-sec[open] summary::after { content: '−'; }
+details.palan-sec ul { padding-bottom: 8px; }
 .palan ul { margin: 0; padding-left: 1.2em; }
 .palan li { margin-bottom: 8px; line-height: 1.6; }
 
@@ -193,6 +203,7 @@ ol.bhukti li.current { background: #fff1d6; font-weight: 700; margin: 0 -12px; p
   .si-chart { max-width: 85mm; }
   .tiles { grid-template-columns: repeat(5, 1fr); }
   details.dasa { break-inside: avoid; }
+  details.palan-sec summary::after { content: none; }
   .site-footer { background: none; color: #444; padding: 6px 0 0; }
   .site-footer .small { display: none; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

@@ -19,6 +19,8 @@ const state = {
   showPalan: false,
 };
 const t = (k) => UI[state.lang][k] ?? k;
+// Matches the 640px breakpoint in style.css: palan sections start collapsed below it.
+const isMobile = () => window.matchMedia('(max-width: 639px)').matches;
 const nm = (table, i) => NAMES[table][state.lang][i];
 
 // ---------------------------------------------------------------- i18n
@@ -35,7 +37,7 @@ $('lang-toggle').addEventListener('click', () => {
   // Expand every dasa for printing (also when printing from the browser menu).
 let closedForPrint = [];
 window.addEventListener('beforeprint', () => {
-  closedForPrint = [...document.querySelectorAll('details.dasa:not([open])')];
+  closedForPrint = [...document.querySelectorAll('details.dasa:not([open]), details.palan-sec:not([open])')];
   closedForPrint.forEach((d) => (d.open = true));
 });
 window.addEventListener('afterprint', () => closedForPrint.forEach((d) => (d.open = false)));
@@ -273,7 +275,14 @@ function renderResults({ chart, meta }) {
     <div class="card palan" id="palan">
       <h2>${t('palan')}</h2>
       <p class="warn">${esc(pl.note)}</p>
-      ${pl.sections.map((sec) => `<h3>${esc(sec.title)}</h3><ul>${sec.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`).join('')}
+      ${pl.sections
+        .map(
+          (sec, i) => `<details class="palan-sec" ${!isMobile() || i === 0 ? 'open' : ''}>
+        <summary><h3>${esc(sec.title)}</h3></summary>
+        <ul>${sec.items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+      </details>`
+        )
+        .join('')}
       <p class="hint">${esc(pl.excluded)}</p>
     </div>`;
   }
@@ -293,7 +302,7 @@ function renderResults({ chart, meta }) {
 // Expand every dasa for printing (also when printing from the browser menu).
 let closedForPrint = [];
 window.addEventListener('beforeprint', () => {
-  closedForPrint = [...document.querySelectorAll('details.dasa:not([open])')];
+  closedForPrint = [...document.querySelectorAll('details.dasa:not([open]), details.palan-sec:not([open])')];
   closedForPrint.forEach((d) => (d.open = true));
 });
 window.addEventListener('afterprint', () => closedForPrint.forEach((d) => (d.open = false)));
