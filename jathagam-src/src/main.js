@@ -7,6 +7,7 @@ import { computeChart, localToUtc, zoneFor, offsetZone, activePeriod, yearsToYMD
 import { NAMES, UI, thithiName } from './i18n.js';
 import { southIndianChart } from './ui/chart.js';
 import { attachAutocomplete } from './ui/geocode.js';
+import { generatePalan } from './palan/index.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -15,6 +16,7 @@ const state = {
   lang: navigator.language?.startsWith('ta') ? 'ta' : 'en',
   place: null, // {label, lat, lon}
   last: null, // last computed {chart, meta}
+  showPalan: false,
 };
 const t = (k) => UI[state.lang][k] ?? k;
 const nm = (table, i) => NAMES[table][state.lang][i];
@@ -102,6 +104,7 @@ $('birth-form').addEventListener('submit', (e) => {
       conv,
     },
   };
+  state.showPalan = false;
   renderResults(state.last);
   $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
@@ -258,13 +261,32 @@ function renderResults({ chart, meta }) {
 
   const actions = `<div class="actions no-print">
       <button type="button" class="btn-primary" id="btn-print">${t('print')}</button>
+      <button type="button" class="btn-palan" id="btn-palan" aria-expanded="${state.showPalan}" aria-controls="palan">${state.showPalan ? t('palanHide') : t('palanShow')}</button>
       <button type="button" class="btn-ghost dark" id="btn-edit">${t('edit')}</button>
     </div>`;
 
+  // --- palan (traditional readings), shown on demand
+  let palan = '';
+  if (state.showPalan) {
+    const pl = generatePalan(chart, L, (a, b) => `${dt(a, dfmt)} → ${dt(b, dfmt)}`);
+    palan = `
+    <div class="card palan" id="palan">
+      <h2>${t('palan')}</h2>
+      <p class="warn">${esc(pl.note)}</p>
+      ${pl.sections.map((sec) => `<h3>${esc(sec.title)}</h3><ul>${sec.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`).join('')}
+      <p class="hint">${esc(pl.excluded)}</p>
+    </div>`;
+  }
+
   const res = $('results');
-  res.innerHTML = actions + summary + charts + verify + table + panch + dasa;
+  res.innerHTML = actions + summary + palan + charts + verify + table + panch + dasa;
   res.hidden = false;
   $('btn-print').addEventListener('click', () => window.print());
+  $('btn-palan').addEventListener('click', () => {
+    state.showPalan = !state.showPalan;
+    renderResults(state.last);
+    if (state.showPalan) $('palan').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   $('btn-edit').addEventListener('click', () => $('birth-form').scrollIntoView({ behavior: 'smooth' }));
 }
 

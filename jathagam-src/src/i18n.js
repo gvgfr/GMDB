@@ -110,6 +110,9 @@ export const UI = {
     am: 'முற்பகல் (AM)',
     pm: 'பிற்பகல் (PM)',
     sunrise: 'சூரிய உதயம்',
+    palan: 'பலன்கள்',
+    palanShow: 'பலன்கள் காண்க',
+    palanHide: 'பலன்களை மறை',
     lang: 'English',
   },
   en: {
@@ -176,6 +179,9 @@ export const UI = {
     am: 'AM',
     pm: 'PM',
     sunrise: 'Sunrise',
+    palan: 'Palan (traditional readings)',
+    palanShow: 'Show palan',
+    palanHide: 'Hide palan',
     lang: 'தமிழ்',
   },
 };

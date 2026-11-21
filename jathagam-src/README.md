@@ -8,6 +8,17 @@ both modes).
 **Live:** `https://masalameterratings.com/jathagam/` (GitHub Pages, served from
 the `jathagam/` folder of the default branch).
 
+## Palan (traditional readings)
+A **Palan** button on the result page shows readings for that chart, generated
+by rules in `src/palan/` (Tamil and English): lagnam, rasi and nakshatra traits;
+the current dasa/bhukti with dates and the house it acts through; career,
+marriage, education, wealth and home from the relevant houses, their lords and
+significators; and each planet's house, uchcham/neecham/aatchi and vakram.
+Significations follow classical conventions (BPHS, Phaladeepika). Every line is
+phrased as what tradition says, with a note that these are cultural beliefs, not
+proven predictions. Health, lifespan and dosham verdicts are deliberately left
+out (a test checks this).
+
 ## Privacy
 Everything runs in the browser. No storage (no cookies/localStorage), no
 analytics. The only network request is the place-name search to the
