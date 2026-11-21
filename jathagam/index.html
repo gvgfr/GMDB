@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ta">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jathagam — Tamil birth chart</title>
+  <meta name="description" content="Free Tamil jathagam (birth chart): rasi and navamsam charts, nakshatram, lagnam, vimshottari dasa and panchangam — computed privately in your browser." />
+  <meta name="theme-color" content="#6b1d1d" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%236b1d1d'/%3E%3Cpath d='M8 8h48v48H8zM24 8v48M40 8v48M8 24h48M8 40h48' stroke='%23f4b942' stroke-width='3' fill='none'/%3E%3C/svg%3E" />
+  <script type="module" crossorigin src="./assets/index-ChyhYUcz.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DReXR1a4.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <div>
+        <h1 data-i18n="title">ஜாதகம்</h1>
+        <p class="tagline" data-i18n="tagline"></p>
+      </div>
+      <button type="button" id="lang-toggle" class="btn-ghost" aria-label="Switch language"></button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <form id="birth-form" class="card form-card" novalidate>
+      <div class="field">
+        <label for="f-name" data-i18n="name"></label>
+        <input id="f-name" name="name" type="text" autocomplete="off" maxlength="60" />
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label for="f-date" data-i18n="dob"></label>
+          <input id="f-date" name="date" type="date" min="1800-01-01" max="2199-12-31" required />
+        </div>
+        <fieldset class="field time-field">
+          <legend data-i18n="tob"></legend>
+          <div class="time-inputs">
+            <input id="f-hh" name="hh" type="number" inputmode="numeric" min="1" max="12" placeholder="hh" aria-label="hour" required />
+            <span aria-hidden="true">:</span>
+            <input id="f-mm" name="mm" type="number" inputmode="numeric" min="0" max="59" placeholder="mm" aria-label="minute" required />
+            <select id="f-ampm" name="ampm" aria-label="AM/PM">
+              <option value="am" data-i18n="am"></option>
+              <option value="pm" data-i18n="pm"></option>
+            </select>
+          </div>
+        </fieldset>
+      </div>
+      <div class="field place-field">
+        <label for="f-place" data-i18n="pob"></label>
+        <input id="f-place" name="place" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="place-list" data-i18n-placeholder="placeHint" />
+        <ul id="place-list" role="listbox" hidden></ul>
+        <p id="place-picked" class="hint"></p>
+      </div>
+
+      <details class="more">
+        <summary data-i18n="settings"></summary>
+        <div class="row-2">
+          <div class="field">
+            <label for="f-lat" data-i18n="lat"></label>
+            <input id="f-lat" name="lat" type="number" step="any" min="-90" max="90" placeholder="13.0827" />
+          </div>
+          <div class="field">
+            <label for="f-lon" data-i18n="lon"></label>
+            <input id="f-lon" name="lon" type="number" step="any" min="-180" max="180" placeholder="80.2707" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-tz" data-i18n="tzOverride"></label>
+          <select id="f-tz" name="tz">
+            <option value="auto" data-i18n="tzAuto"></option>
+            <option value="330">UTC+5:30 (IST)</option>
+            <option value="390">UTC+6:30 (India war time 1942–45)</option>
+            <option value="291">UTC+4:51 (Bombay Time, until 1955)</option>
+            <option value="321">UTC+5:21 (Madras Time, until 1906)</option>
+            <option value="353">UTC+5:53 (Calcutta Time, until 1948)</option>
+            <option value="480">UTC+8:00</option>
+            <option value="0">UTC+0:00</option>
+            <option value="-300">UTC−5:00</option>
+            <option value="-240">UTC−4:00</option>
+          </select>
+          <p class="hint" data-i18n="tzHelp"></p>
+        </div>
+        <fieldset class="field">
+          <legend data-i18n="node"></legend>
+          <label class="inline"><input type="radio" name="node" value="mean" checked /> <span data-i18n="meanNode"></span></label>
+          <label class="inline"><input type="radio" name="node" value="true" /> <span data-i18n="trueNode"></span></label>
+        </fieldset>
+      </details>
+
+      <p id="form-error" class="error" role="alert"></p>
+      <button type="submit" class="btn-primary" data-i18n="calculate"></button>
+      <p class="hint privacy" data-i18n="privacy"></p>
+    </form>
+
+    <section id="results" hidden aria-live="polite"></section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p data-i18n="disclaimer"></p>
+      <p class="small">Ephemeris: <a href="https://github.com/cosinekitty/astronomy">Astronomy Engine</a> (MIT) · Places: <a href="https://open-meteo.com/en/docs/geocoding-api">Open-Meteo</a> · Time zones: tz-lookup + IANA tzdb</p>
+    </div>
+  </footer>
+</body>
+</html>
