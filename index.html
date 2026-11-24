@@ -3672,6 +3672,13 @@ async function askShowMore() {
 
 // One server call; returns {ok, intro, picks:[{movie, why}]} or {ok:false, message, blocked}.
 async function fetchAskAnswer_(question, exclude) {
+  const first = await fetchAskAnswerOnce_(question, exclude);
+  if (first.ok || first.blocked || !first.retry) return first;
+  // A hiccup (network or the AI being briefly overloaded): quietly try once more.
+  return fetchAskAnswerOnce_(question, exclude);
+}
+const ASK_FAIL_MSG = "Couldn't get AI picks right now — please try again in a moment. Meanwhile, the movies below match your words.";
+async function fetchAskAnswerOnce_(question, exclude) {
   try {
     let url = API_URL + "?action=ask&q=" + encodeURIComponent(question);
     if (exclude && exclude.length) url += "&exclude=" + encodeURIComponent(exclude.slice(-40).join("|"));
@@ -3680,7 +3687,7 @@ async function fetchAskAnswer_(question, exclude) {
       if (data.error === "blocked") return { ok: false, blocked: true, message: ASK_BLOCKED_MSG };
       return { ok: false, message: data.error === "limit" ? "Ask Masala Meter has answered as many questions as it can today — please try again tomorrow."
         : data.error === "too_long" ? "That's a bit long — try a shorter question."
-        : "Couldn't get an answer right now — please try again in a moment." };
+        : ASK_FAIL_MSG, retry: data.error === "busy" };
     }
     const picks = (data.picks || []).map(p => {
       const movie = allMovies.find(m => m.Title === p.title && String(m.Year || "") === String(p.year || "")) || allMovies.find(m => m.Title === p.title);
@@ -3688,7 +3695,7 @@ async function fetchAskAnswer_(question, exclude) {
     }).filter(Boolean);
     return { ok: true, intro: (!askIsBlocked_(data.intro) && data.intro) || "", picks };
   } catch (err) {
-    return { ok: false, message: "Couldn't get an answer right now — please try again in a moment." };
+    return { ok: false, message: ASK_FAIL_MSG, retry: true };
   }
 }
 

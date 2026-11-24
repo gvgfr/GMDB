@@ -2433,34 +2433,45 @@ CATALOG:
 ${catalog.map(c => c.line).join("\n")}`;
 
   try {
-    const res = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models/" + ASK_MODEL + ":generateContent?key=" + GEMINI_API_KEY, {
-      method: "post",
-      contentType: "application/json",
-      muteHttpExceptions: true,
-      payload: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 800, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
-        // Google's own content filters at their strictest.
-        safetySettings: ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]
-          .map(category => ({ category: category, threshold: "BLOCK_LOW_AND_ABOVE" }))
-      })
-    });
-    if (res.getResponseCode() !== 200) {
-      Logger.log("askMasalaMeter_ HTTP " + res.getResponseCode() + ": " + res.getContentText().slice(0, 300));
-      // "detail" isn't shown on the site; it's there so opening the
-      // ?action=ask link directly says why it failed.
-      let reason = "";
-      try { reason = (JSON.parse(res.getContentText()).error || {}).message || ""; } catch (e) { /* not JSON */ }
-      return { ok: false, error: "busy", detail: "HTTP " + res.getResponseCode() + (reason ? ": " + reason.slice(0, 200) : "") };
+    // Gemini sometimes answers "overloaded" (503/429/500) or cuts its JSON
+    // short; one of those used to show visitors "Couldn't get an answer".
+    // Try up to 3 times with a short pause before giving up.
+    let answer = null, lastDetail = "";
+    for (let attempt = 0; attempt < 3 && !answer; attempt++) {
+      if (attempt) Utilities.sleep(1200 * attempt);
+      const res = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models/" + ASK_MODEL + ":generateContent?key=" + GEMINI_API_KEY, {
+        method: "post",
+        contentType: "application/json",
+        muteHttpExceptions: true,
+        payload: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 1500, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
+          // Google's own content filters at their strictest.
+          safetySettings: ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]
+            .map(category => ({ category: category, threshold: "BLOCK_LOW_AND_ABOVE" }))
+        })
+      });
+      if (res.getResponseCode() !== 200) {
+        Logger.log("askMasalaMeter_ HTTP " + res.getResponseCode() + ": " + res.getContentText().slice(0, 300));
+        // "detail" isn't shown on the site; it's there so opening the
+        // ?action=ask link directly says why it failed.
+        let reason = "";
+        try { reason = (JSON.parse(res.getContentText()).error || {}).message || ""; } catch (e) { /* not JSON */ }
+        lastDetail = "HTTP " + res.getResponseCode() + (reason ? ": " + reason.slice(0, 200) : "");
+        if ([429, 500, 502, 503, 504].indexOf(res.getResponseCode()) !== -1) continue;
+        return { ok: false, error: "busy", detail: lastDetail };
+      }
+      const body = JSON.parse(res.getContentText());
+      const cand = (body.candidates || [])[0] || {};
+      if ((body.promptFeedback && body.promptFeedback.blockReason) || cand.finishReason === "SAFETY" || cand.finishReason === "PROHIBITED_CONTENT") {
+        return { ok: false, error: "blocked" };
+      }
+      const parts = (cand.content || {}).parts || [];
+      const text = parts.map(p => p.text || "").join("");
+      try { answer = parseGeminiJsonObject_(text); }
+      catch (e) { lastDetail = "Unreadable reply (" + (cand.finishReason || "no reason") + "): " + String(e).slice(0, 120); }
     }
-    const body = JSON.parse(res.getContentText());
-    const cand = (body.candidates || [])[0] || {};
-    if ((body.promptFeedback && body.promptFeedback.blockReason) || cand.finishReason === "SAFETY" || cand.finishReason === "PROHIBITED_CONTENT") {
-      return { ok: false, error: "blocked" };
-    }
-    const parts = (cand.content || {}).parts || [];
-    const text = parts.map(p => p.text || "").join("");
-    const answer = parseGeminiJsonObject_(text);
+    if (!answer) return { ok: false, error: "busy", detail: lastDetail };
     // Only ever return films that are really in the catalog.
     const seen = {};
     const picks = (answer.picks || []).map(p => {
