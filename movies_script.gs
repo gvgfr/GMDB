@@ -2365,6 +2365,21 @@ function askIsBlocked_(text) {
   return ASK_BLOCKED_RE.test(String(text || "").toLowerCase()) || ASK_BLOCKED_RE.test(n) || ASK_BLOCKED_RE.test(n.replace(/(\w)\1+/g, "$1"));
 }
 
+// "Semma", "Vera Level", "score above 70", "80+" → the lowest Masala Meter
+// score the visitor will accept (0 = no limit). Enforced in code, so the AI
+// can't slip in a lower-scoring film.
+const ASK_TIERS = [["vera level", 85], ["semma", 75], ["paakkalam", 65], ["pakkalam", 65], ["parava illa", 50], ["paravala", 50]];
+function askMinScore_(question) {
+  const t = String(question || "").toLowerCase();
+  let min = 0;
+  ASK_TIERS.forEach(([name, score]) => { if (t.indexOf(name) !== -1) min = Math.max(min, score); });
+  let m = t.match(/(?:at least|minimum|min|>=|no less than)\s*(?:a\s+)?(?:score\s+(?:of\s+)?)?(\d{2})\b/) ||
+          t.match(/\b(\d{2})\s*(?:\+|plus\b|and above|and up\b|or more|or above|or higher)/);
+  if (m) min = Math.max(min, Number(m[1]));
+  else if ((m = t.match(/(?:above|over|more than|greater than|higher than|>)\s*(?:a\s+)?(?:score\s+(?:of\s+)?)?(\d{2})\b/))) min = Math.max(min, Number(m[1]) + 1);
+  return min >= 10 && min <= 99 ? min : 0;
+}
+
 function askMasalaMeter_(rawQuestion, rawExclude) {
   const question = String(rawQuestion || "").replace(/\s+/g, " ").trim();
   // "Show more picks": titles already shown for this question, so the
@@ -2400,12 +2415,13 @@ function askMasalaMeter_(rawQuestion, rawExclude) {
   const cell = (row, c, max) => c < 0 ? "" : String(row[c] || "").replace(/\s+/g, " ").replace(/\|/g, "/").trim().slice(0, max || 2000);
   const cTitle = col("Title"), cYear = col("Year"), cLang = col("Language"), cScore = col("GauthamScore"),
         cTake = col("Takeaway"), cGenre = col("Genre"), cReview = col("ReviewSummary"), cStory = col("Storyline");
+  const minScore = askMinScore_(question);
   const catalog = [];
   for (let r = 1; r < data.length; r++) {
     const row = data[r];
     const title = String(row[cTitle] || "").trim();
     const score = Number(row[cScore]);
-    if (!title || !(score > 0)) continue;
+    if (!title || !(score > 0) || score < minScore) continue;
     const id = catalog.length;
     const base = id + "|" + title.replace(/\|/g, "/") + "|" + cell(row, cYear) + "|" + cell(row, cLang) + "|" + cell(row, cGenre, 80) + "|" + score;
     catalog.push({
@@ -2417,6 +2433,8 @@ function askMasalaMeter_(rawQuestion, rawExclude) {
     });
   }
 
+  if (!catalog.length) return { ok: true, intro: "No films in Masala Meter score that high yet — try a lower score.", picks: [] };
+
   const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MMMM d, yyyy");
   const thisYear = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy");
   const q = question.replace(/"""/g, "'");
@@ -2424,6 +2442,8 @@ function askMasalaMeter_(rawQuestion, rawExclude) {
 """${q}"""
 
 TODAY'S DATE is ${today}. "This year" means ${thisYear}, "last year" the year before, and "new", "recent" or "latest" means released in roughly the last few months. Use the catalog's year column for this, not your own sense of what's recent.
+
+Masala Meter tiers by score: Vera Level 85+, Semma 75-84, Paakkalam 65-74, Parava illa 50-64, Mokkai below 50.${minScore ? " The catalog below already contains only films scoring " + minScore + " or more, as the visitor asked." : ""}
 
 Be strict about fit. When the visitor asks for a genre or mood (romance, comedy, horror, thriller, family, feel-good...), a film counts only if that is what the film mainly IS, not if it merely has a love track, a funny scene or a "journey". If they name a language or year, it must match the language and year columns. If they name a film, don't recommend that same film.
 Keep every word you write family-friendly: no profanity, slurs or sexual language, and never repeat crude words from the question. If the visitor asks for sexual, explicit or adult content, or the question isn't about choosing a film to watch, return no films and a polite one-line "intro" suggesting they ask about a mood, genre or language instead. Mature but mainstream requests (a dark, violent or intense thriller) are fine.
