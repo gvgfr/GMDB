@@ -501,6 +501,9 @@ footer span{color:var(--red);}
 .song-detail-title{font-size:1.4rem;margin:0 0 4px;}
 .song-detail-meta{font-size:14.5px;color:#c4c0b7;margin:2px 0;}
 .song-detail-links{display:flex;flex-direction:column;gap:10px;margin-top:1.25rem;}
+.to-search-btn{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:150;display:flex;align-items:center;gap:6px;background:#FFE27A;color:#1a1206;border:2px solid #fff3c4;border-radius:28px;padding:12px 18px;font-size:16px;font-weight:800;font-family:'Inter',sans-serif;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.6);opacity:0;transform:translateY(20px);pointer-events:none;transition:opacity 0.2s,transform 0.2s;}
+.to-search-btn.show{opacity:1;transform:translateY(0);pointer-events:auto;}
+.to-search-btn:active{transform:scale(0.96);}
 .add-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid var(--red);border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;display:flex;align-items:center;gap:10px;max-width:90vw;}
 .simple-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid #FFB020;border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;max-width:90vw;text-align:center;}
 .simple-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -4529,6 +4532,31 @@ if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.
   cfBeacon.setAttribute("data-cf-beacon", '{"token": "eb2011183e934fa4a46d71478287c1b4"}');
   document.body.appendChild(cfBeacon);
 }
+</script>
+<button id="toSearchBtn" class="to-search-btn" onclick="backToSearch()" aria-label="Back to search">↑ 🔍 Search</button>
+<script>
+// Floating "back to search" button: shows once the search box has scrolled
+// out of view, and takes you straight back to it (cursor in the box).
+function backToSearch() {
+  const input = document.getElementById("searchInput");
+  if (!input) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+  const header = document.querySelector("header");
+  const offset = (header ? header.getBoundingClientRect().height : 60) + 16;
+  window.scrollTo({ top: input.getBoundingClientRect().top + window.scrollY - offset, behavior: "smooth" });
+}
+(function () {
+  const btn = document.getElementById("toSearchBtn");
+  let ticking = false;
+  function update() {
+    ticking = false;
+    const input = document.getElementById("searchInput");
+    const passed = input ? input.getBoundingClientRect().bottom < 0 : window.scrollY > 600;
+    btn.classList.toggle("show", passed);
+  }
+  window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+  update();
+})();
 </script>
 </body>
 </html>
