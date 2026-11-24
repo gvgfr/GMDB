@@ -3727,14 +3727,16 @@ async function askMasalaMeter(question) {
   const panel = document.getElementById("askPanel");
   if (askIsBlocked_(question)) {
     renderAskPanel_("", `<div class="ask-intro">${escapeAskHtml_(ASK_BLOCKED_MSG)}</div>`);
-    panel.scrollIntoView({ behavior: "smooth", block: "center" });
+    panel.scrollIntoView({ behavior: "instant", block: "center" });
     return;
   }
   // Leave room for the sticky header so the question line isn't hidden under it.
   const scrollToPanel = () => {
     const header = document.querySelector("header");
     const offset = (header ? header.getBoundingClientRect().height : 60) + 12;
-    window.scrollTo({ top: panel.getBoundingClientRect().top + window.scrollY - offset, behavior: "smooth" });
+    // Instant, once: a smooth scroll still running while the page changed
+    // height (list hidden, picks arriving) kept the page drifting.
+    window.scrollTo({ top: Math.max(0, panel.getBoundingClientRect().top + window.scrollY - offset), behavior: "instant" });
   };
 
   const local = localPlatformAnswer_(question);
@@ -3742,7 +3744,6 @@ async function askMasalaMeter(question) {
     askState = { question, local: local.all, shown: [] };
     if (!local.all.length) { renderAskPanel_(question, `<div class="ask-intro">${escapeAskHtml_(local.intro)}</div>`); scrollToPanel(); return; }
     renderAskPicks_(question, local.intro, local.all.slice(0, ASK_PAGE_SIZE));
-    askShowFullGrid_();
     scrollToPanel(); return;
   }
 
@@ -3765,7 +3766,7 @@ async function askMasalaMeter(question) {
     return;
   }
   renderAskPicks_(question, data.intro || "Here's what fits:", data.picks);
-  askShowFullGrid_();
+  // No scrolling here: the answer box is already in place at the top.
 }
 
 // Once the ✨ picks are showing, the list below goes back to the normal
