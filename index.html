@@ -113,6 +113,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .ask-box{display:flex;align-items:center;border:2px solid #7C5CFC;border-radius:12px;background:#120f1a;}
 .ask-box input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:16px;padding:13px 14px;font-family:'Inter',sans-serif;min-width:0;}
 .ask-box button{background:none;border:none;font-size:20px;padding:0 14px;cursor:pointer;}
+body.ask-mode .grid-header,body.ask-mode #moviesGrid{display:none !important;}
 .ask-hint{padding:9px 14px;font-size:14px;font-weight:600;color:#d9ccff;text-align:center;pointer-events:none;background:rgba(124,92,252,0.14);border-bottom:1px solid var(--border);}
 .ask-suggestion{background:linear-gradient(100deg,#4b2fc2 0%,#6a3fd8 55%,#a8327a 100%) !important;border:2px solid #b9a4ff !important;border-radius:12px;margin:8px;padding:14px 14px !important;box-shadow:0 0 0 3px rgba(124,92,252,0.25),0 6px 18px rgba(124,92,252,0.35);}
 .ask-suggestion:hover{filter:brightness(1.12);}
@@ -2199,7 +2200,7 @@ function applyMoviesData(data, fromCache) {
     }
   }
 
-  filterMovies();
+  filterMovies(false, true); // a data refresh mustn't close an open AI answer
 
   // Deliberately gated on !fromCache, same reasoning as the carousels above
   // — opening a SPECIFIC shared movie is the ultimate "tell me this film's
@@ -2846,14 +2847,9 @@ function showSuggestions() {
     .slice(0, 8)
     .map(x => x.m);
 
-  // Just a hint, not a button: a tappable "Ask" card here got tapped
-  // mid-typing and sent half a question to the AI. The AI only runs on
-  // Enter / the search button.
-  const rawQ = input.value.trim();
-  const askRow = `<div class="ask-hint">Press Enter ↵ for ✨ AI picks</div>`;
-
-  const showAsk = !askIsBlocked_(rawQ);
-  if(matches.length === 0) { if (!showAsk) { box.style.display="none"; box.innerHTML=""; return; } box.innerHTML = askRow; box.style.display = "block"; return; }
+  // No "Ask" row here: it got tapped mid-typing and sent half a question
+  // to the AI. The AI only runs on Enter / the search button.
+  if(matches.length === 0) { box.style.display="none"; box.innerHTML=""; return; }
 
   const rows = matches.map((m) => {
     const poster = m.PosterURL ? `<img class="suggestion-poster" src="${m.PosterURL}" alt=""/>` : `<div class="suggestion-poster"></div>`;
@@ -2867,7 +2863,7 @@ function showSuggestions() {
       <span class="suggestion-score ${tierClass}">${m.GauthamScore||"—"}</span>
     </div>`;
   }).join("");
-  box.innerHTML = showAsk ? askRow + rows : rows;
+  box.innerHTML = rows;
 
   // Absolute positioning (CSS) keeps the dropdown attached to the search box
   // and scrolling with the page, so taps land correctly on mobile.
@@ -2912,7 +2908,9 @@ document.addEventListener("click", e => {
   }
 })();
 
-function filterMovies(whileTyping) {
+function filterMovies(whileTyping, keepAskMode) {
+  // Any search or filter the visitor makes leaves the AI-answer-only view.
+  if (!keepAskMode) document.body.classList.remove("ask-mode");
   const q = document.getElementById("searchInput").value.toLowerCase().trim();
   updateSearchClear_(); // ✕ in the box whenever there's text, however it got there
 
@@ -3564,6 +3562,7 @@ function clearSearch() {
 }
 
 function clearAsk() {
+  document.body.classList.remove("ask-mode");
   const panel = document.getElementById("askPanel");
   panel.classList.remove("show");
   panel.innerHTML = "";
@@ -3607,6 +3606,9 @@ function renderAskPanel_(question, bodyHtml) {
   panel.innerHTML = `<div class="ask-head">✨ Ask Masala Meter<button class="ask-clear" onclick="clearSearch()">✕ Clear</button></div>
     ${question ? `<div class="ask-q">${escapeAskHtml_(question)}</div>` : ""}${bodyHtml}`;
   panel.classList.add("show");
+  // While an AI answer is open, the page shows only that answer — no movie
+  // list underneath. "✕ Clear", a new search or a filter brings it back.
+  document.body.classList.add("ask-mode");
 }
 
 function askPickCardHtml_({ movie: m, why }) {
@@ -3758,7 +3760,7 @@ function askShowFullGrid_() {
   const input = document.getElementById("searchInput");
   if (input) input.value = "";
   updateSearchClear_();
-  filterMovies();
+  filterMovies(false, true);
 }
 
 // True only when this page is running inside the native Capacitor app
