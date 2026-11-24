@@ -77,7 +77,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop
 .btn-howto{background:rgba(255,176,32,0.16);color:#FFB020;border:2.5px solid #FFB020;font-weight:900;padding:6px 12px;border-radius:50%;line-height:1;flex-shrink:0;font-size:18px;text-shadow:0 0 1px currentColor;}
 .btn-howto:hover{background:rgba(255,176,32,0.2);}
 
-.hero{padding:2.25rem 1.5rem 1rem;text-align:center;border-bottom:1px solid var(--border);position:relative;}
+.hero{padding:2.25rem 1.5rem 1rem;text-align:center;border-bottom:1px solid var(--border);position:relative;overflow-x:clip;}
 .streaming-carousel-section{padding:1.25rem 0 1.5rem;border-bottom:1px solid var(--border);}
 .streaming-carousel-label{font-size:20px;font-weight:800;color:var(--text);margin:0 1.5rem 0.85rem;}
 .streaming-carousel-tv-icon{font-size:26px;vertical-align:middle;margin-right:2px;}
@@ -503,7 +503,7 @@ footer span{color:var(--red);}
 .song-detail-title{font-size:1.4rem;margin:0 0 4px;}
 .song-detail-meta{font-size:14.5px;color:#c4c0b7;margin:2px 0;}
 .song-detail-links{display:flex;flex-direction:column;gap:10px;margin-top:1.25rem;}
-.to-search-btn{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:150;display:flex;align-items:center;gap:6px;background:#FFE27A;color:#1a1206;border:2px solid #fff3c4;border-radius:28px;padding:12px 18px;font-size:16px;font-weight:800;font-family:'Inter',sans-serif;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.6);opacity:0;transform:translateY(20px);pointer-events:none;transition:opacity 0.2s,transform 0.2s;}
+.to-search-btn{touch-action:manipulation;-webkit-tap-highlight-color:transparent;position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:150;display:flex;align-items:center;gap:6px;background:#FFE27A;color:#1a1206;border:2px solid #fff3c4;border-radius:28px;padding:12px 18px;font-size:16px;font-weight:800;font-family:'Inter',sans-serif;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.6);opacity:0;transform:translateY(20px);pointer-events:none;transition:opacity 0.2s,transform 0.2s;}
 .to-search-btn.show{opacity:1;transform:translateY(0);pointer-events:auto;}
 .to-search-btn:active{transform:scale(0.96);}
 .add-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;border:1px solid var(--red);border-radius:12px;padding:14px 22px;font-size:14px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;opacity:0;pointer-events:none;transition:all 0.4s;display:flex;align-items:center;gap:10px;max-width:90vw;}
@@ -4538,10 +4538,16 @@ if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.
 function backToSearch() {
   const input = document.getElementById("searchInput");
   if (!input) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
-  try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+  // Jump instantly (a smooth scroll down a long list was slow, and on
+  // iPhone the keyboard opening mid-scroll cancelled it — needing a 2nd tap),
+  // then put the cursor in the box.
   const header = document.querySelector("header");
   const offset = (header ? header.getBoundingClientRect().height : 60) + 16;
-  window.scrollTo({ top: input.getBoundingClientRect().top + window.scrollY - offset, behavior: "smooth" });
+  // "instant" overrides the page-wide CSS smooth scrolling, which made this
+  // glide through thousands of pixels of movie cards.
+  window.scrollTo({ top: Math.max(0, input.getBoundingClientRect().top + window.scrollY - offset), behavior: "instant" });
+  try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+  document.getElementById("toSearchBtn").classList.remove("show");
 }
 (function () {
   const btn = document.getElementById("toSearchBtn");
