@@ -2398,7 +2398,7 @@ function askMasalaMeter_(rawQuestion, rawExclude) {
   const headers = data[0];
   const col = name => headers.indexOf(name);
   const cTitle = col("Title"), cYear = col("Year"), cLang = col("Language"), cScore = col("GauthamScore"),
-        cTake = col("Takeaway"), cRel = col("ReleaseDate");
+        cTake = col("Takeaway"), cRel = col("ReleaseDate"), cGenre = col("Genre");
   const recentCutoff = Date.now() - 18 * 30 * 24 * 60 * 60 * 1000; // ~18 months: Gemini may not know these yet
   const catalog = [];
   for (let r = 1; r < data.length; r++) {
@@ -2411,7 +2411,7 @@ function askMasalaMeter_(rawQuestion, rawExclude) {
     catalog.push({
       title: title,
       year: String(row[cYear] || "").trim(),
-      line: catalog.length + "|" + title + "|" + String(row[cYear] || "").trim() + "|" + String(row[cLang] || "").trim() + "|" + score +
+      line: catalog.length + "|" + title + "|" + String(row[cYear] || "").trim() + "|" + String(row[cLang] || "").trim() + "|" + (cGenre >= 0 ? String(row[cGenre] || "").replace(/\s+/g, " ").trim() : "") + "|" + score +
         (recent && row[cTake] ? "|" + String(row[cTake]).replace(/\s+/g, " ").trim() : "")
     });
   }
@@ -2421,13 +2421,14 @@ function askMasalaMeter_(rawQuestion, rawExclude) {
 
 TODAY'S DATE is ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MMMM d, yyyy")}. Read time words against it: "this year" means ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy")}, "last year" the year before, and "new", "recent" or "latest" means released in roughly the last few months. Use the catalog's year column for this, not your own sense of what's recent.
 
-Recommend films ONLY from the catalog below. Each line is: id|title|year|language|Masala Meter score (0-100)|optional one-line takeaway (given for recent films you may not know).
-Use your own knowledge of these films (tone, genre, humour, darkness, family-friendliness) to judge the fit, plus the takeaway for recent ones. Prefer higher scores when fits are similar. If the visitor names a film, don't recommend that same film. If the question isn't about choosing a film to watch, or nothing in the catalog fits, return no picks and say so briefly in "intro".
+Recommend films ONLY from the catalog below. Each line is: id|title|year|language|genres|Masala Meter score (0-100)|optional one-line takeaway (given for recent films you may not know).
+Use your own knowledge of these films (tone, genre, humour, darkness, family-friendliness) to judge the fit, plus the takeaway for recent ones. Prefer higher scores when fits are similar.
+Be strict about fit. When the visitor asks for a genre or mood (romance, comedy, horror, thriller, family, feel-good...), every pick must clearly BE that: its genres column lists it, or you're sure the film is mainly that. A film that merely has a love track, a funny scene or a "journey" doesn't count. Same for language and year: if they say Tamil or 2025, every pick must match the catalog's language and year columns. Never pad the list: 2 right picks beat 5 loose ones, and zero picks is fine if nothing truly fits. If the visitor names a film, don't recommend that same film. If the question isn't about choosing a film to watch, or nothing in the catalog fits, return no picks and say so briefly in "intro".
 Keep every word you write family-friendly: no profanity, slurs or sexual language, and never repeat crude words from the question. If the visitor asks for sexual, explicit or adult content, return no picks and a polite one-line "intro" suggesting they ask about a mood, genre or language instead. Mature but mainstream requests (a dark, violent or intense thriller) are fine.
 
 ${exclude.length ? "The visitor already saw these picks, so DON'T include them again; give the next best ones instead: " + exclude.join("; ") + "\n\n" : ""}Reply with JSON only, in this exact shape:
 {"intro": "one short friendly sentence", "picks": [{"id": 12, "why": "one short sentence on why it fits"}]}
-Give 3 to 5 picks when possible.
+Give up to 5 picks, only ones that truly fit. The "intro" must not introduce yourself, and must agree with the picks you return (don't say there are none and then list some).
 
 CATALOG:
 ${catalog.map(c => c.line).join("\n")}`;
