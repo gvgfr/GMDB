@@ -2397,87 +2397,74 @@ function askMasalaMeter_(rawQuestion, rawExclude) {
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
   const col = name => headers.indexOf(name);
+  const cell = (row, c, max) => c < 0 ? "" : String(row[c] || "").replace(/\s+/g, " ").replace(/\|/g, "/").trim().slice(0, max || 2000);
   const cTitle = col("Title"), cYear = col("Year"), cLang = col("Language"), cScore = col("GauthamScore"),
-        cTake = col("Takeaway"), cRel = col("ReleaseDate"), cGenre = col("Genre");
-  const recentCutoff = Date.now() - 18 * 30 * 24 * 60 * 60 * 1000; // ~18 months: Gemini may not know these yet
+        cTake = col("Takeaway"), cGenre = col("Genre"), cReview = col("ReviewSummary"), cStory = col("Storyline");
   const catalog = [];
   for (let r = 1; r < data.length; r++) {
     const row = data[r];
     const title = String(row[cTitle] || "").trim();
     const score = Number(row[cScore]);
     if (!title || !(score > 0)) continue;
-    const rel = new Date(row[cRel] || "").getTime();
-    const recent = !isNaN(rel) && rel >= recentCutoff;
+    const id = catalog.length;
+    const base = id + "|" + title.replace(/\|/g, "/") + "|" + cell(row, cYear) + "|" + cell(row, cLang) + "|" + cell(row, cGenre, 80) + "|" + score;
     catalog.push({
       title: title,
       year: String(row[cYear] || "").trim(),
-      line: catalog.length + "|" + title + "|" + String(row[cYear] || "").trim() + "|" + String(row[cLang] || "").trim() + "|" + (cGenre >= 0 ? String(row[cGenre] || "").replace(/\s+/g, " ").trim() : "") + "|" + score +
-        (recent && row[cTake] ? "|" + String(row[cTake]).replace(/\s+/g, " ").trim() : "")
+      // Step 1 sees the one-line takeaway; step 2 reads the actual review.
+      line: base + "|" + cell(row, cTake, 200),
+      full: base + "\nREVIEW: " + cell(row, cReview, 900) + "\nSTORY: " + cell(row, cStory, 600)
     });
   }
 
-  const prompt = `You are Masala Meter, a friendly Indian-cinema guide. A visitor asked:
-"""${question.replace(/"""/g, "'")}"""
+  const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MMMM d, yyyy");
+  const thisYear = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy");
+  const q = question.replace(/"""/g, "'");
+  const shared = `A visitor to Masala Meter (an Indian-cinema review site) asked:
+"""${q}"""
 
-TODAY'S DATE is ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MMMM d, yyyy")}. Read time words against it: "this year" means ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy")}, "last year" the year before, and "new", "recent" or "latest" means released in roughly the last few months. Use the catalog's year column for this, not your own sense of what's recent.
+TODAY'S DATE is ${today}. "This year" means ${thisYear}, "last year" the year before, and "new", "recent" or "latest" means released in roughly the last few months. Use the catalog's year column for this, not your own sense of what's recent.
 
-Recommend films ONLY from the catalog below. Each line is: id|title|year|language|genres|Masala Meter score (0-100)|optional one-line takeaway (given for recent films you may not know).
-Use your own knowledge of these films (tone, genre, humour, darkness, family-friendliness) to judge the fit, plus the takeaway for recent ones. Prefer higher scores when fits are similar.
-Be strict about fit. When the visitor asks for a genre or mood (romance, comedy, horror, thriller, family, feel-good...), every pick must clearly BE that: its genres column lists it, or you're sure the film is mainly that. A film that merely has a love track, a funny scene or a "journey" doesn't count. Same for language and year: if they say Tamil or 2025, every pick must match the catalog's language and year columns. Never pad the list: 2 right picks beat 5 loose ones, and zero picks is fine if nothing truly fits. If the visitor names a film, don't recommend that same film. If the question isn't about choosing a film to watch, or nothing in the catalog fits, return no picks and say so briefly in "intro".
-Keep every word you write family-friendly: no profanity, slurs or sexual language, and never repeat crude words from the question. If the visitor asks for sexual, explicit or adult content, return no picks and a polite one-line "intro" suggesting they ask about a mood, genre or language instead. Mature but mainstream requests (a dark, violent or intense thriller) are fine.
-
-${exclude.length ? "The visitor already saw these picks, so DON'T include them again; give the next best ones instead: " + exclude.join("; ") + "\n\n" : ""}Reply with JSON only, in this exact shape:
-{"intro": "one short friendly sentence", "picks": [{"id": 12, "why": "one short sentence on why it fits"}]}
-Give up to 5 picks, only ones that truly fit. The "intro" must not introduce yourself, and must agree with the picks you return (don't say there are none and then list some).
-
-CATALOG:
-${catalog.map(c => c.line).join("\n")}`;
+Be strict about fit. When the visitor asks for a genre or mood (romance, comedy, horror, thriller, family, feel-good...), a film counts only if that is what the film mainly IS, not if it merely has a love track, a funny scene or a "journey". If they name a language or year, it must match the language and year columns. If they name a film, don't recommend that same film.
+Keep every word you write family-friendly: no profanity, slurs or sexual language, and never repeat crude words from the question. If the visitor asks for sexual, explicit or adult content, or the question isn't about choosing a film to watch, return no films and a polite one-line "intro" suggesting they ask about a mood, genre or language instead. Mature but mainstream requests (a dark, violent or intense thriller) are fine.
+${exclude.length ? "\nThe visitor already saw these, so leave them out: " + exclude.join("; ") + "\n" : ""}`;
 
   try {
-    // Gemini sometimes answers "overloaded" (503/429/500) or cuts its JSON
-    // short; one of those used to show visitors "Couldn't get an answer".
-    // Try up to 3 times with a short pause before giving up.
-    let answer = null, lastDetail = "";
-    for (let attempt = 0; attempt < 3 && !answer; attempt++) {
-      if (attempt) Utilities.sleep(1200 * attempt);
-      const res = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models/" + ASK_MODEL + ":generateContent?key=" + GEMINI_API_KEY, {
-        method: "post",
-        contentType: "application/json",
-        muteHttpExceptions: true,
-        payload: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 1500, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
-          // Google's own content filters at their strictest.
-          safetySettings: ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]
-            .map(category => ({ category: category, threshold: "BLOCK_LOW_AND_ABOVE" }))
-        })
-      });
-      if (res.getResponseCode() !== 200) {
-        Logger.log("askMasalaMeter_ HTTP " + res.getResponseCode() + ": " + res.getContentText().slice(0, 300));
-        // "detail" isn't shown on the site; it's there so opening the
-        // ?action=ask link directly says why it failed.
-        let reason = "";
-        try { reason = (JSON.parse(res.getContentText()).error || {}).message || ""; } catch (e) { /* not JSON */ }
-        lastDetail = "HTTP " + res.getResponseCode() + (reason ? ": " + reason.slice(0, 200) : "");
-        if ([429, 500, 502, 503, 504].indexOf(res.getResponseCode()) !== -1) continue;
-        return { ok: false, error: "busy", detail: lastDetail };
-      }
-      const body = JSON.parse(res.getContentText());
-      const cand = (body.candidates || [])[0] || {};
-      if ((body.promptFeedback && body.promptFeedback.blockReason) || cand.finishReason === "SAFETY" || cand.finishReason === "PROHIBITED_CONTENT") {
-        return { ok: false, error: "blocked" };
-      }
-      const parts = (cand.content || {}).parts || [];
-      const text = parts.map(p => p.text || "").join("");
-      try { answer = parseGeminiJsonObject_(text); }
-      catch (e) { lastDetail = "Unreadable reply (" + (cand.finishReason || "no reason") + "): " + String(e).slice(0, 120); }
+    // STEP 1 — shortlist from the whole catalog using genres + takeaway (cheap).
+    const step1 = askGeminiJson_(shared + `
+STEP 1 of 2: shortlist. Each line below is: id|title|year|language|genres|Masala Meter score (0-100)|one-line takeaway.
+Use the genres, the takeaway and your own knowledge of the film. Don't rely on the genres column alone; it can be incomplete. Return up to 15 ids that MIGHT fit, best first (prefer higher scores when fits are similar). Return none if nothing could fit.
+Reply with JSON only: {"intro": "only if returning no ids: one short friendly sentence saying so", "ids": [12, 40]}
+
+CATALOG:
+${catalog.map(c => c.line).join("\n")}`, 600);
+    if (step1.error) return step1.error;
+    const shortlist = [];
+    (step1.answer.ids || []).forEach(n => {
+      const c = catalog[Number(n)];
+      if (c && shortlist.indexOf(c) === -1 && !excluded[c.title.toLowerCase()]) shortlist.push(c);
+    });
+    if (!shortlist.length) {
+      const intro = String(step1.answer.intro || "").slice(0, 300);
+      return { ok: true, intro: askIsBlocked_(intro) ? "" : intro, picks: [] };
     }
-    if (!answer) return { ok: false, error: "busy", detail: lastDetail };
-    // Only ever return films that are really in the catalog.
+
+    // STEP 2 — read the actual Masala Meter review of each shortlisted film and decide.
+    const step2 = askGeminiJson_(shared + `
+STEP 2 of 2: decide from our reviews. Below are the shortlisted films, each with Masala Meter's own REVIEW and STORY. Judge each film by what the review and story actually say it is, not by its title or genre tag. Keep only films that truly fit; drop the rest. 2 right picks beat 5 loose ones, and none is fine.
+For each pick, "why" is one short sentence on why it fits, based on the review.
+Reply with JSON only: {"intro": "one short friendly sentence that matches the picks (don't introduce yourself; don't say there are none if you list some)", "picks": [{"id": 12, "why": "..."}]}
+Give at most 5 picks, best first.
+
+FILMS:
+${shortlist.map(c => c.full).join("\n\n")}`, 1200);
+    if (step2.error) return step2.error;
+    const answer = step2.answer;
+    // Only ever return shortlisted films that are really in the catalog.
     const seen = {};
     const picks = (answer.picks || []).map(p => {
       const c = catalog[Number(p && p.id)];
-      if (!c || seen[c.title + "|" + c.year] || excluded[c.title.toLowerCase()]) return null;
+      if (!c || shortlist.indexOf(c) === -1 || seen[c.title + "|" + c.year]) return null;
       seen[c.title + "|" + c.year] = true;
       const why = String(p.why || "").slice(0, 220);
       return { title: c.title, year: c.year, why: askIsBlocked_(why) ? "" : why }; // drop wording that slipped past
@@ -2488,6 +2475,47 @@ ${catalog.map(c => c.line).join("\n")}`;
     Logger.log("askMasalaMeter_ failed: " + err);
     return { ok: false, error: "busy", detail: String(err).slice(0, 200) };
   }
+}
+
+// One Gemini call for Ask Masala Meter, returning {answer} or {error: <reply for the site>}.
+// Retries up to 3 times when Gemini is briefly overloaded (429/5xx) or cuts its JSON short.
+function askGeminiJson_(prompt, maxTokens) {
+  let lastDetail = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) Utilities.sleep(1200 * attempt);
+    const res = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models/" + ASK_MODEL + ":generateContent?key=" + GEMINI_API_KEY, {
+      method: "post",
+      contentType: "application/json",
+      muteHttpExceptions: true,
+      payload: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: maxTokens, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
+        // Google's own content filters at their strictest.
+        safetySettings: ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]
+          .map(category => ({ category: category, threshold: "BLOCK_LOW_AND_ABOVE" }))
+      })
+    });
+    const code = res.getResponseCode();
+    if (code !== 200) {
+      Logger.log("askGeminiJson_ HTTP " + code + ": " + res.getContentText().slice(0, 300));
+      // "detail" isn't shown on the site; it's there so opening the
+      // ?action=ask link directly says why it failed (e.g. 402 = out of credit).
+      let reason = "";
+      try { reason = (JSON.parse(res.getContentText()).error || {}).message || ""; } catch (e) { /* not JSON */ }
+      lastDetail = "HTTP " + code + (reason ? ": " + reason.slice(0, 200) : "");
+      if ([429, 500, 502, 503, 504].indexOf(code) !== -1) continue;
+      return { error: { ok: false, error: "busy", detail: lastDetail } };
+    }
+    const body = JSON.parse(res.getContentText());
+    const cand = (body.candidates || [])[0] || {};
+    if ((body.promptFeedback && body.promptFeedback.blockReason) || cand.finishReason === "SAFETY" || cand.finishReason === "PROHIBITED_CONTENT") {
+      return { error: { ok: false, error: "blocked" } };
+    }
+    const text = ((cand.content || {}).parts || []).map(p => p.text || "").join("");
+    try { return { answer: parseGeminiJsonObject_(text) || {} }; }
+    catch (e) { lastDetail = "Unreadable reply (" + (cand.finishReason || "no reason") + "): " + String(e).slice(0, 120); }
+  }
+  return { error: { ok: false, error: "busy", detail: lastDetail } };
 }
 
 // Visitors can no longer add movies or songs: the site is curated now that
