@@ -131,7 +131,7 @@ body.ask-mode .grid-header,body.ask-mode #moviesGrid{display:none !important;}
    the reasons read easily on a phone. */
 .ask-q{font-size:19px;font-weight:800;margin-bottom:8px;color:#fff;}
 .ask-intro{font-size:16px;color:#e6e2d9;line-height:1.55;margin-bottom:12px;}
-.ask-thinking{font-size:14px;color:var(--text3);display:flex;align-items:center;gap:8px;padding:6px 0;}
+.ask-thinking{font-size:16px;font-weight:600;color:#e6e2d9;display:flex;align-items:center;gap:8px;padding:6px 0;}
 .ask-pick{display:flex;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px;cursor:pointer;}
 .ask-pick:hover{border-color:#6b4bd1;}
 .ask-pick img,.ask-pick .ask-noposter{width:66px;height:99px;border-radius:7px;object-fit:cover;background:#262626;flex-shrink:0;}
@@ -157,11 +157,20 @@ body.ask-mode .grid-header,body.ask-mode #moviesGrid{display:none !important;}
 .search-input{width:100%;padding:15px 90px 15px 20px;background:#2a2030;border:2px solid #FFE600;border-radius:10px;color:var(--text);font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:all 0.2s;box-shadow:0 0 0 0 rgba(255,230,0,0);scroll-margin-top:76px;}
 .search-input:focus{box-shadow:0 0 0 3px rgba(255,230,0,0.25);border-color:#FFE600;}
 .search-input::placeholder{color:rgba(255,255,255,0.75);}
+.search-input:placeholder-shown{padding-right:52px;} /* empty: no ✕ yet, so the hint gets the room */
 .search-hint{font-size:12.5px;color:#FFB020;margin-top:10px;margin-bottom:1.5rem;text-align:center;opacity:0.85;}
 .hint-add-link{cursor:pointer;text-decoration:underline;font-weight:800;opacity:1;color:#F2C94C;font-size:1.05em;}
 .hint-add-link:hover{color:#FFDD66;}
 .search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;border:none;padding:6px;border-radius:8px;transition:background 0.2s;}
 .search-icon:hover{background:rgba(229,32,32,0.15);}
+/* Once the text reads like a question (not a clear title), the 🔍 button
+   becomes a gold "✨ Ask" button — the only way the AI starts besides Enter. */
+.search-ask-label{display:none;}
+.search-wrap.ask-ready .search-icon{background:#FFE27A;color:#2a1460;font-weight:800;font-size:15px;padding:8px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 0 10px rgba(255,226,122,0.45);}
+.search-wrap.ask-ready .search-icon svg{display:none;}
+.search-wrap.ask-ready .search-ask-label{display:inline;}
+.search-wrap.ask-ready .search-clear{right:94px;}
+.search-wrap.ask-ready .search-input{padding-right:136px;}
 .suggestions{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;max-height:min(60vh,480px);overflow-y:auto;display:none;box-shadow:0 12px 32px rgba(0,0,0,0.7);z-index:300;}
 .suggestions.show{display:block;}
 .suggestion-item{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;transition:background 0.15s;border-bottom:1px solid var(--border);}
@@ -822,10 +831,10 @@ footer span{color:var(--red);}
 
 <div class="search-wrap-outer">
   <div class="search-wrap search-wrap-below-filters">
-    <input class="search-input" type="text" placeholder="Search a movie… or ✨ Ask Masala Meter for a suggestion" id="searchInput" oninput="handleSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter();}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" name="movie-search-field"/>
+    <input class="search-input" type="text" placeholder="Movie name, or ✨ ask for a pick" id="searchInput" oninput="handleSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter();}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" name="movie-search-field"/>
     <div id="suggestions" class="suggestions"></div>
     <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Clear search" aria-label="Clear search">✕</button>
-    <button class="search-icon" onclick="searchEnter();" title="Search" aria-label="Search"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
+    <button class="search-icon" id="searchGo" onclick="searchEnter();" title="Search" aria-label="Search"><span class="search-ask-label">✨ Ask</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
   </div>
 </div>
 
@@ -3534,6 +3543,8 @@ function searchEnter() {
   filterMovies();
   hideSuggestions();
   const q = document.getElementById("searchInput").value.trim();
+  // Close the phone keyboard so the result (or "Finding picks…") is visible.
+  document.getElementById("searchInput").blur();
   if (q && !askIsBlocked_(q) && !strongTitleMatch_(q)) {
     // An AI question: the answer appears in the panel above; the list
     // below goes straight back to normal (no word-matched list meanwhile).
@@ -3554,6 +3565,11 @@ function updateSearchClear_() {
   const btn = document.getElementById("searchClear");
   const input = document.getElementById("searchInput");
   if (btn && input) btn.classList.toggle("show", !!input.value);
+  const wrap = input && input.closest(".search-wrap");
+  if (wrap) {
+    const q = input.value.trim();
+    wrap.classList.toggle("ask-ready", q.length >= 3 && !askIsBlocked_(q) && !strongTitleMatch_(q));
+  }
 }
 function clearSearch() {
   clearSearchText_();
