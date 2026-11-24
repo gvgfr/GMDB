@@ -3540,6 +3540,10 @@ function searchEnter() {
     if (!(window._currentMovies || []).length) {
       document.getElementById("gridLabel").innerHTML = `No direct matches in the list — see the ✨ picks above <span class="show-all-link" onclick="clearSearch()">✕ Show all movies</span>`;
       document.getElementById("moviesGrid").innerHTML = "";
+    } else {
+      // Not the AI's answer — just movies whose title, cast or genre contain these words.
+      const n = window._currentMovies.length;
+      document.getElementById("gridLabel").innerHTML = `Word matches for "${escapeAskHtml_(q)}" (${n}) <span class="show-all-link" onclick="clearSearch()">✕ Show all movies</span>`;
     }
     askMasalaMeter(q);
   }
@@ -3725,6 +3729,7 @@ async function askMasalaMeter(question) {
     askState = { question, local: local.all, shown: [] };
     if (!local.all.length) { renderAskPanel_(question, `<div class="ask-intro">${escapeAskHtml_(local.intro)}</div>`); scrollToPanel(); return; }
     renderAskPicks_(question, local.intro, local.all.slice(0, ASK_PAGE_SIZE));
+    askShowFullGrid_();
     scrollToPanel(); return;
   }
 
@@ -3743,6 +3748,18 @@ async function askMasalaMeter(question) {
     return;
   }
   renderAskPicks_(question, data.intro || "Here's what fits:", data.picks);
+  askShowFullGrid_();
+}
+
+// Once the ✨ picks are showing, the list below goes back to the normal
+// full catalog — a second, word-matched list under the AI answer
+// ("9 movies for 'action movies 2024'") just confused people. The question
+// stays visible in the Ask panel, so the search box can be emptied.
+function askShowFullGrid_() {
+  const input = document.getElementById("searchInput");
+  if (input) input.value = "";
+  updateSearchClear_();
+  filterMovies();
 }
 
 // True only when this page is running inside the native Capacitor app
