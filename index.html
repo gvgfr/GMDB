@@ -4569,6 +4569,19 @@ function backToSearch() {
 }
 (function () {
   const btn = document.getElementById("toSearchBtn");
+  // Act on finger-up, not "click". On iPhone a tap while the list is still
+  // gliding only stops the scroll, and taps this close to Safari's bottom
+  // toolbar often never become a click — so it took 2–3 taps.
+  let start = null;
+  btn.addEventListener("touchstart", e => { const t = e.touches[0]; start = { x: t.clientX, y: t.clientY }; }, { passive: true });
+  btn.addEventListener("touchend", e => {
+    const t = e.changedTouches[0];
+    if (start && Math.abs(t.clientX - start.x) < 12 && Math.abs(t.clientY - start.y) < 12) {
+      e.preventDefault(); // no second, duplicate click
+      backToSearch();
+    }
+    start = null;
+  });
   let ticking = false;
   function update() {
     ticking = false;
